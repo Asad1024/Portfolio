@@ -15,7 +15,7 @@ const Navbar = () => {
           <img src={images.logo2} alt="logo" />
         </a>
       </div>
-      {/* <ul className="app__navbar-links">
+      <ul className="app__navbar-links">
         {["home", "about", "work", "skills", "contact"].map((item) => (
           <li className="app__flex p-text" key={`link-${item}`}>
             <div />
@@ -44,7 +44,7 @@ const Navbar = () => {
             </ul>
           </motion.div>
         )}
-      </div> */}
+      </div>
     </nav>
   );
 };

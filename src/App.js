@@ -9,7 +9,6 @@ import {
   Work,
 } from "./container";
 import { Navbar } from "./components";
-import NavbarBottom from "./components/nav2/nav2.jsx";
 import "./App.scss";
 
 function App() {
@@ -22,7 +21,6 @@ function App() {
       <Skills />
       <Footer />
       <Footer2 />
-      <NavbarBottom />
     </div>
   );
 }
