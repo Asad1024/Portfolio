@@ -41,7 +41,7 @@ const Footer2 = () => {
           <a href="#contact">Contact</a>
         </li>
       </ul>
-      <p className="copy">@2022 ASAD</p>
+      <p className="copy">@2023 ASAD</p>
       <p className="copy">All rights reserved</p>
     </section>
   );
