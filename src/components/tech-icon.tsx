@@ -211,6 +211,21 @@ export function hasTechIcon(name: string) {
 }
 
 /**
+ * The raw glyph behind a tech's icon, for consumers that need to draw it
+ * themselves rather than mount an <svg> — the WebGL scene paints these onto a
+ * canvas and orbits them as sprites. Both sets share a 24x24 viewBox; the
+ * brand marks are filled and the hand-drawn fallbacks are stroked, hence the
+ * flag.
+ */
+export function techGlyph(name: string): { path: string; stroked: boolean } | null {
+  const icon = ICONS[name];
+  if (icon) return { path: icon.path, stroked: false };
+  const fallback = FALLBACKS[name];
+  if (fallback) return { path: fallback, stroked: true };
+  return null;
+}
+
+/**
  * A tech's brand colour as a plain hex string, for consumers that can't use a
  * CSS variable — the WebGL scene, in practice, where planets are tinted per
  * technology. Monochrome marks (Next.js, Express) would render as black

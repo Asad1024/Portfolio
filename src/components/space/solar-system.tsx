@@ -6,7 +6,7 @@ import { Html, OrbitControls, Stars } from "@react-three/drei";
 import { Bloom, EffectComposer, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { featuredStack } from "@/lib/data";
-import { TechIcon, techColor } from "../tech-icon";
+import { techColor, techGlyph } from "../tech-icon";
 
 /* ── the hero solar system ──────────────────────────────────────────────────
    Every technology in the stack is a planet, tinted its own brand colour.
@@ -28,7 +28,6 @@ type Body = {
   speed: number;
   phase: number;
   tilt: number;
-  ringed: boolean;
 };
 
 /* Deterministic layout — same every load, so the hero never reshuffles.
@@ -49,7 +48,6 @@ function buildBodies(): Body[] {
       speed: 0.42 / Math.sqrt(radius),
       phase: (i * 2.399) % (Math.PI * 2), // golden angle — no clustering
       tilt: ((i % 5) - 2) * 0.045,
-      ringed: i === 3 || i === 11,
     };
   });
 }
@@ -257,6 +255,51 @@ function OrbitPath({ radius, tilt, color }: { radius: number; tilt: number; colo
   );
 }
 
+/* Paints a tech's glyph onto a canvas so it can orbit as a sprite. The icons
+   are 24x24 path data, so this is just a scaled Path2D fill — no SVG parsing,
+   no network, and the result is a texture that blooms like anything else in
+   the scene. */
+const GLYPH_PX = 128;
+
+function useGlyphTexture(tech: string, color: string) {
+  const texture = useMemo(() => {
+    const glyph = techGlyph(tech);
+    if (!glyph) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = GLYPH_PX;
+    canvas.height = GLYPH_PX;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    const pad = 12;
+    const scale = (GLYPH_PX - pad * 2) / 24;
+    ctx.translate(pad, pad);
+    ctx.scale(scale, scale);
+
+    const path = new Path2D(glyph.path);
+    if (glyph.stroked) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.9;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.stroke(path);
+    } else {
+      ctx.fillStyle = color;
+      ctx.fill(path);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    return tex;
+  }, [tech, color]);
+
+  // textures hold GPU memory; the theme swap rebuilds them, so release the old
+  useEffect(() => () => texture?.dispose(), [texture]);
+
+  return texture;
+}
+
 function Planet({
   body,
   hovered,
@@ -267,7 +310,9 @@ function Planet({
   onHover: (tech: string | null) => void;
 }) {
   const group = useRef<THREE.Group>(null);
-  const mesh = useRef<THREE.Mesh>(null);
+  const mesh = useRef<THREE.Object3D>(null);
+  const texture = useGlyphTexture(body.tech, body.color);
+  const glyphScale = body.size * 4.6;
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -280,7 +325,9 @@ function Planet({
       );
     }
     if (mesh.current) {
-      mesh.current.rotation.y = t * 0.6;
+      // sprites always face the camera, so there's nothing to spin — only the
+      // fallback sphere gets a rotation
+      if (!texture) mesh.current.rotation.y = t * 0.6;
       const target = hovered ? 1.45 : 1;
       // eased toward target rather than snapped, so hover feels physical
       mesh.current.scale.lerp(new THREE.Vector3(target, target, target), 0.14);
@@ -306,29 +353,34 @@ function Planet({
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
-      <mesh ref={mesh} raycast={() => null}>
-        <sphereGeometry args={[body.size, 32, 32]} />
-        <meshStandardMaterial
-          color={body.color}
-          roughness={0.62}
-          metalness={0.18}
-          emissive={body.color}
-          emissiveIntensity={hovered ? 0.85 : 0.22}
-        />
-      </mesh>
-
-      {body.ringed && (
-        <mesh rotation={[-Math.PI / 2.4, 0.3, 0]}>
-          <ringGeometry args={[body.size * 1.5, body.size * 2.3, 64]} />
-          <meshBasicMaterial
-            color={body.color}
-            transparent
-            opacity={0.42}
-            side={THREE.DoubleSide}
-            depthWrite={false}
-          />
-        </mesh>
-      )}
+      {/* The body itself: the technology's own mark, billboarded so it always
+          faces the camera. Hover scaling lives on this wrapper so the sprite
+          keeps its own intrinsic size. A tech with no glyph at all falls back
+          to a lit sphere. */}
+      <group ref={mesh}>
+        {texture ? (
+          <sprite scale={[glyphScale, glyphScale, 1]} raycast={() => null}>
+            <spriteMaterial
+              map={texture}
+              transparent
+              toneMapped={false}
+              depthWrite={false}
+              opacity={hovered ? 1 : 0.88}
+            />
+          </sprite>
+        ) : (
+          <mesh raycast={() => null}>
+            <sphereGeometry args={[body.size, 32, 32]} />
+            <meshStandardMaterial
+              color={body.color}
+              roughness={0.62}
+              metalness={0.18}
+              emissive={body.color}
+              emissiveIntensity={hovered ? 0.85 : 0.22}
+            />
+          </mesh>
+        )}
+      </group>
 
       {hovered && (
         <mesh rotation={[-Math.PI / 2, 0, 0]}>
@@ -345,7 +397,7 @@ function Planet({
         center
         distanceFactor={17}
         zIndexRange={[20, 0]}
-        position={[0, -body.size - 0.42, 0]}
+        position={[0, -glyphScale / 2 - 0.3, 0]}
         style={{ pointerEvents: "none" }}
       >
         <div
@@ -355,7 +407,6 @@ function Planet({
               : "text-[11px] text-white/55"
           }`}
         >
-          <TechIcon name={body.tech} size={hovered ? 13 : 11} />
           {body.tech}
         </div>
       </Html>
