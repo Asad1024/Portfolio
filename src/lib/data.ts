@@ -1026,28 +1026,20 @@ export const capabilities = [
   },
 ];
 
-/** The headline stack — what leads the 3D ring. Curated, not exhaustive:
- *  the full list lives in the Skills section. */
+/** The headline stack — one body per entry in the hero's orbital system, so
+ *  this list is deliberately short: nine, each on its own visible orbit, one
+ *  per surface I actually build on. Curated, not exhaustive — the full list
+ *  lives in the Skills section. */
 export const featuredStack = [
-  "TypeScript",
-  "React",
-  "Next.js",
-  "Tailwind CSS",
-  "Node.js",
-  "NestJS",
-  "Express.js",
-  "MySQL",
-  "PostgreSQL",
-  "MongoDB",
-  "Redis",
-  "Prisma ORM",
-  "OpenAI · Gemini",
-  "ElevenLabs",
-  "Twilio",
-  "Stripe",
-  "React Native",
-  "Flutter",
-  "Electron",
+  "TypeScript",      // language
+  "React",           // web
+  "Next.js",         // framework
+  "Node.js",         // runtime
+  "NestJS",          // services
+  "PostgreSQL",      // data
+  "React Native",    // mobile
+  "Electron",        // desktop
+  "OpenAI · Gemini", // ai
 ];
 
 export const stackList = [

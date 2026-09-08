@@ -8,19 +8,21 @@ import { featuredStack } from "@/lib/data";
 import { techColor, techGlyph } from "../tech-icon";
 
 /* ── the hero solar system ──────────────────────────────────────────────────
-   Every technology in the stack is a planet on its own orbit, tinted its own
-   brand colour, with its own inclination and its own rate — a few of them
-   retrograde. Kepler sets the baseline (angular speed falling off as 1/√r) but
-   each body is deliberately knocked off it, so the field never turns as one
-   rigid disc. It all runs off a single clock in useFrame; there is no
-   per-planet state, so the whole stack costs one render.
+   Nine technologies, each a body on its own visible orbit, tinted its own
+   brand colour and carrying its own inclination and rate. Every one travels
+   the same way round — counterclockwise from above the plane, as every planet
+   in the real solar system does; only the speed varies. Kepler sets the
+   baseline (angular speed falling off as 1/√r) and each body is then knocked
+   off it, so the field never turns as one rigid disc. It all runs off a single
+   clock in useFrame; there is no per-body state, so the whole stack costs one
+   render.
 
    This file is only ever reached through a dynamic() import with ssr:false;
    WebGL has no meaning on the server and drei's Stars will throw there. */
 
 /** Innermost orbit, and the gap to the next one out. */
-const MIN_RADIUS = 3.05;
-const RADIUS_STEP = 0.355;
+const MIN_RADIUS = 3.1;
+const RADIUS_STEP = 0.8;
 
 /** Deterministic 0..1 from a string. Same value every load, so nothing
  *  reshuffles between renders or between server and client — "random" here
@@ -64,17 +66,21 @@ function buildBodies(): Body[] {
 
   return order.map((tech, i) => {
     const radius = MIN_RADIUS + i * RADIUS_STEP;
-    // Kepler sets the baseline, then each body is knocked off it so the field
-    // doesn't turn as one rigid disc. A few run retrograde.
+    // Kepler sets the baseline — inner bodies genuinely outrun outer ones —
+    // and each is then knocked off it so the field doesn't turn as one rigid
+    // disc. Rate only: direction is shared, never reversed.
     const rate = 0.55 + hash01(tech, 3) * 1.25;
-    const retrograde = hash01(tech, 31) > 0.84 ? -1 : 1;
 
     return {
       tech,
       color: techColor(tech),
       size: 0.27 + hash01(tech, 11) * 0.1,
       radius,
-      speed: (0.42 / Math.sqrt(radius)) * rate * retrograde,
+      // Negative, so the system turns counterclockwise seen from above the
+      // plane — the direction every planet in the real solar system travels.
+      // +z projects downward from a camera sitting above, so a positive rate
+      // would have run the whole field backwards.
+      speed: -(0.42 / Math.sqrt(radius)) * rate,
       // Even coverage at t=0, nudged by a bounded jitter. A purely hashed
       // phase can start half the field bunched on one side of the star, and a
       // jitter wide enough to look properly random reintroduces the same
@@ -328,11 +334,11 @@ function Sun({ color }: { color: string }) {
 function OrbitPath({ radius, tilt, color }: { radius: number; tilt: number; color: string }) {
   return (
     <mesh rotation={[-Math.PI / 2 - tilt, 0, 0]}>
-      <ringGeometry args={[radius - 0.006, radius + 0.006, 160]} />
+      <ringGeometry args={[radius - 0.009, radius + 0.009, 192]} />
       <meshBasicMaterial
         color={color}
         transparent
-        opacity={0.09}
+        opacity={0.3}
         side={THREE.DoubleSide}
         depthWrite={false}
       />
