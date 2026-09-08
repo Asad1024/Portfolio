@@ -1034,12 +1034,17 @@ export const featuredStack = [
   "TypeScript",      // language
   "React",           // web
   "Next.js",         // framework
+  "Tailwind CSS",    // styling
   "Node.js",         // runtime
   "NestJS",          // services
   "PostgreSQL",      // data
+  "MongoDB",         // documents
+  "Redis",           // cache + queues
   "React Native",    // mobile
   "Electron",        // desktop
   "OpenAI · Gemini", // ai
+  "Twilio",          // telephony
+  "Stripe",          // payments
 ];
 
 export const stackList = [

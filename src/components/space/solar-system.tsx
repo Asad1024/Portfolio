@@ -8,7 +8,7 @@ import { featuredStack } from "@/lib/data";
 import { techColor, techGlyph } from "../tech-icon";
 
 /* ── the hero solar system ──────────────────────────────────────────────────
-   Nine technologies, each a body on its own visible orbit, tinted its own
+   Fourteen technologies, each a body on its own visible orbit, tinted its own
    brand colour and carrying its own inclination and rate. Every one travels
    the same way round — counterclockwise from above the plane, as every planet
    in the real solar system does; only the speed varies. Kepler sets the
@@ -21,8 +21,8 @@ import { techColor, techGlyph } from "../tech-icon";
    WebGL has no meaning on the server and drei's Stars will throw there. */
 
 /** Innermost orbit, and the gap to the next one out. */
-const MIN_RADIUS = 3.1;
-const RADIUS_STEP = 0.8;
+const MIN_RADIUS = 3.0;
+const RADIUS_STEP = 0.56;
 
 /** Deterministic 0..1 from a string. Same value every load, so nothing
  *  reshuffles between renders or between server and client — "random" here
@@ -338,7 +338,7 @@ function OrbitPath({ radius, tilt, color }: { radius: number; tilt: number; colo
       <meshBasicMaterial
         color={color}
         transparent
-        opacity={0.3}
+        opacity={0.24}
         side={THREE.DoubleSide}
         depthWrite={false}
       />
@@ -433,7 +433,7 @@ function Planet({
   // Sized from the glyph, not the sprite: the sprite is mostly transparent
   // padding and label, so scaling it directly makes the icons far bigger than
   // intended. Solve for the sprite height that lands the icon at iconWorld.
-  const iconWorld = body.size * 2.6;
+  const iconWorld = body.size * 2.4;
   const spriteH = iconWorld / ICON_FRACTION;
   const spriteW = spriteH * (CANVAS_W / CANVAS_H);
 
