@@ -103,10 +103,16 @@ export default function Template({ children }: { children: React.ReactNode }) {
 
       const draw = (now: number) => {
         if (cancelled) return;
+        /* Both of these need a floor, not just a ceiling. requestAnimationFrame
+           hands you the frame's start time, which can precede a performance.now()
+           taken after that frame already began — so `now - start` is briefly
+           negative on the first frame. Unclamped that gives a negative t, and
+           Math.pow(negative, 2.4) is NaN, which createRadialGradient rejects
+           outright. A negative dt would also drive the field backwards. */
         const elapsed = now - start;
-        const dt = Math.min(48, now - last);
+        const dt = Math.min(48, Math.max(0, now - last));
         last = now;
-        const t = Math.min(1, elapsed / HOLD_MS);
+        const t = Math.max(0, Math.min(1, elapsed / HOLD_MS));
 
         // hard away from the gate, easing off as the destination fills the view
         const speed = (0.35 + Math.sin(t * Math.PI) * 2.4) * dt;

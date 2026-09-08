@@ -2,18 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/* ── first visit: a star forming ────────────────────────────────────────────
-   Dust falls inward, spirals into an accretion disc, ignites, and the shock
-   front carries the curtain away — which is exactly the object the hero opens
-   on, so the load reads as that star being born rather than as a progress bar
-   with a space wallpaper behind it.
+/* ── first visit: a star forms, then you fall into it ───────────────────────
+   Two acts on one canvas.
 
-   Progress is the physics, not a decoration alongside it: the same 0..1 drives
-   how far the dust has fallen, how bright and how large the core is, and how
-   far the ring has closed. There is nothing to keep in sync because there is
-   only one number.
+   Collapse: dust falls inward, winds into an accretion disc seen near
+   edge-on, and the core brightens and swells as the mass arrives. The
+   percentage lives inside that — it sits at the centre of an orbit whose arc
+   closes as the star assembles, with a lit body riding the leading edge, so
+   100% is one full revolution rather than a number bolted on beside it.
 
-   Shown once per browser session, not once per page load — sessionStorage
+   Approach: the moment it reads 100 the core ignites and the view runs at it.
+   The readout drops away and a projected field tears past, which is the same
+   effect the route transition uses — so arriving at the site for the first
+   time and arriving at any page afterwards are the same motion, at different
+   lengths. That is the whole reason to chain them.
+
+   Shown once per browser session, not once per page load: sessionStorage
    survives a refresh, so a reload doesn't sit through it again. */
 
 const PHASES = [
@@ -23,10 +27,15 @@ const PHASES = [
   { at: 0.86, status: "ignition →" },
 ];
 
-const COLLAPSE_MS = 3000;
-const IGNITE_MS = 620;
-const TOTAL_MS = COLLAPSE_MS + IGNITE_MS;
+const COLLAPSE_MS = 2600;
+const WARP_MS = 950;
+const FADE_MS = 450;
+
 const MAX_DUST = 1400;
+/** the approach field — projected, so these carry a depth */
+const MOTES = 560;
+const DEPTH = 1500;
+const FOV = 340;
 
 type Mote = {
   /** where it starts, in polar coordinates about the core */
@@ -40,6 +49,8 @@ type Mote = {
   hot: boolean;
 };
 
+type Flyer = { x: number; y: number; z: number; hot: boolean };
+
 const easeIn = (t: number) => t * t;
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
@@ -51,7 +62,7 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 export function Preloader() {
-  const [phase, setPhase] = useState<"idle" | "run" | "exit" | "gone">("idle");
+  const [phase, setPhase] = useState<"idle" | "collapse" | "warp" | "exit" | "gone">("idle");
   const [progress, setProgress] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -61,7 +72,7 @@ export function Preloader() {
       window.dispatchEvent(new CustomEvent("boot-complete"));
       return;
     }
-    setPhase("run");
+    setPhase("collapse");
     document.body.style.overflow = "hidden";
 
     /* The readout is timer-driven and measured against the wall clock, never
@@ -72,31 +83,44 @@ export function Preloader() {
       setProgress(Math.min(100, Math.round(((performance.now() - t0) / COLLAPSE_MS) * 100)));
     }, 60);
 
-    const exitTimer = setTimeout(() => {
+    const toWarp = setTimeout(() => {
+      setProgress(100);
+      clearInterval(tick);
+      setPhase("warp");
+    }, COLLAPSE_MS);
+
+    /* boot-complete fires at the END of the approach, not when the counter
+       hits 100. The hero holds its entrance on this event, and releasing it a
+       second early would run the name's decrypt behind a curtain that is still
+       up, landing it already finished. */
+    const toExit = setTimeout(() => {
       sessionStorage.setItem("booted", "1");
       window.dispatchEvent(new CustomEvent("boot-complete"));
       document.body.style.overflow = "";
-      setProgress(100);
-      clearInterval(tick);
       setPhase("exit");
-    }, COLLAPSE_MS);
-    const goneTimer = setTimeout(() => setPhase("gone"), TOTAL_MS + 260);
+    }, COLLAPSE_MS + WARP_MS);
+
+    const goneTimer = setTimeout(
+      () => setPhase("gone"),
+      COLLAPSE_MS + WARP_MS + FADE_MS + 120,
+    );
 
     return () => {
       clearInterval(tick);
-      clearTimeout(exitTimer);
+      clearTimeout(toWarp);
+      clearTimeout(toExit);
       clearTimeout(goneTimer);
       document.body.style.overflow = "";
     };
   }, []);
 
-
   /* The canvas gets its own effect, gated on phase. The boot effect above
-     flips phase to "run", but it reads refs in the same pass — at which point
-     the component has still returned null and there is no canvas to draw on.
-     Splitting it means this runs only once the element is actually mounted. */
+     leaves phase as "collapse", but it reads refs in the same pass — at which
+     point the component has still returned null and there is no canvas to draw
+     on. Splitting it means this runs only once the element is mounted, and the
+     guard keeps it to a single run across the phase changes that follow. */
   useEffect(() => {
-    if (phase !== "run") return;
+    if (phase !== "collapse") return;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
@@ -119,6 +143,7 @@ export function Preloader() {
     const cx = w / 2;
     const cy = h / 2;
     const reach = Math.hypot(w, h) * 0.55;
+    const spread = Math.max(w, h);
 
     const dust: Mote[] = Array.from({ length: MAX_DUST }, () => ({
       r0: reach * (0.25 + Math.random() * 0.75),
@@ -129,49 +154,106 @@ export function Preloader() {
       hot: Math.random() < 0.22,
     }));
 
+    const flyers: Flyer[] = Array.from({ length: MOTES }, () => ({
+      x: (Math.random() - 0.5) * spread * 2,
+      y: (Math.random() - 0.5) * spread * 2,
+      z: 1 + Math.random() * DEPTH,
+      hot: Math.random() < 0.3,
+    }));
+
     const start = performance.now();
+    let last = start;
+
     const draw = (now: number) => {
       if (cancelled) return;
+      /* Both of these need a floor, not just a ceiling. requestAnimationFrame
+         hands you the frame's start time, which can precede a performance.now()
+         taken after that frame already began, so the first frame's elapsed can
+         be negative. Unclamped that gives a negative progress, and
+         Math.pow(negative, fractional) is NaN — which createRadialGradient
+         rejects outright. A negative dt would also run the field backwards. */
       const elapsed = reduced ? COLLAPSE_MS : now - start;
-      const p = clamp01(elapsed / COLLAPSE_MS);
-      const blast = clamp01((elapsed - COLLAPSE_MS) / IGNITE_MS);
+      const dt = Math.min(48, Math.max(0, now - last));
+      last = now;
 
       ctx.clearRect(0, 0, w, h);
 
-      // core: grows and brightens as the dust arrives, then flares
-      const coreR = 3 + p * p * 46 + blast * 260;
-      const coreA = blast > 0 ? 1 - blast : 0.35 + p * 0.65;
-      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 3);
-      glow.addColorStop(0, `rgba(255,255,255,${coreA})`);
-      glow.addColorStop(0.16, `rgba(${accent.join(",")},${coreA * 0.85})`);
-      glow.addColorStop(0.45, `rgba(${violet.join(",")},${coreA * 0.22})`);
-      glow.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(cx, cy, coreR * 3, 0, Math.PI * 2);
-      ctx.fill();
+      if (elapsed < COLLAPSE_MS) {
+        // ── act one: the disc falls in ──────────────────────────────────
+        const p = clamp01(elapsed / COLLAPSE_MS);
 
-      for (const m of dust) {
-        // each mote falls on its own clock, and winds as it falls
-        const fall = easeIn(clamp01((p - m.delay) / (1 - m.delay)));
-        const r = m.r0 * (1 - fall) + blast * reach * 1.8;
-        const a = m.a0 + m.wind * fall + blast * 0.6;
-        const x = cx + Math.cos(a) * r;
-        const y = cy + Math.sin(a) * r * 0.62; // disc, seen near edge-on
-
-        // brightest just before it lands, then gone in the flash
-        const alpha = (blast > 0 ? 1 - blast : 0.18 + fall * 0.82) * (m.hot ? 1 : 0.6);
-        const [cr, cg, cb] = m.hot ? accent : violet;
-        ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha})`;
+        const coreR = 3 + p * p * 46;
+        const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 3);
+        glow.addColorStop(0, `rgba(255,255,255,${0.35 + p * 0.65})`);
+        glow.addColorStop(0.16, `rgba(${accent.join(",")},${(0.35 + p * 0.65) * 0.85})`);
+        glow.addColorStop(0.45, `rgba(${violet.join(",")},${(0.35 + p * 0.65) * 0.22})`);
+        glow.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = glow;
         ctx.beginPath();
-        ctx.arc(x, y, m.size + fall * 0.7, 0, Math.PI * 2);
+        ctx.arc(cx, cy, coreR * 3, 0, Math.PI * 2);
         ctx.fill();
+
+        for (const m of dust) {
+          const fall = easeIn(clamp01((p - m.delay) / (1 - m.delay)));
+          const r = m.r0 * (1 - fall);
+          const a = m.a0 + m.wind * fall;
+          const x = cx + Math.cos(a) * r;
+          const y = cy + Math.sin(a) * r * 0.62; // disc, seen near edge-on
+
+          const alpha = (0.18 + fall * 0.82) * (m.hot ? 1 : 0.6);
+          const [cr, cg, cb] = m.hot ? accent : violet;
+          ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha})`;
+          ctx.beginPath();
+          ctx.arc(x, y, m.size + fall * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        // ── act two: ignition, then the run at it ───────────────────────
+        const t = clamp01((elapsed - COLLAPSE_MS) / WARP_MS);
+        // one hard flash off the line, gone by a third of the way in
+        const flash = Math.max(0, 1 - t * 3);
+
+        const coreR = 40 + Math.pow(t, 2.2) * 260 + flash * 140;
+        const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 3.2);
+        glow.addColorStop(0, `rgba(255,255,255,${Math.min(1, 0.75 + t * 0.25 + flash)})`);
+        glow.addColorStop(0.18, `rgba(${accent.join(",")},${0.5 + t * 0.4})`);
+        glow.addColorStop(0.5, `rgba(${violet.join(",")},${0.16 + t * 0.12})`);
+        glow.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, coreR * 3.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // hard away from the gate, easing off as the star fills the view
+        const speed = (0.5 + Math.sin(t * Math.PI) * 3.1) * dt;
+        ctx.lineCap = "round";
+        for (const m of flyers) {
+          const prevZ = m.z;
+          m.z -= speed;
+          if (m.z < 1) {
+            m.x = (Math.random() - 0.5) * spread * 2;
+            m.y = (Math.random() - 0.5) * spread * 2;
+            m.z = DEPTH;
+            continue;
+          }
+
+          // perspective: divide by depth. near motes sweep, far ones crawl.
+          const k = FOV / m.z;
+          const pk = FOV / prevZ;
+          const depthFade = Math.min(1, (DEPTH - m.z) / (DEPTH * 0.55));
+          const [r, g, b] = m.hot ? accent : violet;
+          ctx.strokeStyle = `rgba(${r},${g},${b},${depthFade * (0.4 + t * 0.45)})`;
+          ctx.lineWidth = Math.min(2.4, k * 1.6);
+          ctx.beginPath();
+          ctx.moveTo(cx + m.x * pk, cy + m.y * pk);
+          ctx.lineTo(cx + m.x * k, cy + m.y * k);
+          ctx.stroke();
+        }
       }
 
-      if (elapsed < TOTAL_MS + 120) raf = requestAnimationFrame(draw);
+      if (elapsed < COLLAPSE_MS + WARP_MS + 120) raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-  
 
     return () => {
       cancelled = true;
@@ -181,20 +263,28 @@ export function Preloader() {
 
   if (phase === "idle" || phase === "gone") return null;
 
-  const status = [...PHASES].reverse().find((s) => progress / 100 >= s.at)?.status ?? PHASES[0].status;
+  const status =
+    [...PHASES].reverse().find((s) => progress / 100 >= s.at)?.status ?? PHASES[0].status;
   // the ring closes as the star assembles — 100% is one full orbit
   const R = 74;
   const circumference = 2 * Math.PI * R;
+  // the readout belongs to the collapse; the approach is the canvas alone
+  const readoutGone = phase !== "collapse";
 
   return (
     <div
-      className={`fixed inset-0 z-[250] flex flex-col justify-between bg-bg p-6 transition-opacity duration-500 ease-out sm:p-10 ${
+      className={`fixed inset-0 z-[250] flex flex-col justify-between bg-bg p-6 transition-opacity ease-out sm:p-10 ${
         phase === "exit" ? "opacity-0" : "opacity-100"
       }`}
+      style={{ transitionDuration: `${FADE_MS}ms` }}
     >
       <canvas ref={canvasRef} className="absolute inset-0 size-full" aria-hidden />
 
-      <div className="relative flex items-start justify-between font-mono text-xs text-muted">
+      <div
+        className={`relative flex items-start justify-between font-mono text-xs text-muted transition-opacity duration-300 ${
+          readoutGone ? "opacity-0" : "opacity-100"
+        }`}
+      >
         <p>
           <span className="term-green">$</span> stellar ignition — asad-os
           <span className="caret-blink term-green">_</span>
@@ -204,16 +294,13 @@ export function Preloader() {
 
       {/* the readout sits inside the orbit it describes */}
       <div className="relative flex flex-1 items-center justify-center">
-        <div className="relative flex size-[13rem] items-center justify-center">
+        <div
+          className={`relative flex size-[13rem] items-center justify-center transition-all duration-300 ${
+            readoutGone ? "scale-95 opacity-0" : "scale-100 opacity-100"
+          }`}
+        >
           <svg className="absolute inset-0 -rotate-90" viewBox="0 0 180 180" aria-hidden>
-            <circle
-              cx="90"
-              cy="90"
-              r={R}
-              fill="none"
-              stroke="var(--line)"
-              strokeWidth="1"
-            />
+            <circle cx="90" cy="90" r={R} fill="none" stroke="var(--line)" strokeWidth="1" />
             <circle
               cx="90"
               cy="90"
@@ -246,7 +333,11 @@ export function Preloader() {
         </div>
       </div>
 
-      <p className="relative font-mono text-xs text-muted">
+      <p
+        className={`relative font-mono text-xs text-muted transition-opacity duration-300 ${
+          readoutGone ? "opacity-0" : "opacity-100"
+        }`}
+      >
         <span className="text-accent">▸</span> {status}
       </p>
     </div>
