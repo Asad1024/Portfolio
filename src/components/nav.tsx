@@ -123,6 +123,9 @@ export function Nav() {
           >
             <span>&gt;_</span>
             <span className="hidden sm:inline">terminal</span>
+            {/* a hairline caret rather than a block one — the prompt still
+                looks live without a solid slab sitting in the header */}
+            <span aria-hidden className="caret-blink ml-px h-3.5 w-px bg-current" />
           </button>
 
           {/* hamburger — mobile only */}
