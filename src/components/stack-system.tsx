@@ -41,7 +41,7 @@ export function StackSystem() {
   }, []);
 
   return (
-    <section ref={ref} id="stack" className="relative overflow-hidden py-10">
+    <section ref={ref} id="stack" className="relative scroll-mt-24 overflow-hidden pb-6">
       <div className="mx-auto mb-2 flex max-w-6xl items-center gap-3 px-6 font-mono text-[10px] uppercase tracking-widest text-muted/70">
         <span className="term-green">◆ stack.orbital</span>
         <span className="h-px flex-1 bg-line" />
@@ -51,12 +51,12 @@ export function StackSystem() {
       {/* Masked at top and bottom: the canvas carries its own glow, so ending
           it at the section edge draws a hard seam across the page. */}
       <div
-        className="relative h-[68vh] min-h-[26rem] w-full"
+        className="relative h-[74vh] min-h-[30rem] w-full"
         style={{
           maskImage:
-            "linear-gradient(180deg, transparent 0%, black 12%, black 86%, transparent 100%)",
+            "linear-gradient(180deg, transparent 0%, black 3%, black 93%, transparent 100%)",
           WebkitMaskImage:
-            "linear-gradient(180deg, transparent 0%, black 12%, black 86%, transparent 100%)",
+            "linear-gradient(180deg, transparent 0%, black 3%, black 93%, transparent 100%)",
         }}
       >
         <SolarSystem paused={!inView} />

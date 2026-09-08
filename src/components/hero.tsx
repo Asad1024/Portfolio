@@ -41,7 +41,7 @@ export function Hero() {
   const at = (ms: number) => ({ transitionDelay: `${ms}ms` });
 
   return (
-    <section className="relative flex min-h-screen flex-col justify-center overflow-hidden px-6 pt-16">
+    <section className="relative flex min-h-[88vh] flex-col justify-center overflow-hidden px-6 pt-16">
       {/* The page's own starfield and nebula carry the background here. The
           only thing added is a soft glow behind the name, so the type has
           something to sit on without a second scene competing with it. */}

@@ -38,7 +38,7 @@ type Body = {
 function buildBodies(): Body[] {
   return featuredStack.map((tech, i) => {
     const shell = i % ORBITS;
-    const radius = 3.5 + shell * 1.22;
+    const radius = 3.8 + shell * 1.45;
     return {
       tech,
       color: techColor(tech),
@@ -511,7 +511,11 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
 
   return (
     <Canvas
-      camera={{ position: [0, 9, 24], fov: 48 }}
+      /* Close in and steeper. Distance sets how much of the band the system
+         fills; elevation sets how far the orbital plane opens up rather than
+         collapsing toward a line. At 24 units and 20 degrees it covered barely
+         a third of the height and read as a small thing in a large empty box. */
+      camera={{ position: [0, 12.5, 18], fov: 48 }}
       /* Stop the render loop entirely once the hero scrolls away. Left on
          "always" the scene keeps drawing twelve orbits behind every other
          section — burning battery and competing with the rest of the page for
