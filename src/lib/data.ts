@@ -1030,21 +1030,26 @@ export const capabilities = [
  *  this list is deliberately short: nine, each on its own visible orbit, one
  *  per surface I actually build on. Curated, not exhaustive — the full list
  *  lives in the Skills section. */
-export const featuredStack = [
-  "TypeScript",      // language
-  "React",           // web
-  "Next.js",         // framework
-  "Tailwind CSS",    // styling
-  "Node.js",         // runtime
-  "NestJS",          // services
-  "PostgreSQL",      // data
-  "MongoDB",         // documents
-  "Redis",           // cache + queues
-  "React Native",    // mobile
-  "Electron",        // desktop
-  "OpenAI · Gemini", // ai
-  "Twilio",          // telephony
-  "Stripe",          // payments
+/* The hero's orbit bands. Radius means one thing and always the same thing:
+   how far a technology sits from the code being written — the language and
+   runtime at the centre, the frameworks built on them next, and the services
+   those talk to furthest out. A new technology goes in the band its role
+   belongs to; the rule is only worth having if it survives the next one. */
+export type StackBand = {
+  band: "core" | "frameworks" | "services";
+  members: string[];
+};
+
+export const stackOrbits: StackBand[] = [
+  { band: "core", members: ["TypeScript", "Node.js"] },
+  {
+    band: "frameworks",
+    members: ["React", "Next.js", "NestJS", "React Native", "Electron", "Tailwind CSS"],
+  },
+  {
+    band: "services",
+    members: ["PostgreSQL", "MongoDB", "Redis", "Stripe", "Twilio", "OpenAI", "Gemini"],
+  },
 ];
 
 export const stackList = [

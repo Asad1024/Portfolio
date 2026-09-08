@@ -46,9 +46,15 @@ function destination(pathname: string) {
   if (pathname.startsWith("/work/")) {
     const slug = pathname.split("/")[2];
     const project = projects.find((p) => p.slug === slug);
-    return { name: project?.title ?? slug, sub: project?.platform ?? "case study" };
+    return {
+      name: project?.title ?? slug,
+      sub: project?.platform ?? "case study",
+      // a case study calls itself a body dossier; arriving at one should look
+      // like arriving at a body, not like a page transition
+      body: true,
+    };
   }
-  return { name: "asad", sub: "home" };
+  return { name: "asad", sub: "home", body: false };
 }
 
 export default function Template({ children }: { children: React.ReactNode }) {
@@ -76,7 +82,7 @@ function RouteVeil({
   const [lifting, setLifting] = useState(false);
   const [gone, setGone] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { name, sub } = destination(pathname);
+  const { name, sub, body } = destination(pathname);
 
   useEffect(() => {
     const lift = setTimeout(() => {
@@ -215,15 +221,39 @@ function RouteVeil({
         >
           <canvas ref={canvasRef} className="absolute inset-0 size-full" />
 
+          {/* Approaching a body: the reticle closes on it while the name
+              resolves out of the light. The home route gets the name alone —
+              there is nothing to lock onto, and a targeting frame around your
+              own front door reads as noise rather than arrival. */}
+          {body && (
+            <div
+              aria-hidden
+              className="lock-on absolute left-1/2 top-1/2 size-56 sm:size-72"
+            >
+              {[
+                "left-0 top-0 border-l-2 border-t-2",
+                "right-0 top-0 border-r-2 border-t-2",
+                "bottom-0 left-0 border-b-2 border-l-2",
+                "bottom-0 right-0 border-b-2 border-r-2",
+              ].map((pos) => (
+                <span key={pos} className={`absolute size-8 border-accent/70 ${pos}`} />
+              ))}
+            </div>
+          )}
+
           {/* the name resolves out of the light as you close on it */}
-          <div className="arrive absolute inset-0 flex flex-col items-center justify-center text-center"
-          >
+          <div className="arrive absolute inset-0 flex flex-col items-center justify-center text-center">
             <p className="font-sans text-2xl font-bold tracking-tight text-fg drop-shadow-[0_0_18px_var(--ring)] sm:text-3xl">
               {name}
             </p>
             <p className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.3em] text-fg/60">
               {sub}
             </p>
+            {body && (
+              <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.3em] text-accent/80">
+                ◆ lock acquired
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -95,11 +95,16 @@ export function Hero() {
           viewport edge on one side of the system and a gap to the type on the
           other, which read as lopsided margins.
 
+          Capped at 907px. As a bare percentage the system kept growing with
+          the window, so the layout inside it was only ever right at one width
+          — every crowding decision has to be made against a fixed box, and
+          this is that box.
+
           No edge mask and no post-processing pass, so the canvas is genuinely
           transparent and the page's own starfield and nebula read straight
           through it. */}
       <div
-        className={`absolute inset-x-0 bottom-0 h-[44%] transition-opacity duration-1000 md:inset-y-0 md:bottom-auto md:left-auto md:right-[2.5%] md:h-full md:w-[52%] ${fade}`}
+        className={`absolute inset-x-0 bottom-0 h-[44%] transition-opacity duration-1000 md:inset-y-0 md:bottom-auto md:left-auto md:right-[2.5%] md:h-full md:w-[52%] md:max-w-[907px] ${fade}`}
       >
         <SolarSystem paused={!inView} />
       </div>

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Stars } from "@react-three/drei";
 import * as THREE from "three";
-import { featuredStack } from "@/lib/data";
+import { stackOrbits, type StackBand } from "@/lib/data";
 import { techColor, techGlyph } from "../tech-icon";
 
 /* ── the hero solar system ──────────────────────────────────────────────────
@@ -20,83 +20,71 @@ import { techColor, techGlyph } from "../tech-icon";
    This file is only ever reached through a dynamic() import with ssr:false;
    WebGL has no meaning on the server and drei's Stars will throw there. */
 
-/** How many orbit lines are drawn. Fewer lines than technologies, so the
- *  busiest rings carry two — which buys back the radial room that fourteen
- *  separate rings had eaten. */
-const ORBIT_LINES = 11;
-/** Innermost orbit, and the gap to the next one out. */
-const MIN_RADIUS = 2.8;
-const RADIUS_STEP = 0.64;
+/* ── what a radius means ───────────────────────────────────────────────────
+   Distance from the star is a layer of the stack, and it reads the same way
+   every time: the further out a body sits, the further it is from the code
+   being written.
 
-/** Deterministic 0..1 from a string. Same value every load, so nothing
- *  reshuffles between renders or between server and client — "random" here
- *  means scattered, not actually unpredictable. */
-function hash01(s: string, salt = 0) {
-  let h = 2166136261 ^ salt;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return ((h >>> 0) % 100000) / 100000;
-}
+     core        the language and the runtime everything else is written on
+     frameworks  what the products are actually built with
+     services    what those products talk to
+
+   Anything added later goes in the band its role belongs to — the rule is
+   only worth having if it survives the next technology.
+
+   Radii, tilts and rates are render concerns and live here; which technology
+   belongs to which band is content and lives in data.ts. */
+const BANDS: Record<StackBand["band"], { radius: number; tilt: number; rate: number }> = {
+  core: { radius: 3.6, tilt: 0.14, rate: 1.0 },
+  frameworks: { radius: 5.3, tilt: -0.29, rate: 0.84 },
+  services: { radius: 7.1, tilt: 0.4, rate: 0.72 },
+};
+
+/** Clear of the corona's outer shell (1.5 × 1.75 × 0.9 = 2.36) with room to
+ *  spare, so nothing ever rides through the star. */
+const MIN_RADIUS = 3.2;
+
+/** One size for every body. Nothing else scales it but depth — see Planet. */
+const BODY_SIZE = 0.3;
 
 type Body = {
   tech: string;
   color: string;
-  size: number;
   radius: number;
   speed: number;
   phase: number;
   tilt: number;
 };
 
-/* Eleven orbit lines carrying fourteen technologies, so three rings hold two.
+/* Every body is placed by (band, index) and its position is solved from the
+   ring's own parametric equation in useFrame, so an icon cannot drift off the
+   ellipse drawn for it — there is only one definition of where the ring is.
 
-   Sharing a ring is only safe if it is done deliberately. A shared ring means
-   a shared speed, so two bodies on one hold whatever gap they start with
-   forever — which is what made an earlier version collide permanently, when
-   the phases happened to put a pair 19 degrees apart. Placed exactly opposite
-   each other they stay exactly opposite, which is stable and looks intended.
-
-   Tilt and rate therefore belong to the ring, not the body: bodies on one line
-   have to actually travel that line.
-
-   Inclination does the separating between neighbouring rings — orbits tilted
-   differently pull apart vertically even where their radii are close, which is
-   what stops the field reading as one flat disc. Everything is hashed, so the
-   arrangement looks arbitrary but is identical on every load and on both sides
-   of hydration. */
+   Angles are handed out evenly around the full circle rather than hashed:
+   scattering by hash is what left the bottom-left crowded and the right-hand
+   side empty. Each band starts at a different angle so the three do not line
+   up along one spoke. */
 function buildBodies(): Body[] {
-  // shuffle first so ring assignment doesn't track the order in data.ts
-  const order = [...featuredStack].sort((a, b) => hash01(a, 7) - hash01(b, 7));
-  const rings: string[][] = Array.from({ length: ORBIT_LINES }, () => []);
-  order.forEach((tech, i) => rings[i % ORBIT_LINES].push(tech));
+  return stackOrbits.flatMap((band, bandIndex) => {
+    const { radius, tilt, rate } = BANDS[band.band];
+    if (radius < MIN_RADIUS) throw new Error(`${band.band} orbits inside the star`);
 
-  return rings.flatMap((members, ring) => {
-    const radius = MIN_RADIUS + ring * RADIUS_STEP;
-    const key = `ring-${ring}`;
-    // Kepler sets the baseline — inner rings genuinely outrun outer ones — and
-    // each is then knocked off it so the field doesn't turn as one rigid disc.
-    // Rate only: direction is shared, never reversed.
-    const rate = 0.6 + hash01(key, 3) * 1.1;
-
-    return members.map((tech, m) => ({
+    return band.members.map((tech, i) => ({
       tech,
       color: techColor(tech),
-      size: 0.27 + hash01(tech, 11) * 0.1,
       radius,
-      // Negative, so the system turns counterclockwise seen from above the
-      // plane — the direction every planet in the real solar system travels.
-      // +z projects downward from a camera sitting above, so a positive rate
-      // would have run the whole field backwards.
+      tilt,
+      phase: (i / band.members.length) * Math.PI * 2 + bandIndex * 0.7,
+      // Kepler sets the baseline — inner bands genuinely outrun outer ones —
+      // and each band is knocked off it so the field doesn't turn as one
+      // rigid disc. Rate only: direction is shared, never reversed.
       speed: -(0.42 / Math.sqrt(radius)) * rate,
-      // spread this ring's own members evenly around it, and offset each ring
-      // so they don't all line up along one spoke
-      phase: (m / members.length) * Math.PI * 2 + ring * 2.399,
-      tilt: (hash01(key, 23) - 0.5) * 0.98,
     }));
   });
 }
+
+/** Sprite size of the halo, and the value a flare scales up from. */
+const HALO_SIZE = 11.5;
 
 /* ── sun ────────────────────────────────────────────────────────────────── */
 
@@ -166,19 +154,6 @@ const SURFACE_FRAG = /* glsl */ `
 /* Fresnel rim, brightest where the sphere turns away from the camera, with a
    slow breathing pulse. Additive + BackSide so it reads as atmosphere around
    the core rather than a shell in front of it. */
-const CORONA_FRAG = /* glsl */ `
-  uniform vec3  uColor;
-  uniform float uTime;
-  uniform float uPower;
-  varying vec3  vNormal;
-  varying vec3  vView;
-  void main() {
-    vec3  view  = normalize(vView);
-    float fres  = 1.0 - abs(dot(view, normalize(vNormal)));
-    float pulse = 0.82 + 0.18 * sin(uTime * 1.4);
-    gl_FragColor = vec4(uColor, pow(fres, uPower) * pulse);
-  }
-`;
 
 /* Both colours sit close to, but mostly within, 1.0. They used to be pushed
    several times over so a bloom pass had something to catch; with the glow
@@ -211,10 +186,21 @@ function glowTexture(color: string) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-  g.addColorStop(0, "rgba(255,255,255,0.95)");
-  g.addColorStop(0.12, `rgba(${rgb},0.8)`);
-  g.addColorStop(0.3, `rgba(${rgb},0.34)`);
-  g.addColorStop(0.6, `rgba(${rgb},0.07)`);
+  /* One continuous falloff to zero alpha, and nothing drawn on top of it.
+     Two back-side corona shells used to sit over this, and a sphere's alpha
+     necessarily stops at its own silhouette — so each shell ended on a hard
+     circle and the star wore two or three concentric rims. A gradient has no
+     silhouette to stop at.
+
+     The curve is deliberately front-loaded: bright core, quick shoulder, then
+     a long tail that is nearly gone by 55% of the sprite. That is what keeps
+     the innermost band clear of the glare rather than swimming in it. */
+  g.addColorStop(0.0, "rgba(255,255,255,0.95)");
+  g.addColorStop(0.08, `rgba(${rgb},0.85)`);
+  g.addColorStop(0.16, `rgba(${rgb},0.42)`);
+  g.addColorStop(0.26, `rgba(${rgb},0.17)`);
+  g.addColorStop(0.4, `rgba(${rgb},0.06)`);
+  g.addColorStop(0.62, `rgba(${rgb},0.015)`);
   g.addColorStop(1, `rgba(${rgb},0)`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 256, 256);
@@ -223,8 +209,25 @@ function glowTexture(color: string) {
   return tex;
 }
 
+/** How long a flare takes to fall back to nothing, in seconds. */
+const FLARE_DECAY = 1.4;
+
 function Sun({ color }: { color: string }) {
   const core = useRef<THREE.Mesh>(null);
+  const halo = useRef<THREE.Sprite>(null);
+  const lamp = useRef<THREE.PointLight>(null);
+
+  /* Kept in a ref, not state: a flare is a value that changes every frame for
+     a second and a half, and routing that through React would re-render the
+     scene sixty times to say the star is slightly brighter. */
+  const flare = useRef(0);
+  useEffect(() => {
+    const onCommand = () => {
+      flare.current = 1;
+    };
+    window.addEventListener("shell-command", onCommand);
+    return () => window.removeEventListener("shell-command", onCommand);
+  }, []);
   const glow = useMemo(() => glowTexture(color), [color]);
   useEffect(() => () => glow?.dispose(), [glow]);
 
@@ -235,8 +238,6 @@ function Sun({ color }: { color: string }) {
      genuinely harder to reason about; going through the material keeps every
      write outside of render. */
   const surfaceMat = useRef<THREE.ShaderMaterial>(null);
-  const innerMat = useRef<THREE.ShaderMaterial>(null);
-  const outerMat = useRef<THREE.ShaderMaterial>(null);
 
   const surfaceUniforms = useMemo(
     () => ({
@@ -246,40 +247,34 @@ function Sun({ color }: { color: string }) {
     }),
     [color],
   );
-  const innerUniforms = useMemo(
-    () => ({
-      uColor: { value: new THREE.Color(color) },
-      uTime: { value: 0 },
-      uPower: { value: 2.6 },
-    }),
-    [color],
-  );
-  const outerUniforms = useMemo(
-    () => ({
-      uColor: { value: new THREE.Color(color) },
-      uTime: { value: 0 },
-      uPower: { value: 4.2 },
-    }),
-    [color],
-  );
-
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
     if (surfaceMat.current) surfaceMat.current.uniforms.uTime.value = t;
-    if (innerMat.current) innerMat.current.uniforms.uTime.value = t;
-    if (outerMat.current) outerMat.current.uniforms.uTime.value = t;
     if (core.current) core.current.rotation.y = t * 0.05;
+
+    /* Decays on wall-clock delta rather than frame count, so a flare lasts
+       the same second and a half on a 60Hz screen and a 144Hz one. Eased
+       cubically: a flare should go off hard and fade slowly, not ramp down
+       linearly like a dimmer. */
+    if (flare.current > 0) {
+      flare.current = Math.max(0, flare.current - delta / FLARE_DECAY);
+      const f = flare.current * flare.current * flare.current;
+      if (halo.current) halo.current.scale.setScalar(HALO_SIZE * (1 + f * 0.34));
+      if (lamp.current) lamp.current.intensity = 220 + f * 460;
+      if (core.current) core.current.scale.setScalar(1 + f * 0.06);
+    }
   });
 
   return (
     <group>
-      {/* Everything the star is made of scales together, so the corona shells
-          keep their relationship to the core and the bloom keeps its
-          relationship to both. The light stays outside it: its reach is in
+      {/* The star is two things and only two: a photosphere that writes
+          depth, so bodies genuinely pass behind it, and one gradient halo
+          above it. They scale together so the bloom keeps its relationship to
+          the sphere. The light stays outside that scaling — its reach is in
           world units and has nothing to do with how big the sphere looks. */}
       <group scale={0.9}>
         {glow && (
-          <sprite scale={[14, 14, 1]} raycast={() => null}>
+          <sprite ref={halo} scale={[HALO_SIZE, HALO_SIZE, 1]} raycast={() => null}>
             <spriteMaterial
               map={glow}
               transparent
@@ -300,39 +295,104 @@ function Sun({ color }: { color: string }) {
             toneMapped={false}
           />
         </mesh>
-
-        {/* two corona shells at different falloffs = a soft, layered edge */}
-        <mesh scale={1.28}>
-          <sphereGeometry args={[1.5, 48, 48]} />
-          <shaderMaterial
-            vertexShader={CORONA_VERT}
-            fragmentShader={CORONA_FRAG}
-            ref={innerMat}
-            uniforms={innerUniforms}
-            transparent
-            blending={THREE.AdditiveBlending}
-            side={THREE.BackSide}
-            depthWrite={false}
-          />
-        </mesh>
-        <mesh scale={1.75}>
-          <sphereGeometry args={[1.5, 32, 32]} />
-          <shaderMaterial
-            vertexShader={CORONA_VERT}
-            fragmentShader={CORONA_FRAG}
-            ref={outerMat}
-            uniforms={outerUniforms}
-            transparent
-            blending={THREE.AdditiveBlending}
-            side={THREE.BackSide}
-            depthWrite={false}
-          />
-        </mesh>
       </group>
 
-      <pointLight intensity={220} distance={90} decay={2} color={color} />
+      <pointLight ref={lamp} intensity={220} distance={90} decay={2} color={color} />
     </group>
   );
+}
+
+type LabelSide = "below" | "above";
+
+const FULL = new THREE.Color("#ffffff");
+const RECEDED = new THREE.Color("#5a6b7a");
+const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+
+/* Labels are baked into each body's texture, so a label can only be on one of
+   two sides — and which side is free depends on where every other body has
+   drifted to. This runs the check in screen space, which is the only place
+   "overlapping" means anything: two bodies far apart in the world can print
+   their names on top of each other, which is what put "TypeScript" underneath
+   the Next.js icon.
+
+   Four times a second, not every frame. The bodies move slowly enough that a
+   250ms cadence is invisible, and a texture swap is not something to do at
+   60Hz. Bodies are resolved nearest-first so the one in front keeps the side
+   it wants and the one behind moves. */
+function LabelPass({
+  bodies,
+  positions,
+  onResolve,
+}: {
+  bodies: Body[];
+  positions: React.RefObject<Map<string, THREE.Vector3>>;
+  onResolve: (sides: Record<string, LabelSide>) => void;
+}) {
+  const next = useRef(0);
+  const scratch = useRef(new THREE.Vector3());
+
+  useFrame((state) => {
+    if (state.clock.elapsedTime < next.current) return;
+    next.current = state.clock.elapsedTime + 0.25;
+
+    const { camera, size } = state;
+    const seen: { x: number; y: number; depth: number; tech: string }[] = [];
+
+    for (const b of bodies) {
+      const at = positions.current.get(b.tech);
+      if (!at) continue;
+      const p = scratch.current.copy(at).project(camera);
+      seen.push({
+        x: ((p.x + 1) / 2) * size.width,
+        y: ((1 - p.y) / 2) * size.height,
+        depth: p.z,
+        tech: b.tech,
+      });
+    }
+
+    // nearest first: the body in front states its preference, the one behind
+    // is the one that has to give way
+    seen.sort((a, b) => a.depth - b.depth);
+
+    /* Boxes for both halves of a body, because a label does not only collide
+       with other labels — the thing that put the OpenAI mark across the word
+       "React" was an icon landing on a label, and a pass that only compares
+       labels to labels cannot see that at all. Every body contributes two
+       rectangles, and a candidate side is scored against all of them. */
+    const LABEL_W = 96;
+    const LABEL_H = 15;
+    const ICON_W = 34;
+    const ICON_H = 34;
+    const OFFSET = 30;
+
+    type Box = { x: number; y: number; w: number; h: number };
+    const taken: Box[] = [];
+    const sides: Record<string, LabelSide> = {};
+
+    const hits = (a: Box) =>
+      taken.filter(
+        (b) =>
+          Math.abs(a.x - b.x) < (a.w + b.w) / 2 &&
+          Math.abs(a.y - b.y) < (a.h + b.h) / 2,
+      ).length;
+
+    for (const s of seen) {
+      const icon: Box = { x: s.x, y: s.y, w: ICON_W, h: ICON_H };
+      const below: Box = { x: s.x, y: s.y + OFFSET, w: LABEL_W, h: LABEL_H };
+      const above: Box = { x: s.x, y: s.y - OFFSET, w: LABEL_W, h: LABEL_H };
+
+      // the icon's own overlaps are unavoidable — it cannot move off its
+      // orbit — so only the label's side is decided here, against everything
+      // already placed, icons included
+      const side: LabelSide = hits(below) <= hits(above) ? "below" : "above";
+      sides[s.tech] = side;
+      taken.push(icon, side === "below" ? below : above);
+    }
+
+    onResolve(sides);
+  });
+
+  return null;
 }
 
 /* ── orbits + planets ───────────────────────────────────────────────────── */
@@ -372,36 +432,61 @@ const ICON_PX = 96;
  *  glyph itself lands at a predictable world size. */
 const ICON_FRACTION = ICON_PX / CANVAS_H;
 
-function useGlyphTexture(tech: string, color: string, labelColor: string) {
+/* A handful of brand marks are a filled tile with the wordmark knocked out
+   of it, which puts a solid coloured square next to fourteen bare glyphs.
+   Drawn as their letters instead, in the same brand colour, so every body on
+   screen is a mark on transparent background and nothing carries a backdrop
+   the others don't. */
+const LETTERFORMS: Record<string, string> = { TypeScript: "TS" };
+
+function useGlyphTexture(
+  tech: string,
+  color: string,
+  labelColor: string,
+  side: LabelSide,
+) {
   const texture = useMemo(() => {
-    const glyph = techGlyph(tech);
-    if (!glyph) return null;
+    const letters = LETTERFORMS[tech];
+    const glyph = letters ? null : techGlyph(tech);
+    if (!glyph && !letters) return null;
     const canvas = document.createElement("canvas");
     canvas.width = CANVAS_W;
     canvas.height = CANVAS_H;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
-    // glyph, centred across the top
+    // the icon occupies the same box for every technology; only the label
+    // moves, and it moves to whichever side is free
+    const iconTop = side === "below" ? 6 : CANVAS_H - ICON_PX - 6;
+
     ctx.save();
-    const scale = ICON_PX / 24;
-    ctx.translate((CANVAS_W - ICON_PX) / 2, 6);
-    ctx.scale(scale, scale);
-    const path = new Path2D(glyph.path);
-    if (glyph.stroked) {
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.9;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      ctx.stroke(path);
-    } else {
+    ctx.translate(0, iconTop);
+    if (letters) {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
       ctx.fillStyle = color;
-      ctx.fill(path);
+      ctx.font = `700 ${Math.round(ICON_PX * 0.62)}px "JetBrains Mono", ui-monospace, monospace`;
+      ctx.fillText(letters, CANVAS_W / 2, ICON_PX / 2);
+    } else {
+      const scale = ICON_PX / 24;
+      ctx.translate((CANVAS_W - ICON_PX) / 2, 0);
+      ctx.scale(scale, scale);
+      const path = new Path2D(glyph!.path);
+      if (glyph!.stroked) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.9;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.stroke(path);
+      } else {
+        ctx.fillStyle = color;
+        ctx.fill(path);
+      }
     }
     ctx.restore();
 
-    // name underneath, shrunk to fit rather than clipped — "OpenAI · Gemini"
-    // and "React Native" are both wider than the icon
+    // name on the free side, shrunk to fit rather than clipped — "React
+    // Native" and "Tailwind CSS" are both wider than the icon
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = labelColor;
@@ -421,14 +506,15 @@ function useGlyphTexture(tech: string, color: string, labelColor: string) {
     ctx.strokeStyle = "rgba(4, 5, 10, 0.92)";
     ctx.lineWidth = 5;
     ctx.lineJoin = "round";
-    ctx.strokeText(tech, CANVAS_W / 2, ICON_PX + 32);
-    ctx.fillText(tech, CANVAS_W / 2, ICON_PX + 32);
+    const labelY = side === "below" ? ICON_PX + 32 : 22;
+    ctx.strokeText(tech, CANVAS_W / 2, labelY);
+    ctx.fillText(tech, CANVAS_W / 2, labelY);
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
     return tex;
-  }, [tech, color, labelColor]);
+  }, [tech, color, labelColor, side]);
 
   // textures hold GPU memory; a theme swap rebuilds them, so release the old
   useEffect(() => () => texture?.dispose(), [texture]);
@@ -441,38 +527,63 @@ function Planet({
   hovered,
   onHover,
   labelColor,
+  side,
+  report,
 }: {
   body: Body;
   hovered: boolean;
   onHover: (tech: string | null) => void;
   labelColor: string;
+  side: LabelSide;
+  /** hands this body's world position to the label pass each frame */
+  report: (tech: string, at: THREE.Vector3) => void;
 }) {
   const group = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Object3D>(null);
-  const texture = useGlyphTexture(body.tech, body.color, labelColor);
+  const material = useRef<THREE.SpriteMaterial>(null);
+  const texture = useGlyphTexture(body.tech, body.color, labelColor, side);
 
   // Sized from the glyph, not the sprite: the sprite is mostly transparent
   // padding and label, so scaling it directly makes the icons far bigger than
   // intended. Solve for the sprite height that lands the icon at iconWorld.
-  const iconWorld = body.size * 2.5;
+  const iconWorld = BODY_SIZE * 2.5;
   const spriteH = iconWorld / ICON_FRACTION;
   const spriteW = spriteH * (CANVAS_W / CANVAS_H);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     const a = body.phase + t * body.speed;
-    if (group.current) {
-      group.current.position.set(
-        Math.cos(a) * body.radius,
-        Math.sin(a) * body.radius * Math.sin(body.tilt),
-        Math.sin(a) * body.radius * Math.cos(body.tilt),
-      );
+    if (!group.current) return;
+
+    /* The one definition of where this body is: the parametric point on its
+       own ring, at its own angle. OrbitPath draws the same curve from the
+       same radius and tilt, so the two cannot disagree. */
+    group.current.position.set(
+      Math.cos(a) * body.radius,
+      Math.sin(a) * body.radius * Math.sin(body.tilt),
+      Math.sin(a) * body.radius * Math.cos(body.tilt),
+    );
+    report(body.tech, group.current.position);
+
+    /* Depth is the only thing that changes a body's size or brightness. The
+       far half of a ring is further from the camera than the star is, so it
+       reads as being behind it — dimmer and smaller — and the near half comes
+       forward at full strength. The star's own sphere writes depth, so the
+       bodies genuinely pass behind it rather than being faded by hand. */
+    const distance = group.current.position.distanceTo(state.camera.position);
+    const centre = state.camera.position.length();
+    const depth = clamp01((centre + body.radius - distance) / (2 * body.radius));
+
+    if (material.current) {
+      material.current.opacity = hovered ? 1 : 0.5 + depth * 0.42;
+      // multiplying toward a cool grey rather than tinting: what recedes
+      // should lose presence, not gain a colour
+      material.current.color.lerpColors(RECEDED, FULL, 0.35 + depth * 0.65);
     }
+
     if (mesh.current) {
-      // sprites always face the camera, so there's nothing to spin — only the
-      // fallback sphere gets a rotation
       if (!texture) mesh.current.rotation.y = t * 0.6;
-      const target = hovered ? 1.25 : 1;
+      const target = (0.84 + depth * 0.32) * (hovered ? 1.25 : 1);
       // eased toward target rather than snapped, so hover feels physical
       mesh.current.scale.lerp(new THREE.Vector3(target, target, target), 0.14);
     }
@@ -490,7 +601,7 @@ function Planet({
         }}
         onPointerOut={() => onHover(null)}
       >
-        <sphereGeometry args={[body.size * 2.8, 12, 12]} />
+        <sphereGeometry args={[BODY_SIZE * 2.8, 12, 12]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
@@ -502,16 +613,16 @@ function Planet({
         {texture ? (
           <sprite scale={[spriteW, spriteH, 1]} raycast={() => null}>
             <spriteMaterial
+              ref={material}
               map={texture}
               transparent
               toneMapped={false}
               depthWrite={false}
-              opacity={hovered ? 1 : 0.88}
             />
           </sprite>
         ) : (
           <mesh raycast={() => null}>
-            <sphereGeometry args={[body.size, 32, 32]} />
+            <sphereGeometry args={[BODY_SIZE, 32, 32]} />
             <meshStandardMaterial
               color={body.color}
               roughness={0.62}
@@ -525,7 +636,7 @@ function Planet({
 
       {hovered && (
         <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[body.size * 2.6, body.size * 2.72, 64]} />
+          <ringGeometry args={[BODY_SIZE * 2.6, BODY_SIZE * 2.72, 64]} />
           <meshBasicMaterial color="#ffffff" transparent opacity={0.75} side={THREE.DoubleSide} />
         </mesh>
       )}
@@ -549,6 +660,25 @@ function Scene({
   onHover: (tech: string | null) => void;
   hovered: string | null;
 }) {
+  /* Written every frame by the bodies, read four times a second by the label
+     pass. A ref rather than state: this is a channel between two things
+     inside the canvas, and routing it through React would re-render the
+     whole scene sixty times a second to say nothing new. */
+  const positions = useRef(new Map<string, THREE.Vector3>());
+  const report = useCallback((tech: string, at: THREE.Vector3) => {
+    const held = positions.current.get(tech);
+    if (held) held.copy(at);
+    else positions.current.set(tech, at.clone());
+  }, []);
+
+  const [sides, setSides] = useState<Record<string, LabelSide>>({});
+  const onResolve = useCallback((resolved: Record<string, LabelSide>) => {
+    setSides((prev) => {
+      const changed = Object.keys(resolved).some((k) => prev[k] !== resolved[k]);
+      return changed ? resolved : prev;
+    });
+  }, []);
+
   /* Shells are shared between technologies, so rings are drawn from the
      deduplicated set — one per shell — rather than one per body, which would
      stack a dozen coincident rings and blow out their opacity. */
@@ -574,8 +704,12 @@ function Scene({
           hovered={hovered === b.tech}
           onHover={onHover}
           labelColor={labelColor}
+          side={sides[b.tech] ?? "below"}
+          report={report}
         />
       ))}
+
+      <LabelPass bodies={bodies} positions={positions} onResolve={onResolve} />
 
       <Stars radius={110} depth={55} count={1500} factor={3.6} saturation={0} fade speed={0.5} />
 
@@ -626,10 +760,15 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
          larger than the far half, so every ellipse hung below the star with
          its top edge crushed toward it. Narrowing to 34° flattens that
          near/far difference — the standard long-lens trick — and the camera
-         moves out from 27.9 to 40.6 to keep the visible height identical, so
-         the system fills the same space while sitting evenly around the
-         star. */
-      camera={{ position: [0, 27.45, 29.95], fov: 34 }}
+         moves out to keep the visible height identical, so the system fills
+         the same space while sitting evenly around the star.
+
+         Distance is 36 for an outermost ring of 7.1: half the visible height
+         is 36·tan(17°) = 11.0, and the widest thing on screen is that ring
+         plus an icon, about 7.6 — so every ellipse closes inside the canvas
+         at any aspect down to 0.69, instead of the outer ones running off the
+         edge as they did when the bands reached 9.2. */
+      camera={{ position: [0, 24.32, 26.53], fov: 34 }}
       /* Stop the render loop entirely once the hero scrolls away. Left on
          "always" the scene keeps drawing twelve orbits behind every other
          section — burning battery and competing with the rest of the page for

@@ -211,6 +211,12 @@ export function Terminal() {
       }
 
       setLines((l) => [...l, ...out]);
+      /* The star flares when the shell is used. The two showpieces on this
+         page had nothing to do with each other — a terminal that happened to
+         sit in front of a solar system — and one event is enough to make them
+         the same machine. Fired for real commands only; an empty line is not
+         an event. */
+      if (cmd) window.dispatchEvent(new CustomEvent("shell-command"));
       if (cmd) setHistory((h) => [cmd, ...h]);
       setHistIdx(-1);
       setValue("");

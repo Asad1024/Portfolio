@@ -149,9 +149,13 @@ const FALLBACKS: Record<string, string> = {
     "M22 11V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8M2 10h20M18 13l-3 4.5h4L16 22",
   "JazzCash · PayFast":
     "M21 9V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2M22 9h-6a3 3 0 0 0 0 6h6V9z",
-  // six-point spark
+  /* A hexagonal knot, not a spark. simple-icons carries no OpenAI mark, and
+     the spark this replaces was the same four-pointed shape as Google
+     Gemini's real logo — the two sat on neighbouring orbits looking like the
+     same company twice. Two nested hexagons read as OpenAI's rosette at a
+     glance and, more to the point, cannot be mistaken for the spark. */
   OpenAI:
-    "M12 2.5l1.6 6.3 6.3 1.6-6.3 1.6L12 18.3l-1.6-6.3L4.1 10.4l6.3-1.6L12 2.5z",
+    "M12 2.6l8.1 4.7v9.4L12 21.4 3.9 16.7V7.3L12 2.6z M12 7.4l3.9 2.3v4.6L12 16.6l-3.9-2.3V9.7L12 7.4z",
   // stacked coins
   "Credit-based usage":
     "M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6",
