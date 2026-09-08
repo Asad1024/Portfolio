@@ -109,24 +109,22 @@ export function Nav() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* The terminal, not the palette. It is the thing that makes this
-              site feel like this site, and it opens with its commands already
-              on screen as chips — one of which hands you the palette — so it
-              is a way in rather than a blank prompt you have to know already.
-              No pill around it: in a header of plain links, a bordered button
-              was the loudest thing on the page. Green is enough. */}
-          <button
-            aria-label="Open terminal"
-            title="Terminal — `"
-            onClick={() => window.dispatchEvent(new CustomEvent("open-terminal"))}
-            className="term-pill flex h-9 items-center gap-1.5 font-mono text-xs"
-          >
-            <span>&gt;_</span>
-            <span className="hidden sm:inline">terminal</span>
-            {/* a hairline caret rather than a block one — the prompt still
-                looks live without a solid slab sitting in the header */}
-            <span aria-hidden className="caret-blink ml-px h-3.5 w-px bg-current" />
-          </button>
+          {/* Set exactly like the wordmark opposite it — cyan sigil, plain
+              word, blinking cyan underscore. The two ends of the header are
+              the same kind of object then: one is where you are, the other is
+              what you can talk to. */}
+          <Magnetic>
+            <button
+              aria-label="Open terminal"
+              title="Terminal — `"
+              onClick={() => window.dispatchEvent(new CustomEvent("open-terminal"))}
+              className="group flex h-9 items-center font-mono text-sm tracking-tight"
+            >
+              <span className="text-accent">&gt;_</span>
+              <span className="ml-1.5 transition-colors group-hover:text-accent">terminal</span>
+              <span className="caret-blink text-accent">_</span>
+            </button>
+          </Magnetic>
 
           {/* hamburger — mobile only */}
           <button

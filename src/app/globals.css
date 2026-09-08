@@ -205,19 +205,6 @@ body::after {
   text-shadow: 0 0 22px color-mix(in oklab, var(--accent) 55%, transparent);
 }
 
-/* ── orbital shell ──────────────────────────────────────────────────────────
-   The terminal is the only green surface on the site, so its trigger in the
-   header and the console it opens are lit the same way: a hairline in green,
-   a faint wash behind it, and a bloom that comes up on hover. */
-.term-pill {
-  color: color-mix(in oklab, var(--green) 88%, transparent);
-  transition: color 0.2s ease, text-shadow 0.2s ease;
-}
-.term-pill:hover {
-  color: var(--green);
-  text-shadow: 0 0 14px color-mix(in oklab, var(--green) 70%, transparent);
-}
-
 /* a handful of stars behind the panels. Two layers at different sizes so the
    field does not read as a repeating tile at the size a dialog actually is. */
 .hull-stars {
