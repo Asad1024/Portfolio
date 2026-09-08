@@ -601,8 +601,10 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
       /* Framed for the hero's right-hand column, which is near square rather
          than letterboxed. Distance sets how much of that column the system
          fills; elevation sets how far the orbital plane opens up instead of
-         collapsing toward a line. */
-      camera={{ position: [0, 15, 21], fov: 48 }}
+         collapsing toward a line. Both were scaled by the same 8% to pull the
+         system in a little — the ratio is what holds the tilt, so moving one
+         without the other would flatten the plane rather than shrink it. */
+      camera={{ position: [0, 16.2, 22.7], fov: 48 }}
       /* Stop the render loop entirely once the hero scrolls away. Left on
          "always" the scene keeps drawing twelve orbits behind every other
          section — burning battery and competing with the rest of the page for
