@@ -75,11 +75,17 @@ export function Hero() {
       className="relative flex min-h-screen items-center overflow-hidden"
     >
       {/* The system owns the right half on desktop and the lower band on
-          mobile — never the same pixels as the type. No edge mask and no
-          post-processing pass, so the canvas is genuinely transparent and the
-          page's own starfield and nebula read straight through it. */}
+          mobile — never the same pixels as the type.
+
+          Inset from the right edge rather than flush to it. Flush put a hard
+          viewport edge on one side of the system and a gap to the type on the
+          other, which read as lopsided margins.
+
+          No edge mask and no post-processing pass, so the canvas is genuinely
+          transparent and the page's own starfield and nebula read straight
+          through it. */}
       <div
-        className={`absolute inset-x-0 bottom-0 h-[44%] transition-opacity duration-1000 md:inset-y-0 md:bottom-auto md:left-auto md:right-0 md:h-full md:w-[54%] ${fade}`}
+        className={`absolute inset-x-0 bottom-0 h-[44%] transition-opacity duration-1000 md:inset-y-0 md:bottom-auto md:left-auto md:right-[2.5%] md:h-full md:w-[52%] ${fade}`}
       >
         <SolarSystem paused={!inView} />
       </div>

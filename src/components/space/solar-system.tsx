@@ -25,8 +25,8 @@ import { techColor, techGlyph } from "../tech-icon";
  *  separate rings had eaten. */
 const ORBIT_LINES = 11;
 /** Innermost orbit, and the gap to the next one out. */
-const MIN_RADIUS = 3.0;
-const RADIUS_STEP = 0.72;
+const MIN_RADIUS = 2.8;
+const RADIUS_STEP = 0.64;
 
 /** Deterministic 0..1 from a string. Same value every load, so nothing
  *  reshuffles between renders or between server and client — "random" here
