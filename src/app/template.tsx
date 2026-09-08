@@ -1,42 +1,45 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { projects } from "@/lib/data";
 
-/* ── route change: a jump ───────────────────────────────────────────────────
-   Stars stretch into streaks, hold, and snap back as the destination arrives.
-   This replaces a terminal task list, which was fine writing but described a
-   filesystem on a site about orbits — and made every navigation wait out five
-   ticked-off steps for something that has already loaded.
+/* ── route change: an orbital transfer ──────────────────────────────────────
+   A trajectory draws itself between two bodies while a craft runs it, and the
+   destination lights up as it arrives.
 
-   It is also half the length: 1.1s against 2.3s. A transition is a cut, not a
-   loading screen; the page underneath is ready long before either finishes.
+   It echoes the first-visit loader deliberately — a lit body travelling a
+   curve toward something — so the two curtains read as one system rather than
+   two unrelated effects. It is also literally what a navigation is: you were
+   there, now you are here.
 
    Everything the page depends on is CSS-transition driven, not animated in
-   JS. A throttled tab starves requestAnimationFrame, and the veil — and the
-   content behind it — must never be left stranded at opacity 0 because of it.
-   The streaks are the only rAF work, and they are decoration: if that loop
-   never runs, the veil still lifts on its timer. */
+   JS. A throttled tab starves requestAnimationFrame, and neither the veil nor
+   the content behind it may be stranded at opacity 0 because of that. The
+   trajectory is pure CSS for the same reason: there is no loop to starve. */
 
-const HOLD_MS = 620;
-const FADE_MS = 420;
+const HOLD_MS = 1250;
+const FADE_MS = 550;
 const TOTAL_MS = HOLD_MS + FADE_MS;
-const STREAKS = 220;
+
+/** Shared by the drawn path and the craft's offset-path, so the curve and the
+ *  thing running it can never disagree. */
+const TRAJECTORY = "M 54 96 Q 200 12 346 96";
 
 function destination(pathname: string) {
   if (pathname.startsWith("/work/")) {
     const slug = pathname.split("/")[2];
-    return projects.find((p) => p.slug === slug)?.title ?? slug;
+    const project = projects.find((p) => p.slug === slug);
+    return { name: project?.title ?? slug, sub: project?.platform ?? "case study" };
   }
-  return "home";
+  return { name: "asad", sub: "home" };
 }
 
 export default function Template({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [lifting, setLifting] = useState(false);
   const [gone, setGone] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { name, sub } = destination(pathname);
 
   useEffect(() => {
     setLifting(false);
@@ -50,59 +53,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
     }, HOLD_MS);
     const clear = setTimeout(() => setGone(true), TOTAL_MS);
 
-    let raf = 0;
-    let cancelled = false;
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-
-    if (canvas && ctx && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const cx = w / 2;
-      const cy = h / 2;
-      const reach = Math.hypot(w, h) * 0.5;
-
-      const stars = Array.from({ length: STREAKS }, () => ({
-        a: Math.random() * Math.PI * 2,
-        // biased outward, so the field reads as depth rather than a ring
-        d: Math.pow(Math.random(), 0.55),
-        len: 0.05 + Math.random() * 0.3,
-      }));
-
-      const start = performance.now();
-      const draw = (now: number) => {
-        if (cancelled) return;
-        const t = Math.min(1, (now - start) / TOTAL_MS);
-        // accelerate away, then decelerate into the destination
-        const speed = Math.sin(t * Math.PI);
-        ctx.clearRect(0, 0, w, h);
-        ctx.lineCap = "round";
-
-        for (const s of stars) {
-          const near = s.d * reach + speed * reach * 0.55;
-          const far = near + s.len * reach * speed;
-          const ca = Math.cos(s.a);
-          const sa = Math.sin(s.a);
-          ctx.strokeStyle = `rgba(255,255,255,${0.06 + speed * 0.5})`;
-          ctx.lineWidth = 0.6 + speed * 0.9;
-          ctx.beginPath();
-          ctx.moveTo(cx + ca * near, cy + sa * near);
-          ctx.lineTo(cx + ca * far, cy + sa * far);
-          ctx.stroke();
-        }
-
-        if (t < 1) raf = requestAnimationFrame(draw);
-      };
-      raf = requestAnimationFrame(draw);
-    }
-
     return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf);
       clearTimeout(lift);
       clearTimeout(clear);
     };
@@ -124,17 +75,62 @@ export default function Template({ children }: { children: React.ReactNode }) {
       {!gone && (
         <div
           aria-hidden
-          className={`pointer-events-none fixed inset-0 z-[120] bg-bg transition-opacity ease-out ${
+          className={`pointer-events-none fixed inset-0 z-[120] flex items-center justify-center bg-bg transition-opacity ease-out ${
             lifting ? "opacity-0" : "opacity-100"
           }`}
           style={{ transitionDuration: `${FADE_MS}ms` }}
         >
-          <canvas ref={canvasRef} className="absolute inset-0 size-full" />
-
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="font-mono text-[11px] uppercase tracking-[0.35em] text-muted">
-              <span className="text-accent">↯</span> {destination(pathname)}
+          {/* keyed on the route so the whole sequence restarts on every
+              navigation rather than holding its finished state */}
+          <div key={pathname} className="w-[25rem] max-w-[86vw] px-6">
+            <p className="mb-2 text-center font-mono text-[10px] uppercase tracking-[0.35em] text-muted/60">
+              transfer orbit
             </p>
+
+            <svg viewBox="0 0 400 120" className="w-full overflow-visible">
+              {/* the full course, faint */}
+              <path
+                d={TRAJECTORY}
+                fill="none"
+                stroke="var(--line)"
+                strokeWidth="1"
+                strokeDasharray="2 6"
+              />
+              {/* the part already flown */}
+              <path
+                className="trace-path"
+                d={TRAJECTORY}
+                pathLength={1}
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+
+              {/* origin */}
+              <circle cx="54" cy="96" r="3" fill="var(--muted)" />
+
+              {/* destination — its ring closes as the craft lands */}
+              <circle
+                cx="346"
+                cy="96"
+                r="7"
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth="1"
+                className="arrive"
+                style={{ transformOrigin: "346px 96px" }}
+              />
+              <circle cx="346" cy="96" r="2.5" fill="var(--accent)" />
+
+              {/* the craft, running the same curve the path describes */}
+              <circle className="run-path" r="3.5" fill="var(--fg)" />
+            </svg>
+
+            <div className="mt-1 text-center">
+              <p className="font-sans text-lg font-bold tracking-tight">{name}</p>
+              <p className="mt-0.5 font-mono text-[10px] text-muted">{sub}</p>
+            </div>
           </div>
         </div>
       )}
