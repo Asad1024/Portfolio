@@ -260,7 +260,9 @@ export function Terminal() {
           {/* The console is hardware on a ship, not a window on a laptop: no
               traffic lights, no title bar pretending to be zsh. Hull plating,
               corner brackets, a live reactor light and a sweep that keeps
-              crossing it — every part of the chrome says "instrument". */}
+              crossing it — every part of the chrome says "instrument". It is the
+              same instrument as the nav computer, lit the same cyan, running a
+              different program. */}
           <motion.div
             initial={{ y: 40, scale: 0.98, opacity: 0 }}
             animate={{ y: 0, scale: 1, opacity: 1 }}
@@ -268,9 +270,9 @@ export function Terminal() {
             transition={{ duration: 0.25, ease: [0.21, 0.6, 0.35, 1] }}
             className="relative flex h-[28rem] w-full max-w-2xl flex-col overflow-hidden rounded-lg border bg-[#04070a]/95 backdrop-blur-xl"
             style={{
-              borderColor: "color-mix(in oklab, var(--green) 32%, transparent)",
+              borderColor: "color-mix(in oklab, var(--accent) 30%, transparent)",
               boxShadow:
-                "0 0 0 1px rgba(0,0,0,0.65), 0 26px 70px -52px color-mix(in oklab, var(--green) 55%, transparent)",
+                "0 0 0 1px rgba(0,0,0,0.65), 0 26px 70px -52px color-mix(in oklab, var(--accent) 60%, transparent)",
             }}
             onClick={(e) => {
               e.stopPropagation();
@@ -280,19 +282,19 @@ export function Terminal() {
             {/* hull: plating, a wash off the top edge, and a slow sweep */}
             <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
               <div className="hull-stars absolute inset-0 opacity-70" />
-              <div className="hull-grid absolute inset-0 opacity-30" />
+              <div className="tele-grid absolute inset-0 opacity-25" />
               <div
                 className="absolute inset-x-0 top-0 h-16"
                 style={{
                   background:
-                    "radial-gradient(ellipse at 50% 0%, color-mix(in oklab, var(--green) 10%, transparent), transparent 72%)",
+                    "radial-gradient(ellipse at 50% 0%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 72%)",
                 }}
               />
               <div
                 className="hull-scan absolute inset-x-0 h-24"
                 style={{
                   background:
-                    "linear-gradient(to bottom, transparent, color-mix(in oklab, var(--green) 8%, transparent), transparent)",
+                    "linear-gradient(to bottom, transparent, color-mix(in oklab, var(--accent) 8%, transparent), transparent)",
                 }}
               />
             </div>
@@ -307,20 +309,20 @@ export function Terminal() {
               <span
                 key={pos}
                 aria-hidden
-                className={`pointer-events-none absolute size-4 border-green/60 ${pos}`}
+                className={`pointer-events-none absolute z-10 size-4 border-accent/60 ${pos}`}
               />
             ))}
 
             {/* ── instrument header ── */}
             <div
               className="relative flex items-center gap-3 border-b px-4 py-2.5"
-              style={{ borderColor: "color-mix(in oklab, var(--green) 22%, transparent)" }}
+              style={{ borderColor: "color-mix(in oklab, var(--accent) 20%, transparent)" }}
             >
               <span className="relative flex size-2 shrink-0">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-green opacity-70" />
-                <span className="relative inline-flex size-2 rounded-full bg-green" />
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-70" />
+                <span className="relative inline-flex size-2 rounded-full bg-accent" />
               </span>
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-green">
+              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">
                 orbital shell
               </p>
               <span className="hidden h-px flex-1 bg-line sm:block" />
@@ -330,12 +332,12 @@ export function Terminal() {
               {/* signal strength, because every console has one */}
               <span aria-hidden className="hidden items-end gap-px sm:flex">
                 {[4, 7, 10, 13].map((h) => (
-                  <span key={h} className="w-[2px] bg-green/70" style={{ height: h }} />
+                  <span key={h} className="w-[2px] bg-accent/70" style={{ height: h }} />
                 ))}
               </span>
               <button
                 onClick={() => setOpen(false)}
-                className="ml-auto rounded border border-line px-1.5 py-px font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:border-green/60 hover:text-green sm:ml-0"
+                className="ml-auto rounded border border-line px-1.5 py-px font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:border-accent/60 hover:text-accent sm:ml-0"
                 aria-label="Close terminal"
               >
                 esc
@@ -353,20 +355,20 @@ export function Terminal() {
                   key={i}
                   className={
                     l.type === "accent"
-                      ? "term-green"
+                      ? "text-accent"
                       : l.type === "input"
                         ? "text-fg"
                         : "text-muted"
                   }
                 >
-                  {l.type === "input" && <span className="mr-2 term-green">❯</span>}
+                  {l.type === "input" && <span className="mr-2 text-accent">❯</span>}
                   <span className="whitespace-pre-wrap">{l.text}</span>
                 </div>
               ))}
 
 
               <div className="flex items-center pt-1">
-                <span className="mr-2 term-green">❯</span>
+                <span className="mr-2 text-accent">❯</span>
                 <input
                   ref={inputRef}
                   value={value}
@@ -387,7 +389,7 @@ export function Terminal() {
                 you have run something and want to know what else there is. */}
             <div
               className="relative flex flex-wrap items-center gap-1.5 border-t px-4 py-2.5"
-              style={{ borderColor: "color-mix(in oklab, var(--green) 18%, transparent)" }}
+              style={{ borderColor: "color-mix(in oklab, var(--accent) 16%, transparent)" }}
             >
               <span className="mr-1 font-mono text-[10px] uppercase tracking-widest text-muted/50">
                 try
@@ -396,9 +398,9 @@ export function Terminal() {
                 <button
                   key={cmd}
                   onClick={() => run(cmd)}
-                  className="flex items-center gap-1.5 rounded-sm border border-green/25 bg-green/[0.06] px-2.5 py-1 font-mono text-[11px] text-green/80 transition-colors hover:border-green/70 hover:bg-green/15 hover:text-green"
+                  className="flex items-center gap-1.5 rounded-sm border border-accent/25 bg-accent/[0.07] px-2.5 py-1 font-mono text-[11px] text-accent/80 transition-colors hover:border-accent/70 hover:bg-accent/15 hover:text-accent"
                 >
-                  <span className="text-green/45">▸</span>
+                  <span className="text-accent/45">▸</span>
                   {cmd}
                 </button>
               ))}
@@ -407,9 +409,9 @@ export function Terminal() {
             {/* ── status rail ── */}
             <div
               className="relative flex items-center gap-2.5 border-t px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-muted/55"
-              style={{ borderColor: "color-mix(in oklab, var(--green) 18%, transparent)" }}
+              style={{ borderColor: "color-mix(in oklab, var(--accent) 16%, transparent)" }}
             >
-              <span className="text-green/80">uplink stable</span>
+              <span className="text-accent/80">uplink stable</span>
               <span className="hidden sm:inline">·</span>
               <span className="hidden tabular-nums sm:inline">
                 {String(lines.length).padStart(3, "0")} lines

@@ -232,15 +232,6 @@ body::after {
   background-repeat: no-repeat;
 }
 
-/* hull plating: the same survey grid as the work cards, but in the shell's
-   green so the console reads as its own instrument rather than part of them */
-.hull-grid {
-  background-image:
-    linear-gradient(to right, color-mix(in oklab, var(--green) 7%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklab, var(--green) 7%, transparent) 1px, transparent 1px);
-  background-size: 22px 22px;
-}
-
 /* a readout crossing the console. `top` rather than a transform, because the
    bar has to travel the panel's height and not its own. */
 @keyframes hull-scan {
