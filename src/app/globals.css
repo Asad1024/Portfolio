@@ -1,26 +1,178 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f6f5f1;
+  --fg: #17171a;
+  --muted: #6b6b74;
+  --line: rgba(23, 23, 26, 0.12);
+  --accent: #157a3f;
+  --card: rgba(23, 23, 26, 0.03);
+  --glow: rgba(21, 122, 63, 0.08);
+  --ring: rgba(21, 122, 63, 0.45);
+}
+
+.dark {
+  --bg: #0a0a0c;
+  --fg: #ececf1;
+  --muted: #898994;
+  --line: rgba(236, 236, 241, 0.1);
+  --accent: #4ade80;
+  --card: rgba(236, 236, 241, 0.035);
+  --glow: rgba(74, 222, 128, 0.07);
+  --ring: rgba(74, 222, 128, 0.45);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-card: var(--card);
+  --font-sans: var(--font-space), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jet), ui-monospace, "Cascadia Code", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  transition: background-color 0.35s ease, color 0.35s ease;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* film-grain noise overlay */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* hero fade mask (applied to the interactive dot-field canvas) */
+.hero-mask {
+  mask-image: radial-gradient(ellipse 90% 75% at 50% 40%, black 30%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 75% at 50% 40%, black 30%, transparent 78%);
+}
+
+/* marquee */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 36s linear infinite;
+}
+.marquee-mask {
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+
+/* terminal caret */
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.caret-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* outlined display text on work rows */
+.text-stroke {
+  -webkit-text-stroke: 1.5px var(--muted);
+  color: transparent;
+  transition: color 0.4s ease, -webkit-text-stroke-color 0.4s ease;
+}
+.group:hover .text-stroke {
+  color: var(--accent);
+  -webkit-text-stroke-color: var(--accent);
+}
+
+/* attention glow — the terminal hint breathes instead of sitting in a box */
+@keyframes term-glow {
+  0%, 100% { opacity: 0.7; text-shadow: none; }
+  50% { opacity: 1; text-shadow: 0 0 10px var(--ring); }
+}
+.attention-pulse {
+  animation: term-glow 2.4s ease-in-out infinite;
+}
+.attention-pulse:hover {
+  animation-play-state: paused;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .attention-pulse { animation: none; opacity: 1; }
+}
+
+/* shiki code blocks — theme follows the site, not the highlighter */
+.shiki,
+.shiki span {
+  color: var(--shiki-light);
+  background: transparent !important;
+}
+.dark .shiki,
+.dark .shiki span {
+  color: var(--shiki-dark);
+}
+.shiki code {
+  counter-reset: ln;
+  display: block;
+}
+.shiki .line {
+  display: block;
+  min-height: 1.7em;
+}
+.shiki .line::before {
+  counter-increment: ln;
+  content: counter(ln);
+  display: inline-block;
+  width: 2.2em;
+  margin-right: 1.4em;
+  text-align: right;
+  color: var(--muted);
+  opacity: 0.45;
+  user-select: none;
+}
+.code-scroll::-webkit-scrollbar { height: 8px; }
+
+/* staggered line reveal for the stack.json view */
+@keyframes line-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.line-in { animation: line-in 0.35s ease-out both; }
+
+/* thin scrollbar */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+@media (pointer: fine) {
+  .has-custom-cursor,
+  .has-custom-cursor a,
+  .has-custom-cursor button {
+    cursor: none;
+  }
 }
