@@ -114,13 +114,20 @@ export function Preloader() {
     };
   }, []);
 
-  /* The canvas gets its own effect, gated on phase. The boot effect above
-     leaves phase as "collapse", but it reads refs in the same pass — at which
-     point the component has still returned null and there is no canvas to draw
-     on. Splitting it means this runs only once the element is mounted, and the
-     guard keeps it to a single run across the phase changes that follow. */
+  /* The canvas needs its own effect: the boot effect above sets phase in the
+     same pass it would read the ref, and at that point the component has still
+     returned null with no canvas to draw on.
+
+     It depends on a boolean spanning every animating phase, NOT on phase
+     itself. Depending on phase tore the loop down the instant it changed —
+     cleanup cancelled the frame, the effect re-ran, and the guard bailed — so
+     the canvas froze on its last collapse frame and the approach never drew.
+     A boolean is compared by value, so collapse -> warp -> exit is one
+     unbroken run. */
+  const animating = phase === "collapse" || phase === "warp" || phase === "exit";
+
   useEffect(() => {
-    if (phase !== "collapse") return;
+    if (!animating) return;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
@@ -259,7 +266,7 @@ export function Preloader() {
       cancelled = true;
       cancelAnimationFrame(raf);
     };
-  }, [phase]);
+  }, [animating]);
 
   if (phase === "idle" || phase === "gone") return null;
 
