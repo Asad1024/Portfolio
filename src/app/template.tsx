@@ -1,89 +1,112 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { projects } from "@/lib/data";
 
-/* Route transition: a terminal-style task list that checks itself off, then
-   dissolves as the page rises in underneath (~1.2s).
+/* ── route change: a jump ───────────────────────────────────────────────────
+   Stars stretch into streaks, hold, and snap back as the destination arrives.
+   This replaces a terminal task list, which was fine writing but described a
+   filesystem on a site about orbits — and made every navigation wait out five
+   ticked-off steps for something that has already loaded.
 
-   Everything here is CSS-transition driven rather than animated in JS: a
-   throttled tab starves requestAnimationFrame, which would otherwise strand
-   the veil — and the page behind it — at opacity 0. */
-const STEP_MS = 400;
-const HOLD_MS = 280;
-const FADE_MS = 350;
+   It is also half the length: 1.1s against 2.3s. A transition is a cut, not a
+   loading screen; the page underneath is ready long before either finishes.
 
-function routeInfo(pathname: string) {
+   Everything the page depends on is CSS-transition driven, not animated in
+   JS. A throttled tab starves requestAnimationFrame, and the veil — and the
+   content behind it — must never be left stranded at opacity 0 because of it.
+   The streaks are the only rAF work, and they are decoration: if that loop
+   never runs, the veil still lifts on its timer. */
+
+const HOLD_MS = 620;
+const FADE_MS = 420;
+const TOTAL_MS = HOLD_MS + FADE_MS;
+const STREAKS = 220;
+
+function destination(pathname: string) {
   if (pathname.startsWith("/work/")) {
     const slug = pathname.split("/")[2];
-    const project = projects.find((p) => p.slug === slug);
-    return {
-      label: `~/work/${slug}`,
-      steps: [
-        "resolving route",
-        `loading ${project?.title ?? "case study"}`,
-        "fetching screenshots",
-        "building architecture map",
-        "ready",
-      ],
-    };
+    return projects.find((p) => p.slug === slug)?.title ?? slug;
   }
-  return {
-    label: "~/home",
-    steps: [
-      "resolving route",
-      "mounting sections",
-      "indexing projects",
-      "warming interface",
-      "ready",
-    ],
-  };
+  return "home";
 }
 
 export default function Template({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { label, steps } = routeInfo(pathname);
-  const [done, setDone] = useState(0);
   const [lifting, setLifting] = useState(false);
   const [gone, setGone] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    setDone(0);
     setLifting(false);
     setGone(false);
 
-    const total = steps.length;
-    const start = performance.now();
-    // wall-clock driven so a throttled interval still lands on the right step
-    const id = setInterval(() => {
-      const n = Math.min(total, Math.floor((performance.now() - start) / STEP_MS) + 1);
-      setDone(n);
-      if (n >= total) clearInterval(id);
-    }, 60);
-
     const lift = setTimeout(() => {
-      setDone(total);
       setLifting(true);
       // the hero holds its entrance until the veil is actually out of the way,
       // otherwise the name animates behind it and lands already finished
       window.dispatchEvent(new CustomEvent("route-revealed"));
-    }, total * STEP_MS + HOLD_MS);
-    const clear = setTimeout(
-      () => setGone(true),
-      total * STEP_MS + HOLD_MS + FADE_MS,
-    );
+    }, HOLD_MS);
+    const clear = setTimeout(() => setGone(true), TOTAL_MS);
+
+    let raf = 0;
+    let cancelled = false;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+
+    if (canvas && ctx && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const cx = w / 2;
+      const cy = h / 2;
+      const reach = Math.hypot(w, h) * 0.5;
+
+      const stars = Array.from({ length: STREAKS }, () => ({
+        a: Math.random() * Math.PI * 2,
+        // biased outward, so the field reads as depth rather than a ring
+        d: Math.pow(Math.random(), 0.55),
+        len: 0.05 + Math.random() * 0.3,
+      }));
+
+      const start = performance.now();
+      const draw = (now: number) => {
+        if (cancelled) return;
+        const t = Math.min(1, (now - start) / TOTAL_MS);
+        // accelerate away, then decelerate into the destination
+        const speed = Math.sin(t * Math.PI);
+        ctx.clearRect(0, 0, w, h);
+        ctx.lineCap = "round";
+
+        for (const s of stars) {
+          const near = s.d * reach + speed * reach * 0.55;
+          const far = near + s.len * reach * speed;
+          const ca = Math.cos(s.a);
+          const sa = Math.sin(s.a);
+          ctx.strokeStyle = `rgba(255,255,255,${0.06 + speed * 0.5})`;
+          ctx.lineWidth = 0.6 + speed * 0.9;
+          ctx.beginPath();
+          ctx.moveTo(cx + ca * near, cy + sa * near);
+          ctx.lineTo(cx + ca * far, cy + sa * far);
+          ctx.stroke();
+        }
+
+        if (t < 1) raf = requestAnimationFrame(draw);
+      };
+      raf = requestAnimationFrame(draw);
+    }
 
     return () => {
-      clearInterval(id);
+      cancelled = true;
+      cancelAnimationFrame(raf);
       clearTimeout(lift);
       clearTimeout(clear);
     };
-    // re-run the sequence on every navigation
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
-
-  const pct = Math.round((done / steps.length) * 100);
 
   return (
     <>
@@ -101,62 +124,17 @@ export default function Template({ children }: { children: React.ReactNode }) {
       {!gone && (
         <div
           aria-hidden
-          className={`pointer-events-none fixed inset-0 z-[120] flex items-center justify-center bg-bg transition-opacity ease-out ${
+          className={`pointer-events-none fixed inset-0 z-[120] bg-bg transition-opacity ease-out ${
             lifting ? "opacity-0" : "opacity-100"
           }`}
           style={{ transitionDuration: `${FADE_MS}ms` }}
         >
-          <div className="w-[15rem] font-mono text-xs">
-            <p className="text-muted">
-              <span className="text-accent">$</span> accessing{" "}
-              <span className="text-fg">{label}</span>
+          <canvas ref={canvasRef} className="absolute inset-0 size-full" />
+
+          <div className="absolute inset-0 flex items-center justify-center">
+            <p className="font-mono text-[11px] uppercase tracking-[0.35em] text-muted">
+              <span className="text-accent">↯</span> {destination(pathname)}
             </p>
-
-            <div className="mt-4 space-y-2">
-              {steps.map((step, i) => {
-                const complete = done > i;
-                return (
-                  <div
-                    key={step}
-                    className={`flex items-center gap-2.5 transition-opacity duration-300 ${
-                      complete ? "opacity-100" : "opacity-30"
-                    }`}
-                  >
-                    <span className="flex size-3 items-center justify-center">
-                      {complete ? (
-                        <svg
-                          width="11"
-                          height="11"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="var(--accent)"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M20 6L9 17l-5-5" />
-                        </svg>
-                      ) : (
-                        <span className="block size-1.5 animate-pulse rounded-full bg-muted" />
-                      )}
-                    </span>
-                    <span className={complete ? "text-muted" : "text-muted/60"}>
-                      {step}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-line">
-                <div
-                  className="h-full bg-accent transition-[width] duration-300 ease-out"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <span className="tabular-nums text-muted">{pct}%</span>
-            </div>
           </div>
         </div>
       )}
