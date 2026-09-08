@@ -7,7 +7,7 @@ import { GithubGraph } from "./github-graph";
 export function Contact() {
   return (
     <section id="contact" className="scroll-mt-24 border-t border-line">
-      <div className="mx-auto max-w-6xl px-6 py-28">
+      <div className="mx-auto max-w-6xl px-6 py-36 sm:py-48">
         <Reveal>
           <p className="font-mono text-xs text-muted">
             <span className="term-green">$</span> ./start-a-project.sh

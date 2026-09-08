@@ -10,10 +10,10 @@ const principles = [
 
 export function About() {
   return (
-    <section id="about" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-28">
+    <section id="about" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-36 sm:py-48">
       <SectionHeading index="05" title="About" hint="$ cat about.md" />
 
-      <div className="grid gap-14 lg:grid-cols-[3fr_2fr]">
+      <div className="grid gap-20 lg:grid-cols-[3fr_2fr]">
         <Reveal>
           <div className="space-y-6 text-lg leading-relaxed text-muted">
             <p>

@@ -15,7 +15,7 @@ export function Work() {
   const shown = projects.filter((p) => filter === "all" || p.tags.includes(filter));
 
   return (
-    <section id="work" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-28">
+    <section id="work" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-36 sm:py-48">
       <SectionHeading index="01" title="Selected Work" hint="every project, one case study each" />
 
       <Reveal>
@@ -42,7 +42,7 @@ export function Work() {
         </div>
       </Reveal>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
         <AnimatePresence initial={false} mode="popLayout">
           {shown.map((p, i) => (
             <motion.div
