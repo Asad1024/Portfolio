@@ -177,6 +177,42 @@ body::after {
 }
 .twinkle { animation: twinkle 3.5s ease-in-out infinite; }
 
+/* ── telemetry ──────────────────────────────────────────────────────────────
+   Instrument-panel treatment for the work cards: a survey grid over the
+   viewport, a scan bar crossing it, and a marker running the arrow's ring. */
+
+.tele-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--accent) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--accent) 10%, transparent) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+@keyframes scan-sweep {
+  0% { transform: translateY(-2rem); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(15rem); opacity: 0; }
+}
+.scan-bar {
+  animation: scan-sweep 5.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes marker-orbit {
+  to { transform: rotate(360deg); }
+}
+.marker-orbit {
+  animation: marker-orbit 3.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-bar,
+  .marker-orbit {
+    animation: none;
+  }
+  .scan-bar { opacity: 0; }
+}
+
 /* cyan bloom on text, used sparingly on headline words */
 .text-glow {
   text-shadow: 0 0 22px color-mix(in oklab, var(--accent) 55%, transparent);

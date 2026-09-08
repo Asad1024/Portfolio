@@ -8,16 +8,31 @@ import { featuredStack } from "@/lib/data";
 import { techColor, techGlyph } from "../tech-icon";
 
 /* ── the hero solar system ──────────────────────────────────────────────────
-   Every technology in the stack is a planet, tinted its own brand colour.
-   Angular speed falls off as 1/√r so the inner shells genuinely outrun the
-   outer ones, and the whole thing runs off a single clock in useFrame — there
-   is no per-planet state, so the entire stack costs one render.
+   Every technology in the stack is a planet on its own orbit, tinted its own
+   brand colour, with its own inclination and its own rate — a few of them
+   retrograde. Kepler sets the baseline (angular speed falling off as 1/√r) but
+   each body is deliberately knocked off it, so the field never turns as one
+   rigid disc. It all runs off a single clock in useFrame; there is no
+   per-planet state, so the whole stack costs one render.
 
    This file is only ever reached through a dynamic() import with ssr:false;
    WebGL has no meaning on the server and drei's Stars will throw there. */
 
-/** How many orbital shells the stack is spread across. */
-const ORBITS = 6;
+/** Innermost orbit, and the gap to the next one out. */
+const MIN_RADIUS = 3.05;
+const RADIUS_STEP = 0.355;
+
+/** Deterministic 0..1 from a string. Same value every load, so nothing
+ *  reshuffles between renders or between server and client — "random" here
+ *  means scattered, not actually unpredictable. */
+function hash01(s: string, salt = 0) {
+  let h = 2166136261 ^ salt;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 100000) / 100000;
+}
 
 type Body = {
   tech: string;
@@ -29,36 +44,46 @@ type Body = {
   tilt: number;
 };
 
-/* Deterministic layout — same every load, so the hero never reshuffles.
+/* One orbit per technology — no two bodies share a ring.
 
-   Phase is assigned per shell, not from the global index. Spacing the whole
-   sequence by the golden angle looks right in a list but is wrong on shared
-   orbits: co-orbiting bodies differ by ORBITS in the index, so their phases
-   differ by ORBITS * 2.399 — which at eight shells landed them 19 degrees
-   apart, and since a shared shell means a shared speed they stayed that close
-   forever. Spreading each shell's own members evenly across its circle is
-   what actually keeps them apart.
+   Sharing rings was what caused the collisions: co-orbiting bodies also share
+   a speed, so whatever gap they start with they keep forever, and any pair
+   that starts close stays overlapping for good. Giving every body its own
+   radius, phase, inclination and speed means the arrangement never settles —
+   anything that crosses drifts apart again a moment later.
 
-   Tilt is per shell too. Held per body, bodies drawn on the same ring each
-   got their own inclination and none of them tracked the ring underneath. */
+   Inclination does most of the work. Orbits tilted differently separate
+   vertically even where their radii are close, which is what stops a dense
+   field of rings reading as one flat disc.
+
+   Everything is hashed from the technology's own name, so the scatter looks
+   arbitrary but is identical on every load and on both sides of hydration. */
 function buildBodies(): Body[] {
-  const shells: string[][] = Array.from({ length: ORBITS }, () => []);
-  featuredStack.forEach((tech, i) => shells[i % ORBITS].push(tech));
+  // shuffle the ring order so radius doesn't track the order in data.ts
+  const order = [...featuredStack].sort((a, b) => hash01(a, 7) - hash01(b, 7));
 
-  return shells.flatMap((members, shell) => {
-    const radius = 3.2 + shell * 1.3;
-    const tilt = ((shell % 5) - 2) * 0.05;
-    return members.map((tech, m) => ({
+  return order.map((tech, i) => {
+    const radius = MIN_RADIUS + i * RADIUS_STEP;
+    // Kepler sets the baseline, then each body is knocked off it so the field
+    // doesn't turn as one rigid disc. A few run retrograde.
+    const rate = 0.55 + hash01(tech, 3) * 1.25;
+    const retrograde = hash01(tech, 31) > 0.84 ? -1 : 1;
+
+    return {
       tech,
       color: techColor(tech),
-      size: 0.3 + (shell % 3) * 0.04,
+      size: 0.27 + hash01(tech, 11) * 0.1,
       radius,
-      // Kepler-flavoured: outer shells visibly lag the inner ones
-      speed: 0.42 / Math.sqrt(radius),
-      // even around this shell, offset per shell so shells don't share a spoke
-      phase: (m / members.length) * Math.PI * 2 + shell * 2.399,
-      tilt,
-    }));
+      speed: (0.42 / Math.sqrt(radius)) * rate * retrograde,
+      // Even coverage at t=0, nudged by a bounded jitter. A purely hashed
+      // phase can start half the field bunched on one side of the star, and a
+      // jitter wide enough to look properly random reintroduces the same
+      // collisions — 0.15rad keeps the smallest opening gap near 12 degrees.
+      // Because every body now runs at its own rate, the arrangement stops
+      // looking regular within a second anyway.
+      phase: (i / order.length) * Math.PI * 2 + (hash01(tech, 5) - 0.5) * 0.15,
+      tilt: (hash01(tech, 23) - 0.5) * 0.98,
+    };
   });
 }
 
@@ -307,7 +332,7 @@ function OrbitPath({ radius, tilt, color }: { radius: number; tilt: number; colo
       <meshBasicMaterial
         color={color}
         transparent
-        opacity={0.2}
+        opacity={0.09}
         side={THREE.DoubleSide}
         depthWrite={false}
       />

@@ -11,6 +11,14 @@ import { TechIcon } from "./tech-icon";
 
 const FILTERS = ["all", "web", "desktop", "ai", "cloud"] as const;
 
+/** Catalogue code for a project, e.g. sparkcue 01 -> SPK-01. Consonants first
+ *  so the letters stay distinctive: SPK reads better than SPA. */
+function designation(slug: string, index: string) {
+  const letters = slug.replace(/[^a-z]/gi, "").toUpperCase();
+  const consonants = letters.replace(/[AEIOU]/g, "");
+  return `${(consonants + letters).slice(0, 3)}-${index}`;
+}
+
 export function Work() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
   const shown = projects.filter((p) => filter === "all" || p.tags.includes(filter));
@@ -69,21 +77,47 @@ export function Work() {
                   className="pointer-events-none absolute bottom-3 right-3 z-20 size-4 rounded-br border-b border-r border-accent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                 />
 
+                {/* the viewport: a screenshot read as something being observed
+                    through an instrument rather than pasted into a tile */}
                 <div className="relative aspect-[16/10] overflow-hidden border-b border-line bg-card">
                   <ProjectVisual slug={p.slug} />
 
-                  {/* keeps the index and status legible over any screenshot */}
+                  {/* survey grid, and a scan bar crossing it on a slow loop */}
                   <span
                     aria-hidden
-                    className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--bg)_88%,transparent),transparent)]"
+                    className="tele-grid pointer-events-none absolute inset-0 opacity-40 mix-blend-screen transition-opacity duration-500 group-hover:opacity-70"
+                  />
+                  <span
+                    aria-hidden
+                    className="scan-bar pointer-events-none absolute inset-x-0 top-0 h-14 bg-[linear-gradient(180deg,transparent,color-mix(in_oklab,var(--accent)_18%,transparent),transparent)]"
                   />
 
-                  <span className="absolute left-4 top-3.5 font-mono text-[11px] text-accent">
+                  {/* frame ticks at the corners of the viewport */}
+                  {[
+                    "left-2 top-2 border-l border-t",
+                    "right-2 top-2 border-r border-t",
+                    "bottom-2 left-2 border-b border-l",
+                    "bottom-2 right-2 border-b border-r",
+                  ].map((pos) => (
+                    <span
+                      key={pos}
+                      aria-hidden
+                      className={`pointer-events-none absolute size-3 border-accent/50 transition-colors duration-300 group-hover:border-accent ${pos}`}
+                    />
+                  ))}
+
+                  {/* keeps the readouts legible over any screenshot */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--bg)_90%,transparent),transparent)]"
+                  />
+
+                  <span className="absolute left-5 top-4 font-mono text-[11px] text-accent">
                     {p.index}
                   </span>
 
                   {p.link ? (
-                    <span className="absolute right-4 top-3.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-fg/85">
+                    <span className="absolute right-5 top-4 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-fg/85">
                       <span className="relative flex size-1.5">
                         <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-70" />
                         <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
@@ -91,35 +125,37 @@ export function Work() {
                       live
                     </span>
                   ) : (
-                    <span className="absolute right-4 top-3.5 font-mono text-[10px] uppercase tracking-widest text-muted/70">
-                      {p.year}
+                    <span className="absolute right-5 top-4 font-mono text-[10px] uppercase tracking-widest text-muted/70">
+                      archived
                     </span>
                   )}
-
-                  {/* sweep: a scan passing over the dossier on hover */}
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 -translate-x-full bg-[linear-gradient(105deg,transparent,color-mix(in_oklab,var(--accent)_22%,transparent),transparent)] transition-transform duration-[900ms] ease-out group-hover:translate-x-full"
-                  />
                 </div>
 
                 <div className="flex flex-1 flex-col p-6">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <h3 className="font-sans text-xl font-bold leading-snug tracking-tight transition-colors duration-300 group-hover:text-accent">
-                      {p.title}
-                    </h3>
-                    <span className="shrink-0 font-mono text-[10px] text-muted/70">{p.year}</span>
+                  <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-widest text-muted/60">
+                    <span>{designation(p.slug, p.index)}</span>
+                    <span>{p.year}</span>
                   </div>
+
+                  <h3 className="mt-3 font-sans text-xl font-bold leading-snug tracking-tight transition-colors duration-300 group-hover:text-accent">
+                    {p.title}
+                  </h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted">{p.tagline}</p>
 
-                  {/* headline result — the thing a card should actually argue */}
+                  {/* Telemetry readout: the project's headline result, framed
+                      as an instrument panel rather than a caption. This is the
+                      thing a card should actually argue. */}
                   {p.outcome[0] && (
-                    <p className="mt-5 flex items-baseline gap-2 font-mono text-[11px] text-muted">
-                      <span className="text-base font-bold not-italic text-accent">
-                        {p.outcome[0].value}
-                      </span>
-                      {p.outcome[0].label}
-                    </p>
+                    <div className="mt-6 rounded-lg border border-accent/25 bg-accent/[0.06] px-4 py-3 transition-colors duration-300 group-hover:border-accent/50">
+                      <p className="flex items-baseline gap-2.5">
+                        <span className="font-sans text-2xl font-bold leading-none tracking-tight text-accent">
+                          {p.outcome[0].value}
+                        </span>
+                        <span className="font-mono text-[10px] leading-tight text-muted">
+                          {p.outcome[0].label}
+                        </span>
+                      </p>
+                    </div>
                   )}
 
                   <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-5">
@@ -139,8 +175,31 @@ export function Work() {
                         </span>
                       )}
                     </span>
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-line transition-all duration-300 group-hover:rotate-45 group-hover:border-accent group-hover:text-accent">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+
+                    {/* the arrow sits inside its own little orbit, with a
+                        marker running the ring while the card is hovered */}
+                    <span className="relative flex size-9 shrink-0 items-center justify-center">
+                      <span
+                        aria-hidden
+                        className="absolute inset-0 rounded-full border border-line transition-colors duration-300 group-hover:border-accent/60"
+                      />
+                      <span
+                        aria-hidden
+                        className="marker-orbit absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                      >
+                        <span className="absolute left-1/2 top-0 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent shadow-[0_0_8px_1px_var(--ring)]" />
+                      </span>
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="transition-all duration-300 group-hover:rotate-45 group-hover:text-accent"
+                      >
                         <path d="M7 17L17 7M17 7H8M17 7v9" />
                       </svg>
                     </span>
