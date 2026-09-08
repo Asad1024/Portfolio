@@ -209,3 +209,21 @@ export function TechIcon({ name, size = 16 }: { name: string; size?: number }) {
 export function hasTechIcon(name: string) {
   return name in ICONS || name in FALLBACKS;
 }
+
+/**
+ * A tech's brand colour as a plain hex string, for consumers that can't use a
+ * CSS variable — the WebGL scene, in practice, where planets are tinted per
+ * technology. Monochrome marks (Next.js, Express) would render as black
+ * spheres, so anything near the ends of the luminance range is replaced with
+ * the theme accent rather than passed through.
+ */
+export function techColor(name: string, fallback = "#38bdf8") {
+  const hex = ICONS[name]?.hex;
+  if (!hex) return fallback;
+  const n = parseInt(hex, 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return lum < 0.18 || lum > 0.9 ? fallback : `#${hex}`;
+}

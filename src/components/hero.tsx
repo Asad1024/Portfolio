@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { ScrambleText } from "./scramble-text";
-import { projects } from "@/lib/data";
+import { featuredStack } from "@/lib/data";
 
 /* The WebGL scene is client-only and lazily chunked: three + drei +
    postprocessing must never land in the first-paint bundle, and none of it
@@ -97,7 +97,7 @@ export function Hero() {
         style={at(900)}
       >
         <span className="term-green">◆ sys.orbital — nominal</span>
-        <span className="hidden sm:inline">{projects.length} bodies tracked</span>
+        <span className="hidden sm:inline">{featuredStack.length} systems online</span>
       </div>
 
       <div className="pointer-events-none relative z-10 mx-auto mb-24 w-full max-w-6xl px-6">
@@ -145,7 +145,7 @@ export function Hero() {
             </span>
             available for work
           </span>
-          <span className="hidden sm:inline">drag to orbit · click a planet</span>
+          <span className="hidden sm:inline">drag to orbit · hover a planet</span>
         </div>
       </div>
 

@@ -7,7 +7,6 @@ import { projects } from "@/lib/data";
 import { Reveal } from "./reveal";
 import { SectionHeading } from "./section-heading";
 import { ProjectVisual } from "./work-preview";
-import { SystemMap } from "./space/system-map";
 
 const FILTERS = ["all", "web", "desktop", "ai", "cloud"] as const;
 
@@ -18,12 +17,6 @@ export function Work() {
   return (
     <section id="work" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-28">
       <SectionHeading index="01" title="Selected Work" hint="every project, one case study each" />
-
-      {/* The map is the showpiece; the grid below is how you actually read the
-          work. Both address the same 12 projects. */}
-      <Reveal>
-        <SystemMap />
-      </Reveal>
 
       <Reveal>
         <div className="mb-10 flex flex-wrap items-center justify-between gap-4">

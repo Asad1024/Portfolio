@@ -142,13 +142,6 @@ body::after {
 }
 .code-scroll::-webkit-scrollbar { height: 8px; }
 
-/* staggered line reveal for the stack.json view */
-@keyframes line-in {
-  from { opacity: 0; transform: translateX(-6px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-.line-in { animation: line-in 0.35s ease-out both; }
-
 /* ── space ──────────────────────────────────────────────────────────────────
    Atmosphere for the cosmic half of the theme. Everything here is decorative
    and must degrade to "nothing happens" rather than to a broken layout. */
@@ -184,20 +177,6 @@ body::after {
 }
 .twinkle { animation: twinkle 3.5s ease-in-out infinite; }
 
-/* slow orbital spin for decorative rings */
-@keyframes orbit-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.orbit-spin { animation: orbit-spin 90s linear infinite; }
-.orbit-spin-rev { animation: orbit-spin 130s linear infinite reverse; }
-
-/* dashed orbit path */
-.orbit-ring {
-  border: 1px dashed color-mix(in oklab, var(--accent) 26%, transparent);
-  border-radius: 50%;
-}
-
 /* cyan bloom on text, used sparingly on headline words */
 .text-glow {
   text-shadow: 0 0 22px color-mix(in oklab, var(--accent) 55%, transparent);
@@ -207,11 +186,7 @@ body::after {
 .term-green { color: var(--green); }
 
 @media (prefers-reduced-motion: reduce) {
-  .twinkle,
-  .orbit-spin,
-  .orbit-spin-rev {
-    animation: none;
-  }
+  .twinkle { animation: none; }
 }
 
 /* thin scrollbar */

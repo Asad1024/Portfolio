@@ -1,5 +1,4 @@
 import { Hero } from "@/components/hero";
-import { StackCarousel } from "@/components/stack-carousel";
 import { Work } from "@/components/work";
 import { Capabilities } from "@/components/capabilities";
 import { Skills } from "@/components/skills";
@@ -11,7 +10,6 @@ export default function Home() {
   return (
     <>
       <Hero />
-      <StackCarousel />
       <Work />
       <Capabilities />
       <Skills />

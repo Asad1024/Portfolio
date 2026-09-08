@@ -1,34 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Html, OrbitControls, Stars } from "@react-three/drei";
 import { Bloom, EffectComposer, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
-import { projects } from "@/lib/data";
+import { featuredStack } from "@/lib/data";
+import { TechIcon, techColor } from "../tech-icon";
 
 /* ── the hero solar system ──────────────────────────────────────────────────
-   Every project is a planet. Orbit radius follows the order in data.ts,
-   angular speed falls off as 1/√r so the inner system genuinely outruns the
-   outer one, and the whole thing runs off a single clock in useFrame — there
-   is no per-planet state, so twelve bodies cost one render.
+   Every technology in the stack is a planet, tinted its own brand colour.
+   Angular speed falls off as 1/√r so the inner shells genuinely outrun the
+   outer ones, and the whole thing runs off a single clock in useFrame — there
+   is no per-planet state, so the entire stack costs one render.
 
    This file is only ever reached through a dynamic() import with ssr:false;
    WebGL has no meaning on the server and drei's Stars will throw there. */
 
-const TAG_COLOR: Record<string, string> = {
-  ai: "#8b5cf6",
-  desktop: "#22d3ee",
-  web: "#38bdf8",
-  cloud: "#2dd4bf",
-};
+/** How many orbital shells the stack is spread across. */
+const ORBITS = 8;
 
 type Body = {
-  slug: string;
-  title: string;
-  tagline: string;
-  index: string;
+  tech: string;
   color: string;
   size: number;
   radius: number;
@@ -38,23 +31,25 @@ type Body = {
   ringed: boolean;
 };
 
-/** Deterministic layout — same every load, so the hero never reshuffles. */
+/* Deterministic layout — same every load, so the hero never reshuffles.
+
+   The stack is wider than the number of orbits worth drawing, so shells are
+   shared: consecutive technologies land on different orbits and wrap, which
+   spreads co-orbiting bodies far apart in phase instead of bunching them. */
 function buildBodies(): Body[] {
-  return projects.map((p, i) => {
-    const radius = 3.6 + i * 0.92;
+  return featuredStack.map((tech, i) => {
+    const shell = i % ORBITS;
+    const radius = 3.4 + shell * 1.25;
     return {
-      slug: p.slug,
-      title: p.title,
-      tagline: p.tagline,
-      index: p.index,
-      color: TAG_COLOR[p.tags[0]] ?? "#38bdf8",
-      size: p.featured ? 0.42 : 0.29,
+      tech,
+      color: techColor(tech),
+      size: 0.3 + (shell % 3) * 0.045,
       radius,
-      // Kepler-flavoured: outer worlds visibly lag the inner ones
+      // Kepler-flavoured: outer shells visibly lag the inner ones
       speed: 0.42 / Math.sqrt(radius),
       phase: (i * 2.399) % (Math.PI * 2), // golden angle — no clustering
       tilt: ((i % 5) - 2) * 0.045,
-      ringed: i === 3 || i === 8,
+      ringed: i === 3 || i === 11,
     };
   });
 }
@@ -266,12 +261,10 @@ function Planet({
   body,
   hovered,
   onHover,
-  onSelect,
 }: {
   body: Body;
   hovered: boolean;
-  onHover: (slug: string | null) => void;
-  onSelect: (slug: string) => void;
+  onHover: (tech: string | null) => void;
 }) {
   const group = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Mesh>(null);
@@ -296,18 +289,24 @@ function Planet({
 
   return (
     <group ref={group}>
+      {/* Hit proxy. The planets are small and permanently in motion, so aiming
+          at the visible sphere is genuinely hard — and since hovering is the
+          only way to read what a body is, a missed hover means the label is
+          unreachable. This invisible sphere gives the pointer something much
+          larger to catch. Opacity 0 rather than visible={false}, which some
+          raycaster paths skip entirely. */}
       <mesh
-        ref={mesh}
         onPointerOver={(e: ThreeEvent<PointerEvent>) => {
           e.stopPropagation();
-          onHover(body.slug);
+          onHover(body.tech);
         }}
         onPointerOut={() => onHover(null)}
-        onClick={(e: ThreeEvent<MouseEvent>) => {
-          e.stopPropagation();
-          onSelect(body.slug);
-        }}
       >
+        <sphereGeometry args={[body.size * 2.8, 12, 12]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+
+      <mesh ref={mesh} raycast={() => null}>
         <sphereGeometry args={[body.size, 32, 32]} />
         <meshStandardMaterial
           color={body.color}
@@ -331,24 +330,35 @@ function Planet({
         </mesh>
       )}
 
-      {/* selection reticle — only mounted for the hovered body */}
       {hovered && (
-        <>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[body.size * 2.6, body.size * 2.72, 64]} />
-            <meshBasicMaterial color="#ffffff" transparent opacity={0.75} side={THREE.DoubleSide} />
-          </mesh>
-          <Html center distanceFactor={14} zIndexRange={[20, 0]}>
-            <div className="pointer-events-none -translate-y-14 whitespace-nowrap rounded-md border border-accent/60 bg-black/85 px-3 py-2 text-center font-mono backdrop-blur-sm">
-              <p className="text-[11px] font-bold tracking-tight text-white">{body.title}</p>
-              <p className="mt-0.5 text-[9px] text-cyan-300">{body.tagline}</p>
-              <p className="mt-1 text-[8px] uppercase tracking-widest text-white/45">
-                click to open dossier
-              </p>
-            </div>
-          </Html>
-        </>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[body.size * 2.6, body.size * 2.72, 64]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.75} side={THREE.DoubleSide} />
+        </mesh>
       )}
+
+      {/* Labels are always on, not hover-only. These are small, fast-moving
+          targets and reading the stack is the entire point of the scene — a
+          name you can only reach by successfully chasing a planet with the
+          cursor is a name nobody reads. Hover just promotes one. */}
+      <Html
+        center
+        distanceFactor={17}
+        zIndexRange={[20, 0]}
+        position={[0, -body.size - 0.42, 0]}
+        style={{ pointerEvents: "none" }}
+      >
+        <div
+          className={`flex select-none items-center gap-1.5 whitespace-nowrap font-mono transition-all duration-300 ${
+            hovered
+              ? "rounded border border-accent/60 bg-black/80 px-2 py-1 text-[12px] text-white"
+              : "text-[11px] text-white/55"
+          }`}
+        >
+          <TechIcon name={body.tech} size={hovered ? 13 : 11} />
+          {body.tech}
+        </div>
+      </Html>
     </group>
   );
 }
@@ -363,26 +373,34 @@ function Scene({
 }: {
   bodies: Body[];
   accent: string;
-  onHover: (slug: string | null) => void;
+  onHover: (tech: string | null) => void;
   hovered: string | null;
 }) {
-  const router = useRouter();
+  /* Shells are shared between technologies, so rings are drawn from the
+     deduplicated set — one per shell — rather than one per body, which would
+     stack a dozen coincident rings and blow out their opacity. */
+  const shells = useMemo(() => {
+    const seen = new Map<number, { radius: number; tilt: number }>();
+    for (const b of bodies) if (!seen.has(b.radius)) seen.set(b.radius, { radius: b.radius, tilt: b.tilt });
+    return [...seen.values()];
+  }, [bodies]);
 
   return (
     <>
       <ambientLight intensity={0.16} />
       <Sun color={accent} />
 
+      {shells.map((s) => (
+        <OrbitPath key={s.radius} radius={s.radius} tilt={s.tilt} color={accent} />
+      ))}
+
       {bodies.map((b) => (
-        <group key={b.slug}>
-          <OrbitPath radius={b.radius} tilt={b.tilt} color={b.color} />
-          <Planet
-            body={b}
-            hovered={hovered === b.slug}
-            onHover={onHover}
-            onSelect={(slug) => router.push(`/work/${slug}`)}
-          />
-        </group>
+        <Planet
+          key={b.tech}
+          body={b}
+          hovered={hovered === b.tech}
+          onHover={onHover}
+        />
       ))}
 
       <Stars radius={110} depth={55} count={2600} factor={4.2} saturation={0} fade speed={0.7} />
