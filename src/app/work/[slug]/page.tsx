@@ -45,9 +45,17 @@ export default async function CaseStudy({
           href="/#work"
           className="group inline-flex items-center gap-2 font-mono text-xs text-muted transition-colors hover:text-accent"
         >
-          <span className="transition-transform group-hover:-translate-x-1">←</span> cd ..
+          <span className="transition-transform group-hover:-translate-x-1">←</span> return to
+          system map
         </Link>
-        <p className="mt-10 font-mono text-sm text-accent">
+
+        <div className="mt-10 flex items-center gap-3 font-mono text-[10px] uppercase tracking-widest text-muted/70">
+          <span className="term-green">◆ body dossier</span>
+          <span className="h-px flex-1 bg-line" />
+          <span>designation {project.slug}</span>
+        </div>
+
+        <p className="mt-6 font-mono text-sm text-accent">
           {project.index} / {project.platform}
         </p>
         <h1 className="mt-4 font-sans text-6xl font-bold tracking-tighter sm:text-8xl">
@@ -91,7 +99,7 @@ export default async function CaseStudy({
             [project.company ? "built at" : "platform", project.company ?? project.platform],
             ["stack", project.stack.slice(0, 3).join(", ") + " +"],
           ].map(([k, v]) => (
-            <div key={k} className="bg-bg p-4">
+            <div key={k} className="bg-bg/70 p-4 backdrop-blur-sm">
               <p className="text-accent">{k}</p>
               <p className="mt-1 leading-relaxed text-muted">{v}</p>
             </div>
@@ -188,7 +196,7 @@ export default async function CaseStudy({
       <Section mono="05_decisions">
         <div className="grid gap-6 sm:grid-cols-2">
           {project.decisions.map((d) => (
-            <div key={d.title} className="rounded-xl border border-line bg-card p-7">
+            <div key={d.title} className="rounded-xl border border-line bg-bg/50 p-7 backdrop-blur-sm transition-colors hover:border-accent/45">
               <h3 className="font-sans text-lg font-bold tracking-tight">{d.title}</h3>
               <p className="mt-3 text-sm leading-relaxed text-muted">{d.body}</p>
             </div>
@@ -200,7 +208,7 @@ export default async function CaseStudy({
       <Section mono="06_outcome">
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3">
           {project.outcome.map((o) => (
-            <div key={o.label} className="bg-bg p-8 text-center">
+            <div key={o.label} className="bg-bg/70 p-8 text-center backdrop-blur-sm">
               <p className="font-sans text-5xl font-bold tracking-tight text-accent">
                 <StatValue value={o.value} />
               </p>
@@ -248,7 +256,12 @@ export default async function CaseStudy({
 function Section({ mono, children }: { mono: string; children: React.ReactNode }) {
   return (
     <Reveal>
-      <section className="mt-20 border-t border-line pt-10">
+      <section className="relative mt-20 border-t border-line pt-10">
+        {/* node on the section rule, echoing the mission-log spine */}
+        <span
+          aria-hidden
+          className="absolute -top-[3px] left-0 size-[7px] rounded-full bg-accent shadow-[0_0_10px_2px_var(--ring)]"
+        />
         <p className="mb-6 font-mono text-sm text-accent">/{mono}</p>
         {children}
       </section>

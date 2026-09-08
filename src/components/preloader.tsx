@@ -6,10 +6,10 @@ import { useEffect, useRef, useState } from "react";
    Particles vortex in and spell WEB, morph through MOBILE and AI, then
    converge into ASAD and burst outward as the curtain lifts. ~3.9s total. */
 const PHASES = [
-  { word: "WEB", enter: 900, hold: 220, status: "compiling web stack" },
-  { word: "MOBILE", enter: 400, hold: 200, status: "linking mobile runtime" },
-  { word: "AI", enter: 380, hold: 200, status: "waking ai systems" },
-  { word: "ASAD", enter: 440, hold: 560, status: "access granted →" },
+  { word: "WEB", enter: 900, hold: 220, status: "pressurizing web stack" },
+  { word: "MOBILE", enter: 400, hold: 200, status: "mobile runtime · go" },
+  { word: "AI", enter: 380, hold: 200, status: "ai core spun up" },
+  { word: "ASAD", enter: 440, hold: 560, status: "launch confirmed →" },
 ];
 const EXPLODE_MS = 600;
 const STARTS: number[] = [];
@@ -303,10 +303,10 @@ export function Preloader() {
 
       <div className="relative flex items-start justify-between font-mono text-xs text-muted">
         <p>
-          <span className="text-accent">$</span> initializing asad-os
-          <span className="caret-blink text-accent">_</span>
+          <span className="term-green">$</span> launch sequence — asad-os
+          <span className="caret-blink term-green">_</span>
         </p>
-        <p className="hidden sm:block">v2.0.0</p>
+        <p className="hidden sm:block">v3.0.0 · orbital</p>
       </div>
 
       <div className="relative flex items-end justify-between gap-6">

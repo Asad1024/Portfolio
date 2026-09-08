@@ -10,11 +10,11 @@ export function Contact() {
       <div className="mx-auto max-w-6xl px-6 py-28">
         <Reveal>
           <p className="font-mono text-xs text-muted">
-            <span className="text-accent">$</span> ./start-a-project.sh
+            <span className="term-green">$</span> ./start-a-project.sh
           </p>
           <h2 className="mt-6 max-w-3xl font-sans text-5xl font-bold leading-[1.05] tracking-tighter sm:text-7xl">
             Let&apos;s build something{" "}
-            <span className="text-accent">worth shipping.</span>
+            <span className="text-accent text-glow">worth shipping.</span>
           </h2>
         </Reveal>
 
@@ -86,7 +86,7 @@ export function Contact() {
           </p>
           <LocalTime />
           <p className="text-muted/80">
-            built with Next.js 16 · Tailwind 4 · canvas particles · CSS 3D — no Three.js
+            built with Next.js 16 · Tailwind 4 · Three.js · GLSL shaders · CSS 3D
           </p>
           <p>
             <span className="text-accent">exit 0</span>

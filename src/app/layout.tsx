@@ -7,7 +7,7 @@ import { Terminal } from "@/components/terminal";
 import { Cursor } from "@/components/cursor";
 import { Preloader } from "@/components/preloader";
 import { SmoothScroll } from "@/components/smooth-scroll";
-import { DotField } from "@/components/dot-field";
+import { Starfield } from "@/components/space/starfield";
 import { CommandPalette } from "@/components/command-palette";
 import { MatrixRain } from "@/components/matrix-rain";
 import { ConsoleEgg } from "@/components/console-egg";
@@ -50,13 +50,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <SmoothScroll />
           <Cursor />
           <Nav />
-          {/* Page-wide reactive grid: sparse, quiet, and behind every section
-              so the whole page reads as one continuous surface. */}
-          <div
-            aria-hidden
-            className="pointer-events-none fixed inset-0 z-0 opacity-[0.3]"
-          >
-            <DotField spacing={46} masked={false} />
+          {/* Page-wide sky: starfield plus two nebula washes, fixed behind every
+              section so the site reads as one continuous piece of space rather
+              than a stack of separately dark panels. */}
+          <div aria-hidden className="nebula pointer-events-none fixed inset-0 z-0">
+            <Starfield />
           </div>
           <main className="relative z-10 flex-1">{children}</main>
           <Terminal />

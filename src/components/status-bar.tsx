@@ -79,12 +79,12 @@ export function StatusBar() {
 
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("open-terminal"))}
-            className={`${hint} attention-pulse text-accent`}
+            className={`${hint} attention-pulse term-green`}
             aria-label="Open terminal"
           >
-            <span className="text-accent">&gt;_</span>
+            <span className="term-green">&gt;_</span>
             <span className="hidden sm:inline">terminal</span>
-            <span className="caret-blink text-accent">_</span>
+            <span className="caret-blink term-green">_</span>
           </button>
 
           <span className="ml-2 hidden w-10 text-right tabular-nums text-accent sm:inline">

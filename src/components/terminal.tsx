@@ -9,7 +9,7 @@ import { contact, projects, skillGroups, stackList } from "@/lib/data";
 type Line = { type: "input" | "output" | "accent"; text: string };
 
 const WELCOME: Line[] = [
-  { type: "accent", text: "asad-os v2.0.0 — interactive shell" },
+  { type: "accent", text: "asad-os v3.0.0 — orbital shell" },
   { type: "output", text: "type 'help' to see available commands." },
 ];
 
@@ -276,13 +276,13 @@ export function Terminal() {
               className="flex-1 space-y-1 overflow-y-auto p-4 font-mono text-[13px] leading-relaxed"
             >
               {lines.map((l, i) => (
-                <div key={i} className={l.type === "accent" ? "text-accent" : l.type === "input" ? "text-fg" : "text-muted"}>
-                  {l.type === "input" && <span className="mr-2 text-accent">❯</span>}
+                <div key={i} className={l.type === "accent" ? "term-green" : l.type === "input" ? "text-fg" : "text-muted"}>
+                  {l.type === "input" && <span className="mr-2 term-green">❯</span>}
                   <span className="whitespace-pre-wrap">{l.text}</span>
                 </div>
               ))}
               <div className="flex items-center">
-                <span className="mr-2 text-accent">❯</span>
+                <span className="mr-2 term-green">❯</span>
                 <input
                   ref={inputRef}
                   value={value}

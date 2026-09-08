@@ -7,6 +7,7 @@ import { projects } from "@/lib/data";
 import { Reveal } from "./reveal";
 import { SectionHeading } from "./section-heading";
 import { ProjectVisual } from "./work-preview";
+import { SystemMap } from "./space/system-map";
 
 const FILTERS = ["all", "web", "desktop", "ai", "cloud"] as const;
 
@@ -17,6 +18,12 @@ export function Work() {
   return (
     <section id="work" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-28">
       <SectionHeading index="01" title="Selected Work" hint="every project, one case study each" />
+
+      {/* The map is the showpiece; the grid below is how you actually read the
+          work. Both address the same 12 projects. */}
+      <Reveal>
+        <SystemMap />
+      </Reveal>
 
       <Reveal>
         <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
@@ -55,10 +62,15 @@ export function Work() {
             >
               <Link
                 href={`/work/${p.slug}`}
-                className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line transition-all duration-300 hover:border-accent hover:shadow-[0_0_32px_-4px_var(--ring)]"
+                className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-bg/40 backdrop-blur-sm transition-all duration-300 hover:border-accent hover:shadow-[0_0_32px_-4px_var(--ring)]"
               >
                 <div className="relative aspect-[16/10] overflow-hidden border-b border-line bg-card">
                   <ProjectVisual slug={p.slug} />
+                  {/* sweep: a scan passing over the dossier on hover */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 -translate-x-full bg-[linear-gradient(105deg,transparent,color-mix(in_oklab,var(--accent)_22%,transparent),transparent)] transition-transform duration-[900ms] ease-out group-hover:translate-x-full"
+                  />
                 </div>
 
                 <div className="flex flex-1 flex-col p-6">
