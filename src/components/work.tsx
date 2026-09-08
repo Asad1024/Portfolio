@@ -79,20 +79,28 @@ export function Work() {
 
                 {/* the viewport: a screenshot read as something being observed
                     through an instrument rather than pasted into a tile */}
-                <div className="relative aspect-[16/10] overflow-hidden border-b border-line bg-card">
-                  {/* Graded down at rest. These are bright white app UIs, and
-                      dropped in raw they read as three glaring rectangles
-                      punched through a dark page — the screenshot fights the
-                      theme instead of sitting inside it. Full colour returns on
-                      hover, when you are actually looking at that one. */}
-                  <div className="absolute inset-0 brightness-[0.55] contrast-[1.08] saturate-[0.7] transition-all duration-500 group-hover:brightness-100 group-hover:contrast-100 group-hover:saturate-100">
+                <div className="relative isolate aspect-[16/10] overflow-hidden border-b border-line bg-card">
+                  {/* Duotone, not dimming. Darkening the shot made it belong to
+                      the page but killed it — a murky grey smudge you cannot
+                      read. Stripping the colour and blending the palette back
+                      over it keeps full luminance, so the shot stays bright and
+                      legible while its hue is the same violet-to-cyan the rest
+                      of the page runs on. True colour returns on hover, when
+                      you are actually looking at that one. */}
+                  <div className="absolute inset-0 saturate-0 contrast-[1.06] transition-all duration-500 group-hover:saturate-100 group-hover:contrast-100">
                     <ProjectVisual slug={p.slug} />
                   </div>
-
-                  {/* survey grid, and a scan bar crossing it on a slow loop */}
                   <span
                     aria-hidden
-                    className="tele-grid pointer-events-none absolute inset-0 opacity-40 mix-blend-screen transition-opacity duration-500 group-hover:opacity-70"
+                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(155deg,var(--violet),var(--accent))] opacity-95 mix-blend-color transition-opacity duration-500 group-hover:opacity-0"
+                  />
+
+                  {/* survey grid, and a scan bar crossing it on a slow loop.
+                      overlay rather than screen: screen vanished against the
+                      light areas of a bright shot. */}
+                  <span
+                    aria-hidden
+                    className="tele-grid pointer-events-none absolute inset-0 opacity-50 mix-blend-overlay transition-opacity duration-500 group-hover:opacity-80"
                   />
                   <span
                     aria-hidden
@@ -124,7 +132,7 @@ export function Work() {
                   {/* keeps the readouts legible over any screenshot */}
                   <span
                     aria-hidden
-                    className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--bg)_90%,transparent),transparent)]"
+                    className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,var(--bg),color-mix(in_oklab,var(--bg)_70%,transparent)_55%,transparent)]"
                   />
 
                   <span className="absolute left-5 top-4 font-mono text-[11px] text-accent">
