@@ -154,48 +154,78 @@ export function Work() {
                 href={`/work/${active.slug}`}
                 className="group block overflow-hidden rounded-2xl border border-line bg-bg/40 backdrop-blur-sm transition-colors duration-300 hover:border-accent/60"
               >
-                <div className="relative isolate aspect-[16/10] overflow-hidden border-b border-line bg-card">
-                  {/* keyed on the slug so React remounts it per project and the
-                      fade replays, rather than swapping the pixels in place */}
-                  <div key={active.slug} className="absolute inset-0 animate-[fade-in_0.45s_ease-out]">
-                    <ProjectVisual slug={active.slug} />
+                {/* ── the display ──────────────────────────────────────
+                    A bezel with a screen inside it rather than a picture
+                    running edge to edge. Two reasons: the shot is contained
+                    now, so it needs a black ground to sit on and be framed by,
+                    and a bordered panel reads as a monitor in a console — the
+                    thing the whole section is pretending to be. */}
+                <div className="p-3 sm:p-4">
+                  <div className="rounded-xl border border-line bg-[linear-gradient(180deg,color-mix(in_oklab,var(--fg)_7%,var(--bg)),var(--bg))] p-2.5 shadow-[inset_0_1px_0_0_color-mix(in_oklab,var(--fg)_10%,transparent)]">
+                    <div className="relative isolate aspect-[16/9] overflow-hidden rounded-lg bg-black ring-1 ring-[color-mix(in_oklab,var(--fg)_12%,transparent)]">
+                      {/* keyed on the slug so React remounts it per project and
+                          the fade replays, rather than swapping pixels in place */}
+                      <div
+                        key={active.slug}
+                        className="absolute inset-0 animate-[fade-in_0.45s_ease-out]"
+                      >
+                        <ProjectVisual slug={active.slug} />
+                      </div>
+
+                      <span
+                        aria-hidden
+                        className="tele-grid pointer-events-none absolute inset-0 opacity-30 mix-blend-overlay"
+                      />
+                      <span
+                        aria-hidden
+                        className="scan-bar pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(180deg,transparent,color-mix(in_oklab,var(--accent)_14%,transparent),transparent)]"
+                      />
+
+                      {/* glare: one soft diagonal wipe, so the glass reads as
+                          glass instead of as a flat hole in the bezel */}
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 bg-[linear-gradient(125deg,color-mix(in_oklab,var(--fg)_9%,transparent),transparent_42%)]"
+                      />
+
+                      {[
+                        "left-2.5 top-2.5 border-l border-t",
+                        "right-2.5 top-2.5 border-r border-t",
+                        "bottom-2.5 left-2.5 border-b border-l",
+                        "bottom-2.5 right-2.5 border-b border-r",
+                      ].map((pos) => (
+                        <span
+                          key={pos}
+                          aria-hidden
+                          className={`pointer-events-none absolute size-3 border-accent/50 ${pos}`}
+                        />
+                      ))}
+                    </div>
+
+                    {/* chin: the readouts live on the bezel now, off the
+                        picture, so they never sit on top of the work */}
+                    <div className="flex items-center justify-between gap-3 px-1 pb-0.5 pt-2.5 font-mono text-[10px]">
+                      <span className="flex items-center gap-2">
+                        <span
+                          aria-hidden
+                          className={`size-1.5 rounded-full ${
+                            active.link
+                              ? "bg-accent shadow-[0_0_6px_1px_var(--ring)]"
+                              : "bg-muted/40"
+                          }`}
+                        />
+                        <span className="text-accent">
+                          {designation(active.slug, active.index)}
+                        </span>
+                      </span>
+                      <span className="uppercase tracking-widest text-muted/70">
+                        {active.link ? "live" : "archived"}
+                      </span>
+                    </div>
                   </div>
-
-                  <span
-                    aria-hidden
-                    className="tele-grid pointer-events-none absolute inset-0 opacity-40 mix-blend-overlay"
-                  />
-                  <span
-                    aria-hidden
-                    className="scan-bar pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(180deg,transparent,color-mix(in_oklab,var(--accent)_16%,transparent),transparent)]"
-                  />
-
-                  {[
-                    "left-3 top-3 border-l border-t",
-                    "right-3 top-3 border-r border-t",
-                    "bottom-3 left-3 border-b border-l",
-                    "bottom-3 right-3 border-b border-r",
-                  ].map((pos) => (
-                    <span
-                      key={pos}
-                      aria-hidden
-                      className={`pointer-events-none absolute size-3.5 border-accent/60 ${pos}`}
-                    />
-                  ))}
-
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--bg)_85%,transparent),transparent)]"
-                  />
-                  <span className="absolute left-5 top-4 font-mono text-[11px] text-accent">
-                    {designation(active.slug, active.index)}
-                  </span>
-                  <span className="absolute right-5 top-4 font-mono text-[10px] uppercase tracking-widest text-muted/80">
-                    {active.link ? "live" : "archived"}
-                  </span>
                 </div>
 
-                <div className="p-7">
+                <div className="px-7 pb-7 pt-1">
                   <div className="flex items-baseline justify-between gap-4">
                     <h3 className="font-sans text-2xl font-bold tracking-tight transition-colors duration-300 group-hover:text-accent">
                       {active.title}

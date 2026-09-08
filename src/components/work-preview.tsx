@@ -85,8 +85,12 @@ export function ProjectVisual({ slug }: { slug: string }) {
         src={project.image}
         alt={`${project.title} interface`}
         fill
-        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-        className="object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+        sizes="(max-width: 1024px) 100vw, 560px"
+        /* contain, not cover: these are full desktop captures and cover was
+           slicing the sides off every one of them. The screen it sits in has
+           a black ground, so the little letterboxing this leaves reads as a
+           display showing content rather than as a gap. */
+        className="object-contain transition-transform duration-700 ease-out group-hover:scale-[1.02]"
       />
     );
   }
