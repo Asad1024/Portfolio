@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Stars } from "@react-three/drei";
-import { Bloom, EffectComposer, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { featuredStack } from "@/lib/data";
 import { techColor, techGlyph } from "../tech-icon";
@@ -38,7 +37,7 @@ type Body = {
 function buildBodies(): Body[] {
   return featuredStack.map((tech, i) => {
     const shell = i % ORBITS;
-    const radius = 3.8 + shell * 1.45;
+    const radius = 3.0 + shell * 0.92;
     return {
       tech,
       color: techColor(tech),
@@ -134,20 +133,53 @@ const CORONA_FRAG = /* glsl */ `
   }
 `;
 
-/* Both colours are pushed past 1.0 on every channel. Bloom keys off luminance,
-   so a sphere sitting inside the 0-1 range just reads as a flat teal disc — it
-   has to actually blow out to look like a star.
+/* Both colours sit close to, but mostly within, 1.0. They used to be pushed
+   several times over so a bloom pass had something to catch; with the glow
+   done in-scene there is nothing to catch it, and everything above 1.0 simply
+   clamps — which flattened the whole photosphere to a uniform white disc and
+   threw away the fBm detail underneath.
 
-   Keep hot and cool close together: a wide spread turns the fBm into
+   Keep hot and cool reasonably close: a wide spread turns the noise into
    high-contrast patches and the star starts reading as a planet with
-   continents. Both ends blow out, only the degree differs. */
+   continents. */
 const hotOf = (c: string) =>
-  new THREE.Color(c).lerp(new THREE.Color("#ffffff"), 0.86).multiplyScalar(3.6);
+  new THREE.Color(c).lerp(new THREE.Color("#ffffff"), 0.86).multiplyScalar(1.14);
 const coolOf = (c: string) =>
-  new THREE.Color(c).lerp(new THREE.Color("#ffffff"), 0.5).multiplyScalar(2.25);
+  new THREE.Color(c).lerp(new THREE.Color("#ffffff"), 0.46);
+
+/* The star's outer glow, drawn in-scene rather than by a bloom pass.
+
+   Postprocessing renders through a composer that writes opaque pixels, which
+   turns a transparent canvas into a visible rectangle — fine when the canvas
+   filled the viewport, obvious the moment it sits in a column beside the type.
+   An additive radial sprite gives the same soft falloff, keeps the canvas
+   transparent so the page's own nebula shows through, and costs one quad
+   instead of a full-screen multi-pass blur. */
+function glowTexture(color: string) {
+  const c = new THREE.Color(color);
+  const rgb = `${(c.r * 255) | 0}, ${(c.g * 255) | 0}, ${(c.b * 255) | 0}`;
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+  g.addColorStop(0, "rgba(255,255,255,0.95)");
+  g.addColorStop(0.12, `rgba(${rgb},0.8)`);
+  g.addColorStop(0.3, `rgba(${rgb},0.34)`);
+  g.addColorStop(0.6, `rgba(${rgb},0.07)`);
+  g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 256, 256);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 
 function Sun({ color }: { color: string }) {
   const core = useRef<THREE.Mesh>(null);
+  const glow = useMemo(() => glowTexture(color), [color]);
+  useEffect(() => () => glow?.dispose(), [glow]);
 
   /* The uniform objects are memoised (stable identity, safe to read while
      rendering) but the per-frame clock is written through each material's own
@@ -194,6 +226,18 @@ function Sun({ color }: { color: string }) {
 
   return (
     <group>
+      {glow && (
+        <sprite scale={[14, 14, 1]} raycast={() => null}>
+          <spriteMaterial
+            map={glow}
+            transparent
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </sprite>
+      )}
+
       <mesh ref={core}>
         <sphereGeometry args={[1.5, 64, 64]} />
         <shaderMaterial
@@ -472,10 +516,6 @@ function Scene({
 
       <Stars radius={110} depth={55} count={1500} factor={3.6} saturation={0} fade speed={0.5} />
 
-      <EffectComposer>
-        <Bloom intensity={2.1} luminanceThreshold={0.06} luminanceSmoothing={0.5} mipmapBlur />
-        <Vignette eskil={false} offset={0.32} darkness={0.55} />
-      </EffectComposer>
     </>
   );
 }
@@ -511,11 +551,11 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
 
   return (
     <Canvas
-      /* Close in and steeper. Distance sets how much of the band the system
-         fills; elevation sets how far the orbital plane opens up rather than
-         collapsing toward a line. At 24 units and 20 degrees it covered barely
-         a third of the height and read as a small thing in a large empty box. */
-      camera={{ position: [0, 12.5, 18], fov: 48 }}
+      /* Framed for the hero's right-hand column, which is near square rather
+         than letterboxed. Distance sets how much of that column the system
+         fills; elevation sets how far the orbital plane opens up instead of
+         collapsing toward a line. */
+      camera={{ position: [0, 15, 21], fov: 48 }}
       /* Stop the render loop entirely once the hero scrolls away. Left on
          "always" the scene keeps drawing twelve orbits behind every other
          section — burning battery and competing with the rest of the page for
