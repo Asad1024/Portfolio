@@ -11,8 +11,19 @@ export function Capabilities() {
       <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2">
         {capabilities.map((c, i) => (
           <Reveal key={c.label} delay={i * 0.08} className="h-full">
-            <div className="group flex h-full flex-col bg-bg p-8 transition-colors duration-300 hover:bg-card sm:p-10">
-              <p className="font-mono text-xs text-accent">{c.mono}</p>
+            <div className="group relative flex h-full flex-col overflow-hidden bg-bg p-8 transition-colors duration-300 hover:bg-card sm:p-10">
+              {/* orbit watermark — concentric rings tucked into the corner,
+                  brightening with the card */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -right-16 -top-16 size-52 rounded-full border border-accent/10 transition-colors duration-500 group-hover:border-accent/25"
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -right-6 -top-6 size-32 rounded-full border border-accent/10 transition-colors duration-500 group-hover:border-accent/20"
+              />
+
+              <p className="relative font-mono text-xs text-accent">{c.mono}</p>
               <h3 className="mt-3 font-sans text-2xl font-bold tracking-tight">{c.label}</h3>
               <p className="mt-4 text-sm leading-relaxed text-muted">{c.body}</p>
 

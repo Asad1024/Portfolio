@@ -17,7 +17,7 @@ import { techColor, techGlyph } from "../tech-icon";
    WebGL has no meaning on the server and drei's Stars will throw there. */
 
 /** How many orbital shells the stack is spread across. */
-const ORBITS = 8;
+const ORBITS = 6;
 
 type Body = {
   tech: string;
@@ -31,23 +31,34 @@ type Body = {
 
 /* Deterministic layout — same every load, so the hero never reshuffles.
 
-   The stack is wider than the number of orbits worth drawing, so shells are
-   shared: consecutive technologies land on different orbits and wrap, which
-   spreads co-orbiting bodies far apart in phase instead of bunching them. */
+   Phase is assigned per shell, not from the global index. Spacing the whole
+   sequence by the golden angle looks right in a list but is wrong on shared
+   orbits: co-orbiting bodies differ by ORBITS in the index, so their phases
+   differ by ORBITS * 2.399 — which at eight shells landed them 19 degrees
+   apart, and since a shared shell means a shared speed they stayed that close
+   forever. Spreading each shell's own members evenly across its circle is
+   what actually keeps them apart.
+
+   Tilt is per shell too. Held per body, bodies drawn on the same ring each
+   got their own inclination and none of them tracked the ring underneath. */
 function buildBodies(): Body[] {
-  return featuredStack.map((tech, i) => {
-    const shell = i % ORBITS;
-    const radius = 3.0 + shell * 0.92;
-    return {
+  const shells: string[][] = Array.from({ length: ORBITS }, () => []);
+  featuredStack.forEach((tech, i) => shells[i % ORBITS].push(tech));
+
+  return shells.flatMap((members, shell) => {
+    const radius = 3.2 + shell * 1.3;
+    const tilt = ((shell % 5) - 2) * 0.05;
+    return members.map((tech, m) => ({
       tech,
       color: techColor(tech),
-      size: 0.3 + (shell % 3) * 0.045,
+      size: 0.3 + (shell % 3) * 0.04,
       radius,
       // Kepler-flavoured: outer shells visibly lag the inner ones
       speed: 0.42 / Math.sqrt(radius),
-      phase: (i * 2.399) % (Math.PI * 2), // golden angle — no clustering
-      tilt: ((i % 5) - 2) * 0.045,
-    };
+      // even around this shell, offset per shell so shells don't share a spoke
+      phase: (m / members.length) * Math.PI * 2 + shell * 2.399,
+      tilt,
+    }));
   });
 }
 

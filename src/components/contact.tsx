@@ -6,8 +6,24 @@ import { GithubGraph } from "./github-graph";
 
 export function Contact() {
   return (
-    <section id="contact" className="scroll-mt-24 border-t border-line">
-      <div className="mx-auto max-w-6xl px-6 py-36 sm:py-48">
+    <section id="contact" className="relative scroll-mt-24 overflow-hidden border-t border-line">
+      {/* Planet limb closing the page: one very large ellipse whose top arc is
+          all that clears the container, lit along the edge. The page has been
+          in open space the whole way down, so arriving somewhere gives the
+          scroll an ending. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-80 overflow-hidden">
+        <div
+          className="absolute left-1/2 top-28 h-[110rem] w-[220%] -translate-x-1/2 rounded-[50%] border-t"
+          style={{
+            borderColor: "color-mix(in oklab, var(--accent) 45%, transparent)",
+            background:
+              "radial-gradient(ellipse at 50% 0%, color-mix(in oklab, var(--accent) 13%, transparent), transparent 42%)",
+            boxShadow: "0 -18px 70px -20px var(--ring)",
+          }}
+        />
+      </div>
+
+      <div className="relative mx-auto max-w-6xl px-6 pb-56 pt-36 sm:pb-72 sm:pt-48">
         <Reveal>
           <p className="font-mono text-xs text-muted">
             <span className="term-green">$</span> ./start-a-project.sh
