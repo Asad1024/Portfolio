@@ -27,15 +27,20 @@ export function Capabilities() {
               <h3 className="mt-3 font-sans text-2xl font-bold tracking-tight">{c.label}</h3>
               <p className="mt-4 text-sm leading-relaxed text-muted">{c.body}</p>
 
-              {/* the tools this surface is actually built with */}
-              <div className="mt-auto flex flex-wrap items-center gap-3 pt-7">
+              {/* The tools this surface is actually built with — named, and at
+                  full strength. These were bare icons at 60% opacity, which
+                  read as dull and made you hover each one to find out what it
+                  was. Same treatment as the Skills groups now. */}
+              <div className="relative mt-auto flex flex-wrap gap-x-6 gap-y-3.5 border-t border-line pt-6">
                 {c.techs.map((t) => (
                   <span
                     key={t}
-                    title={t}
-                    className="opacity-60 transition-opacity duration-300 group-hover:opacity-100"
+                    className="flex min-w-0 items-center gap-3 font-mono text-sm text-fg"
                   >
-                    <TechIcon name={t} size={19} />
+                    <span className="flex w-5 shrink-0 justify-center">
+                      <TechIcon name={t} size={17} />
+                    </span>
+                    <span className="truncate">{t}</span>
                   </span>
                 ))}
               </div>
