@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, Stars } from "@react-three/drei";
 import * as THREE from "three";
+import { featuredStack } from "@/lib/data";
 import { techColor, techGlyph } from "../tech-icon";
 
 /* ── the hero solar system ──────────────────────────────────────────────────
@@ -17,120 +18,73 @@ import { techColor, techGlyph } from "../tech-icon";
    This file is only ever reached through a dynamic() import with ssr:false;
    WebGL has no meaning on the server and drei's Stars will throw there. */
 
-/* ── the nine ──────────────────────────────────────────────────────────────
-   Nine headline skills carried by the nine classical planets, using each
-   planet's real orbital elements. Semi-major axis in AU, eccentricity,
-   inclination to the ecliptic in degrees, sidereal period in years, and
-   equatorial radius in km, and longitude of perihelion in degrees — all
-   actual values.
+/** Innermost orbit, and the gap to the next one out. */
+const MIN_RADIUS = 3.05;
+const RADIUS_STEP = 0.355;
 
-   Two things have to be compressed or the picture is unusable, and both are
-   compressed the way every observatory diagram does it:
-
-   • Distance. Real axes run 0.39 AU to 39.5 AU, a hundredfold spread that
-     would bury the four inner planets inside the star's glow. Radius is
-     placed on a log scale, which preserves the ordering and the sense of a
-     crowded inner system against a sparse outer one.
-   • Period. Real periods run 88 days to 248 years, a thousandfold spread that
-     would leave Pluto motionless. Periods are taken to the fourth root, which
-     keeps the real ranking — Mercury fastest, Pluto slowest — inside a range
-     you can actually watch.
-
-   Everything else is untouched and does real work: eccentricity puts the star
-   at a focus rather than the centre and makes each planet genuinely quicker at
-   perihelion, and inclination tilts each orbit to its true angle. */
-type Planet = {
-  name: string;
-  tech: string;
-  au: number;
-  ecc: number;
-  incl: number;
-  years: number;
-  km: number;
-  /** longitude of perihelion — which way this orbit's long axis points */
-  peri: number;
-  color: string;
-  ringed?: boolean;
-};
-
-const PLANETS: Planet[] = [
-  { name: "Mercury", tech: "PostgreSQL",     au: 0.387, ecc: 0.2056, incl: 7.0,   years: 0.241, km: 2440,  peri: 77.46,  color: "#9a938c" },
-  { name: "Venus",   tech: "React Native",   au: 0.723, ecc: 0.0068, incl: 3.39,  years: 0.615, km: 6052,  peri: 131.60, color: "#e8cda2" },
-  { name: "Earth",   tech: "TypeScript",     au: 1.0,   ecc: 0.0167, incl: 0.0,   years: 1.0,   km: 6371,  peri: 102.95, color: "#5b8fd4" },
-  { name: "Mars",    tech: "Electron",       au: 1.524, ecc: 0.0934, incl: 1.85,  years: 1.881, km: 3390,  peri: 336.06, color: "#c1552e" },
-  { name: "Jupiter", tech: "React",          au: 5.203, ecc: 0.0484, incl: 1.30,  years: 11.86, km: 69911, peri: 14.75,  color: "#d9a066" },
-  { name: "Saturn",  tech: "Next.js",        au: 9.537, ecc: 0.0539, incl: 2.49,  years: 29.45, km: 58232, peri: 92.43,  color: "#e6d7a8", ringed: true },
-  { name: "Uranus",  tech: "Node.js",        au: 19.19, ecc: 0.0473, incl: 0.77,  years: 84.02, km: 25362, peri: 170.96, color: "#a8dfe6" },
-  { name: "Neptune", tech: "NestJS",         au: 30.07, ecc: 0.0086, incl: 1.77,  years: 164.8, km: 24622, peri: 44.97,  color: "#4361c9" },
-  { name: "Pluto",   tech: "OpenAI · Gemini", au: 39.48, ecc: 0.2488, incl: 17.16, years: 248.0, km: 1188,  peri: 224.07, color: "#cdb9a4" }
-];
-
-/** Innermost and outermost drawn semi-major axis. */
-const R_INNER = 3.0;
-const R_OUTER = 8.4;
-/** Seconds for one Earth year, before the fourth-root period compression. */
-const YEAR_SECONDS = 19;
-
-type Body = {
-  name: string;
-  tech: string;
-  /** semi-major and semi-minor axes, in scene units */
-  a: number;
-  b: number;
-  /** distance from ellipse centre to the focus the star sits on */
-  focus: number;
-  ecc: number;
-  size: number;
-  color: string;
-  ringed: boolean;
-  /** inclination in radians */
-  tilt: number;
-  /** longitude of perihelion in radians — the orbit's orientation */
-  peri: number;
-  /** seconds per revolution, and the mean anomaly at t=0 */
-  period: number;
-  phase: number;
-};
-
-function buildBodies(): Body[] {
-  const logs = PLANETS.map((p) => Math.log10(p.au));
-  const lo = Math.min(...logs);
-  const hi = Math.max(...logs);
-  const biggest = Math.max(...PLANETS.map((p) => p.km));
-
-  return PLANETS.map((p, i) => {
-    const a = R_INNER + ((Math.log10(p.au) - lo) / (hi - lo)) * (R_OUTER - R_INNER);
-    return {
-      name: p.name,
-      tech: p.tech,
-      a,
-      b: a * Math.sqrt(1 - p.ecc * p.ecc),
-      focus: a * p.ecc,
-      ecc: p.ecc,
-      // radii span Jupiter to Pluto 59:1, so these are compressed too — the
-      // ranking survives, Jupiter still obviously dominates
-      size: 0.17 + 0.5 * Math.pow(p.km / biggest, 0.42),
-      color: p.color,
-      ringed: Boolean(p.ringed),
-      tilt: (p.incl * Math.PI) / 180,
-      peri: (p.peri * Math.PI) / 180,
-      period: Math.pow(p.years, 0.25) * YEAR_SECONDS,
-      // spread the starting positions so the nine don't line up on one spoke
-      phase: (i / PLANETS.length) * Math.PI * 2,
-    };
-  });
+/** Deterministic 0..1 from a string. Same value every load, so nothing
+ *  reshuffles between renders or between server and client — "random" here
+ *  means scattered, not actually unpredictable. */
+function hash01(s: string, salt = 0) {
+  let h = 2166136261 ^ salt;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 100000) / 100000;
 }
 
-/** Kepler's equation, M = E - e·sin E, solved for the eccentric anomaly.
- *  Newton converges in a couple of steps at planetary eccentricities; this is
- *  what makes a body genuinely faster at perihelion than at aphelion rather
- *  than sweeping the ellipse at a constant angular rate. */
-function eccentricAnomaly(meanAnomaly: number, ecc: number) {
-  let E = meanAnomaly;
-  for (let i = 0; i < 4; i++) {
-    E -= (E - ecc * Math.sin(E) - meanAnomaly) / (1 - ecc * Math.cos(E));
-  }
-  return E;
+type Body = {
+  tech: string;
+  color: string;
+  size: number;
+  radius: number;
+  speed: number;
+  phase: number;
+  tilt: number;
+};
+
+/* One orbit per technology — no two bodies share a ring.
+
+   Sharing rings was what caused the collisions: co-orbiting bodies also share
+   a speed, so whatever gap they start with they keep forever, and any pair
+   that starts close stays overlapping for good. Giving every body its own
+   radius, phase, inclination and speed means the arrangement never settles —
+   anything that crosses drifts apart again a moment later.
+
+   Inclination does most of the work. Orbits tilted differently separate
+   vertically even where their radii are close, which is what stops a dense
+   field of rings reading as one flat disc.
+
+   Everything is hashed from the technology's own name, so the scatter looks
+   arbitrary but is identical on every load and on both sides of hydration. */
+function buildBodies(): Body[] {
+  // shuffle the ring order so radius doesn't track the order in data.ts
+  const order = [...featuredStack].sort((a, b) => hash01(a, 7) - hash01(b, 7));
+
+  return order.map((tech, i) => {
+    const radius = MIN_RADIUS + i * RADIUS_STEP;
+    // Kepler sets the baseline, then each body is knocked off it so the field
+    // doesn't turn as one rigid disc. A few run retrograde.
+    const rate = 0.55 + hash01(tech, 3) * 1.25;
+    const retrograde = hash01(tech, 31) > 0.84 ? -1 : 1;
+
+    return {
+      tech,
+      color: techColor(tech),
+      size: 0.27 + hash01(tech, 11) * 0.1,
+      radius,
+      speed: (0.42 / Math.sqrt(radius)) * rate * retrograde,
+      // Even coverage at t=0, nudged by a bounded jitter. A purely hashed
+      // phase can start half the field bunched on one side of the star, and a
+      // jitter wide enough to look properly random reintroduces the same
+      // collisions — 0.15rad keeps the smallest opening gap near 12 degrees.
+      // Because every body now runs at its own rate, the arrangement stops
+      // looking regular within a second anyway.
+      phase: (i / order.length) * Math.PI * 2 + (hash01(tech, 5) - 0.5) * 0.15,
+      tilt: (hash01(tech, 23) - 0.5) * 0.98,
+    };
+  });
 }
 
 /* ── sun ────────────────────────────────────────────────────────────────── */
@@ -371,30 +325,18 @@ function Sun({ color }: { color: string }) {
    which is the same closed curve the planet walks in useFrame traced in the
    opposite direction. Rx(-π/2 + tilt) mirrors Z instead, and the planets then
    ride an ellipse that visibly isn't the one drawn for them. */
-/* A real orbital path: an ellipse with the star at one focus, not a circle
-   centred on it. That offset is the whole reason a planet is nearer and
-   quicker at one end of its year than the other, so drawing circles would
-   contradict the motion. */
-function OrbitPath({ body, color, lit }: { body: Body; color: string; lit: boolean }) {
-  const geometry = useMemo(() => {
-    const curve = new THREE.EllipseCurve(-body.focus, 0, body.a, body.b, 0, Math.PI * 2, false, 0);
-    const pts = curve.getPoints(180).map((pt) => new THREE.Vector3(pt.x, 0, pt.y));
-    return new THREE.BufferGeometry().setFromPoints(pts);
-  }, [body.a, body.b, body.focus]);
-
-  useEffect(() => () => geometry.dispose(), [geometry]);
-
+function OrbitPath({ radius, tilt, color }: { radius: number; tilt: number; color: string }) {
   return (
-    <group rotation={[0, body.peri, 0]}>
-      <lineLoop geometry={geometry} rotation={[body.tilt, 0, 0]} raycast={() => null}>
-        <lineBasicMaterial
-          color={color}
-          transparent
-          opacity={lit ? 0.45 : 0.16}
-          depthWrite={false}
-        />
-      </lineLoop>
-    </group>
+    <mesh rotation={[-Math.PI / 2 - tilt, 0, 0]}>
+      <ringGeometry args={[radius - 0.006, radius + 0.006, 160]} />
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={0.09}
+        side={THREE.DoubleSide}
+        depthWrite={false}
+      />
+    </mesh>
   );
 }
 
@@ -480,44 +422,37 @@ function Planet({
 }) {
   const group = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Object3D>(null);
-  // the sphere wears the planet's real colour, but the mark under it keeps
-  // the technology's own brand colour
-  const texture = useGlyphTexture(body.tech, techColor(body.tech), labelColor);
+  const texture = useGlyphTexture(body.tech, body.color, labelColor);
 
   // Sized from the glyph, not the sprite: the sprite is mostly transparent
-  // padding and label, so scaling it directly makes the mark far bigger than
-  // intended. Solve for the sprite height that lands the glyph at iconWorld.
-  // Fixed, not derived from the planet — Jupiter is four times Pluto, and
-  // labels that scaled with that would be unreadable at the small end.
-  const iconWorld = 0.62;
+  // padding and label, so scaling it directly makes the icons far bigger than
+  // intended. Solve for the sprite height that lands the icon at iconWorld.
+  const iconWorld = body.size * 2.6;
   const spriteH = iconWorld / ICON_FRACTION;
   const spriteW = spriteH * (CANVAS_W / CANVAS_H);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-
+    const a = body.phase + t * body.speed;
     if (group.current) {
-      // mean anomaly advances at a constant rate; the true position does not
-      const M = body.phase + (t / body.period) * Math.PI * 2;
-      const E = eccentricAnomaly(M, body.ecc);
-      // in the orbital plane, with the star at the focus
-      const x = body.a * Math.cos(E) - body.focus;
-      const z = body.b * Math.sin(E);
-      // tip the plane to the orbit's real inclination
-      group.current.position.set(x, -z * Math.sin(body.tilt), z * Math.cos(body.tilt));
+      group.current.position.set(
+        Math.cos(a) * body.radius,
+        Math.sin(a) * body.radius * Math.sin(body.tilt),
+        Math.sin(a) * body.radius * Math.cos(body.tilt),
+      );
     }
-
     if (mesh.current) {
-      mesh.current.rotation.y = t * 0.35;
-      const target = hovered ? 1.3 : 1;
+      // sprites always face the camera, so there's nothing to spin — only the
+      // fallback sphere gets a rotation
+      if (!texture) mesh.current.rotation.y = t * 0.6;
+      const target = hovered ? 1.25 : 1;
       // eased toward target rather than snapped, so hover feels physical
       mesh.current.scale.lerp(new THREE.Vector3(target, target, target), 0.14);
     }
   });
 
   return (
-    <group rotation={[0, body.peri, 0]}>
-     <group ref={group}>
+    <group ref={group}>
       {/* Hit proxy: the bodies are small and permanently in motion, so aiming
           at the glyph itself is hard. Opacity 0 rather than visible={false},
           which some raycaster paths skip entirely. */}
@@ -532,52 +467,34 @@ function Planet({
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
-      {/* The planet itself: a lit sphere in the body's real colour, sized off
-          its real equatorial radius. Only the star emits, so each one carries
-          a day side and a night side and the phase changes as it comes round —
-          which is most of what makes the system read as physical. */}
+      {/* The body itself: the technology's own mark, billboarded so it always
+          faces the camera. Hover scaling lives on this wrapper so the sprite
+          keeps its own intrinsic size. A tech with no glyph at all falls back
+          to a lit sphere. */}
       <group ref={mesh}>
-        <mesh raycast={() => null}>
-          <sphereGeometry args={[body.size, 32, 32]} />
-          <meshStandardMaterial
-            color={body.color}
-            roughness={0.85}
-            metalness={0.05}
-            emissive={body.color}
-            emissiveIntensity={hovered ? 0.35 : 0.12}
-          />
-        </mesh>
-
-        {body.ringed && (
-          <mesh rotation={[-Math.PI / 2 + 0.42, 0, 0.22]} raycast={() => null}>
-            <ringGeometry args={[body.size * 1.45, body.size * 2.25, 72]} />
-            <meshBasicMaterial
-              color={body.color}
+        {texture ? (
+          <sprite scale={[spriteW, spriteH, 1]} raycast={() => null}>
+            <spriteMaterial
+              map={texture}
               transparent
-              opacity={0.55}
-              side={THREE.DoubleSide}
+              toneMapped={false}
               depthWrite={false}
+              opacity={hovered ? 1 : 0.88}
+            />
+          </sprite>
+        ) : (
+          <mesh raycast={() => null}>
+            <sphereGeometry args={[body.size, 32, 32]} />
+            <meshStandardMaterial
+              color={body.color}
+              roughness={0.62}
+              metalness={0.18}
+              emissive={body.color}
+              emissiveIntensity={hovered ? 0.85 : 0.22}
             />
           </mesh>
         )}
       </group>
-
-      {/* the skill it carries, billboarded under the planet */}
-      {texture && (
-        <sprite
-          position={[0, -body.size - spriteH * 0.42, 0]}
-          scale={[spriteW, spriteH, 1]}
-          raycast={() => null}
-        >
-          <spriteMaterial
-            map={texture}
-            transparent
-            toneMapped={false}
-            depthWrite={false}
-            opacity={hovered ? 1 : 0.85}
-          />
-        </sprite>
-      )}
 
       {hovered && (
         <mesh rotation={[-Math.PI / 2, 0, 0]}>
@@ -586,7 +503,6 @@ function Planet({
         </mesh>
       )}
 
-     </group>
     </group>
   );
 }
@@ -606,14 +522,22 @@ function Scene({
   onHover: (tech: string | null) => void;
   hovered: string | null;
 }) {
+  /* Shells are shared between technologies, so rings are drawn from the
+     deduplicated set — one per shell — rather than one per body, which would
+     stack a dozen coincident rings and blow out their opacity. */
+  const shells = useMemo(() => {
+    const seen = new Map<number, { radius: number; tilt: number }>();
+    for (const b of bodies) if (!seen.has(b.radius)) seen.set(b.radius, { radius: b.radius, tilt: b.tilt });
+    return [...seen.values()];
+  }, [bodies]);
+
   return (
     <>
-      <ambientLight intensity={0.2} />
+      <ambientLight intensity={0.16} />
       <Sun color={accent} />
 
-      {/* one path per planet, its own ellipse — the hovered one lights up */}
-      {bodies.map((b) => (
-        <OrbitPath key={b.name} body={b} color={accent} lit={hovered === b.tech} />
+      {shells.map((s) => (
+        <OrbitPath key={s.radius} radius={s.radius} tilt={s.tilt} color={accent} />
       ))}
 
       {bodies.map((b) => (
