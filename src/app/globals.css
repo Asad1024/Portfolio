@@ -76,19 +76,6 @@ body::after {
   -webkit-mask-image: radial-gradient(ellipse 90% 75% at 50% 40%, black 30%, transparent 78%);
 }
 
-/* marquee */
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-.animate-marquee {
-  animation: marquee 36s linear infinite;
-}
-.marquee-mask {
-  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
-  -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
-}
-
 /* terminal caret */
 @keyframes blink {
   0%, 49% { opacity: 1; }
@@ -96,17 +83,6 @@ body::after {
 }
 .caret-blink {
   animation: blink 1s step-end infinite;
-}
-
-/* outlined display text on work rows */
-.text-stroke {
-  -webkit-text-stroke: 1.5px var(--muted);
-  color: transparent;
-  transition: color 0.4s ease, -webkit-text-stroke-color 0.4s ease;
-}
-.group:hover .text-stroke {
-  color: var(--accent);
-  -webkit-text-stroke-color: var(--accent);
 }
 
 /* attention glow — the terminal hint breathes instead of sitting in a box */
