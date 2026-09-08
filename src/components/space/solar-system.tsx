@@ -609,10 +609,17 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
          fills; elevation sets how far the orbital plane opens up instead of
          collapsing toward a line. The two move independently: the length of
          this vector sets how much of the column the system fills, and its
-         angle sets how open the ellipses are. Raised from 35.5° to 42.5° to
-         give the orbits more height, with the length held at 27.9 so the
-         system did not grow while the plane opened. */
-      camera={{ position: [0, 18.85, 20.57], fov: 48 }}
+         angle sets how open the ellipses are, at 42.5°.
+
+         The field of view is the third control and the one that fixes the
+         lopsidedness: at 48° the near half of the plane was projecting much
+         larger than the far half, so every ellipse hung below the star with
+         its top edge crushed toward it. Narrowing to 34° flattens that
+         near/far difference — the standard long-lens trick — and the camera
+         moves out from 27.9 to 40.6 to keep the visible height identical, so
+         the system fills the same space while sitting evenly around the
+         star. */
+      camera={{ position: [0, 27.45, 29.95], fov: 34 }}
       /* Stop the render loop entirely once the hero scrolls away. Left on
          "always" the scene keeps drawing twelve orbits behind every other
          section — burning battery and competing with the rest of the page for
