@@ -135,6 +135,20 @@ body::after {
    two saturated corners pulling against each other read as staining rather
    than as depth. The cyan is centred now and much weaker, so it works as a
    glow the page sits inside instead of a second corner. */
+/* Two washes behind the page content. The violet is the one doing the work —
+   it is what keeps the page from being flat black — and it sits off to the
+   top-left where it always has. What went is the teal that used to sit
+   opposite it in the bottom-right: two saturated corners pulling against each
+   other read as staining rather than depth. The cyan is centred now and much
+   weaker, a glow the page sits inside instead of a second corner. */
+.nebula::before,
+.nebula::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
 .nebula::before {
   background: radial-gradient(
     ellipse 60% 50% at 20% 15%,
