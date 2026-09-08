@@ -170,12 +170,30 @@ body::after {
   );
 }
 
-/* a star that breathes — offset per-element with --tw animation-delay */
-@keyframes twinkle {
-  0%, 100% { opacity: 0.25; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.35); }
+/* ── drift ──────────────────────────────────────────────────────────────────
+   Continuous horizontal bands for the skills section. The track holds two
+   copies of its contents and travels exactly half its width, so the seam lands
+   where the second copy starts and the loop is invisible. */
+@keyframes drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
-.twinkle { animation: twinkle 3.5s ease-in-out infinite; }
+.drift {
+  animation: drift var(--drift-duration, 60s) linear infinite;
+  animation-direction: var(--drift-direction, normal);
+}
+.drift-track:hover .drift {
+  animation-play-state: paused;
+}
+.drift-mask {
+  mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* stationary and scrollable by hand instead */
+  .drift { animation: none; }
+  .drift-mask { overflow-x: auto; }
+}
 
 /* ── telemetry ──────────────────────────────────────────────────────────────
    Instrument-panel treatment for the work cards: a survey grid over the
@@ -226,10 +244,6 @@ body::after {
 
 /* the shell keeps terminal green — the one place it still leads */
 .term-green { color: var(--green); }
-
-@media (prefers-reduced-motion: reduce) {
-  .twinkle { animation: none; }
-}
 
 /* thin scrollbar */
 ::-webkit-scrollbar { width: 10px; }
