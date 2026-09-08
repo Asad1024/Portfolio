@@ -8,7 +8,7 @@ export function Capabilities() {
     <section id="capabilities" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-36 sm:py-48">
       <SectionHeading index="02" title="Capabilities" hint="one developer, every surface" />
 
-      <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2">
+      <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-2">
         {capabilities.map((c, i) => (
           <Reveal key={c.label} delay={i * 0.08} className="h-full">
             <div className="group relative flex h-full flex-col overflow-hidden bg-bg p-8 transition-colors duration-300 hover:bg-card sm:p-10">
@@ -31,7 +31,7 @@ export function Capabilities() {
                   full strength. These were bare icons at 60% opacity, which
                   read as dull and made you hover each one to find out what it
                   was. Same treatment as the Skills groups now. */}
-              <div className="relative mt-auto flex flex-wrap gap-x-6 gap-y-3.5 border-t border-line pt-6">
+              <div className="relative mt-auto flex min-h-[5rem] flex-wrap content-start gap-x-6 gap-y-3.5 border-t border-line pt-6">
                 {c.techs.map((t) => (
                   <span
                     key={t}
