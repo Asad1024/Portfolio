@@ -273,56 +273,62 @@ function Sun({ color }: { color: string }) {
 
   return (
     <group>
-      {glow && (
-        <sprite scale={[14, 14, 1]} raycast={() => null}>
-          <spriteMaterial
-            map={glow}
-            transparent
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
+      {/* Everything the star is made of scales together, so the corona shells
+          keep their relationship to the core and the bloom keeps its
+          relationship to both. The light stays outside it: its reach is in
+          world units and has nothing to do with how big the sphere looks. */}
+      <group scale={0.9}>
+        {glow && (
+          <sprite scale={[14, 14, 1]} raycast={() => null}>
+            <spriteMaterial
+              map={glow}
+              transparent
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+            />
+          </sprite>
+        )}
+
+        <mesh ref={core}>
+          <sphereGeometry args={[1.5, 64, 64]} />
+          <shaderMaterial
+            vertexShader={CORONA_VERT}
+            ref={surfaceMat}
+            fragmentShader={SURFACE_FRAG}
+            uniforms={surfaceUniforms}
             toneMapped={false}
           />
-        </sprite>
-      )}
+        </mesh>
 
-      <mesh ref={core}>
-        <sphereGeometry args={[1.5, 64, 64]} />
-        <shaderMaterial
-          vertexShader={CORONA_VERT}
-          ref={surfaceMat}
-          fragmentShader={SURFACE_FRAG}
-          uniforms={surfaceUniforms}
-          toneMapped={false}
-        />
-      </mesh>
-
-      {/* two corona shells at different falloffs = a soft, layered edge */}
-      <mesh scale={1.28}>
-        <sphereGeometry args={[1.5, 48, 48]} />
-        <shaderMaterial
-          vertexShader={CORONA_VERT}
-          fragmentShader={CORONA_FRAG}
-          ref={innerMat}
-          uniforms={innerUniforms}
-          transparent
-          blending={THREE.AdditiveBlending}
-          side={THREE.BackSide}
-          depthWrite={false}
-        />
-      </mesh>
-      <mesh scale={1.75}>
-        <sphereGeometry args={[1.5, 32, 32]} />
-        <shaderMaterial
-          vertexShader={CORONA_VERT}
-          fragmentShader={CORONA_FRAG}
-          ref={outerMat}
-          uniforms={outerUniforms}
-          transparent
-          blending={THREE.AdditiveBlending}
-          side={THREE.BackSide}
-          depthWrite={false}
-        />
-      </mesh>
+        {/* two corona shells at different falloffs = a soft, layered edge */}
+        <mesh scale={1.28}>
+          <sphereGeometry args={[1.5, 48, 48]} />
+          <shaderMaterial
+            vertexShader={CORONA_VERT}
+            fragmentShader={CORONA_FRAG}
+            ref={innerMat}
+            uniforms={innerUniforms}
+            transparent
+            blending={THREE.AdditiveBlending}
+            side={THREE.BackSide}
+            depthWrite={false}
+          />
+        </mesh>
+        <mesh scale={1.75}>
+          <sphereGeometry args={[1.5, 32, 32]} />
+          <shaderMaterial
+            vertexShader={CORONA_VERT}
+            fragmentShader={CORONA_FRAG}
+            ref={outerMat}
+            uniforms={outerUniforms}
+            transparent
+            blending={THREE.AdditiveBlending}
+            side={THREE.BackSide}
+            depthWrite={false}
+          />
+        </mesh>
+      </group>
 
       <pointLight intensity={220} distance={90} decay={2} color={color} />
     </group>
@@ -603,10 +609,10 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
          fills; elevation sets how far the orbital plane opens up instead of
          collapsing toward a line. The two move independently: the length of
          this vector sets how much of the column the system fills, and its
-         angle sets how open the ellipses are. Raised from 35.5° to 39° to
+         angle sets how open the ellipses are. Raised from 35.5° to 42.5° to
          give the orbits more height, with the length held at 27.9 so the
          system did not grow while the plane opened. */
-      camera={{ position: [0, 17.6, 21.65], fov: 48 }}
+      camera={{ position: [0, 18.85, 20.57], fov: 48 }}
       /* Stop the render loop entirely once the hero scrolls away. Left on
          "always" the scene keeps drawing twelve orbits behind every other
          section — burning battery and competing with the rest of the page for
