@@ -2,19 +2,15 @@
 
 import { useEffect, useState } from "react";
 
-/* An editor-style status line pinned to the bottom of the viewport. It exists
-   for two reasons: it makes the keyboard features discoverable (nobody finds a
-   terminal they're never told about), and it reads like a developer tool. */
+/* An editor-style status line pinned to the bottom of the viewport: where you
+   are in the page, and how far down it you have travelled. */
 const SECTIONS = ["work", "capabilities", "skills", "experience", "about", "contact"];
 
 export function StatusBar() {
   const [section, setSection] = useState("");
   const [progress, setProgress] = useState(0);
-  const [isMac, setIsMac] = useState(true);
 
   useEffect(() => {
-    setIsMac(/mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent));
-
     const onScroll = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight;
       setProgress(max > 0 ? Math.round((window.scrollY / max) * 100) : 0);
@@ -41,11 +37,6 @@ export function StatusBar() {
     };
   }, []);
 
-  const hint =
-    "flex items-center gap-1.5 rounded px-2 py-1 transition-colors hover:bg-card hover:text-fg";
-  const key =
-    "rounded border border-line px-1.5 py-px text-[10px] leading-relaxed text-fg/80";
-
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/80 backdrop-blur-md">
       <div className="mx-auto flex h-9 max-w-6xl items-center gap-4 px-4 font-mono text-[11px] text-muted sm:px-6">
@@ -61,36 +52,13 @@ export function StatusBar() {
           </span>
         </span>
 
-        {/* discoverability: the whole point of this bar */}
-        <div className="ml-auto flex items-center gap-1">
-          <button
-            onClick={() =>
-              window.dispatchEvent(
-                new KeyboardEvent("keydown", { key: "k", metaKey: true, ctrlKey: true }),
-              )
-            }
-            className={hint}
-            aria-label="Open command palette"
-          >
-            <kbd className={key}>{isMac ? "⌘" : "ctrl"}</kbd>
-            <kbd className={key}>K</kbd>
-            <span className="hidden text-fg sm:inline">palette</span>
-          </button>
-
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent("open-terminal"))}
-            className={`${hint} attention-pulse term-green`}
-            aria-label="Open terminal"
-          >
-            <span className="term-green">&gt;_</span>
-            <span className="hidden sm:inline">terminal</span>
-            <span className="caret-blink term-green">_</span>
-          </button>
-
-          <span className="ml-2 hidden w-10 text-right tabular-nums text-accent sm:inline">
-            {progress}%
-          </span>
-        </div>
+        {/* The shortcut chips moved up to the header, where they sit beside
+            the nav instead of competing with it from the opposite corner of
+            the screen. What is left is location and progress — which is what
+            a status line is actually for. */}
+        <span className="ml-auto hidden w-10 text-right tabular-nums text-accent sm:inline">
+          {progress}%
+        </span>
       </div>
     </div>
   );

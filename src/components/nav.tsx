@@ -109,32 +109,20 @@ export function Nav() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Command palette, not the terminal. The palette already carries
-              "Open terminal" as one of its actions, so this one button reaches
-              both — whereas a terminal button would strand the palette behind
-              a shortcut. It is also self-describing: you type and it tells you
-              what it can do, where a bare prompt expects you to already know. */}
+          {/* The terminal, not the palette. It is the thing that makes this
+              site feel like this site, and it opens with its commands already
+              on screen as chips — one of which hands you the palette — so it
+              is a way in rather than a blank prompt you have to know already.
+              No pill around it: in a header of plain links, a bordered button
+              was the loudest thing on the page. Green is enough. */}
           <button
-            aria-label="Open command palette"
-            title="Command palette — Ctrl/⌘ K"
-            onClick={() => window.dispatchEvent(new CustomEvent("open-palette"))}
-            className="flex h-9 items-center gap-2 rounded-full border border-line px-3 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
+            aria-label="Open terminal"
+            title="Terminal — `"
+            onClick={() => window.dispatchEvent(new CustomEvent("open-terminal"))}
+            className="term-pill flex h-9 items-center gap-1.5 font-mono text-xs"
           >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="M20 20l-3.5-3.5" />
-            </svg>
-            <span className="hidden sm:inline">palette</span>
+            <span>&gt;_</span>
+            <span className="hidden sm:inline">terminal</span>
           </button>
 
           {/* hamburger — mobile only */}
