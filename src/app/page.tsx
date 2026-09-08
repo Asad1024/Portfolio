@@ -1,4 +1,5 @@
 import { Hero } from "@/components/hero";
+import { StackSystem } from "@/components/stack-system";
 import { Work } from "@/components/work";
 import { Capabilities } from "@/components/capabilities";
 import { Skills } from "@/components/skills";
@@ -10,6 +11,7 @@ export default function Home() {
   return (
     <>
       <Hero />
+      <StackSystem />
       <Work />
       <Capabilities />
       <Skills />

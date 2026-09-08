@@ -38,7 +38,7 @@ type Body = {
 function buildBodies(): Body[] {
   return featuredStack.map((tech, i) => {
     const shell = i % ORBITS;
-    const radius = 3.2 + shell * 1.02;
+    const radius = 3.5 + shell * 1.22;
     return {
       tech,
       color: techColor(tech),
@@ -511,7 +511,7 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
 
   return (
     <Canvas
-      camera={{ position: [0, 11.5, 25.5], fov: 46 }}
+      camera={{ position: [0, 9, 24], fov: 48 }}
       /* Stop the render loop entirely once the hero scrolls away. Left on
          "always" the scene keeps drawing twelve orbits behind every other
          section — burning battery and competing with the rest of the page for
@@ -533,12 +533,10 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
         hovered={hovered}
         onHover={setHovered}
       />
-      {/* Target sits above the sun, which drops the whole system into the lower
-          half of the frame and leaves the headline clean air. The target stays
-          on the sun's own vertical axis so autoRotate still spins around it
-          rather than swinging it across the screen. */}
+      {/* Centred on the star. It used to sit high to push the system clear of
+          the hero headline; in its own section there's nothing to dodge. */}
       <OrbitControls
-        target={[0, 2.1, 0]}
+        target={[0, 0, 0]}
         enablePan={false}
         enableZoom={false}
         autoRotate={!reduced}

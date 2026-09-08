@@ -1,24 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { ScrambleText } from "./scramble-text";
-import { featuredStack } from "@/lib/data";
-
-/* The WebGL scene is client-only and lazily chunked: three + drei +
-   postprocessing must never land in the first-paint bundle, and none of it
-   means anything during SSR. */
-const SolarSystem = dynamic(() => import("./space/solar-system"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex size-full items-center justify-center">
-      <p className="font-mono text-xs text-muted">
-        <span className="term-green">$</span> initializing orbital view
-        <span className="caret-blink term-green">_</span>
-      </p>
-    </div>
-  ),
-});
 
 /* Entrance is CSS-transition driven rather than animated in JS: a throttled
    tab starves requestAnimationFrame, which would leave the hero stranded at
@@ -30,21 +13,7 @@ export function Hero() {
   // first-visit preloader and the route-transition veil.
   const [bootDone, setBootDone] = useState(false);
   const [revealed, setRevealed] = useState(false);
-  const [inView, setInView] = useState(true);
-  const sectionRef = useRef<HTMLElement>(null);
   const ready = bootDone && revealed;
-
-  // Let the WebGL scene idle once it's off screen — see frameloop in
-  // space/solar-system.tsx for why this matters.
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), {
-      rootMargin: "120px",
-    });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
 
   useEffect(() => {
     const onBoot = () => setBootDone(true);
@@ -72,48 +41,26 @@ export function Hero() {
   const at = (ms: number) => ({ transitionDelay: `${ms}ms` });
 
   return (
-    <section ref={sectionRef} className="relative flex min-h-screen flex-col justify-center overflow-hidden">
-      {/* The system itself — full bleed, drag-to-orbit.
-
-          Masked at the edges because the canvas carries its own glow and
-          vignette: ending it at the section boundary leaves a hard horizontal
-          seam straight across the page where the light abruptly stops. The
-          fade lets the scene dissolve into the section below instead. */}
-      <div
-        className={`absolute inset-0 transition-opacity duration-1000 ${fade}`}
-        style={{
-          maskImage:
-            "linear-gradient(180deg, transparent 0%, black 7%, black 83%, transparent 100%)",
-          WebkitMaskImage:
-            "linear-gradient(180deg, transparent 0%, black 7%, black 83%, transparent 100%)",
-        }}
-      >
-        <SolarSystem paused={!inView} />
-      </div>
-
-      {/* Readability scrim, in two passes: a vertical wash that anchors the
-          headline against the top of the frame, and a horizontal one that keeps
-          the left column dark while leaving the outer orbits clear. */}
+    <section className="relative flex min-h-screen flex-col justify-center overflow-hidden px-6 pt-16">
+      {/* The page's own starfield and nebula carry the background here. The
+          only thing added is a soft glow behind the name, so the type has
+          something to sit on without a second scene competing with it. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,var(--bg)_2%,color-mix(in_oklab,var(--bg)_58%,transparent)_34%,transparent_62%)]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,color-mix(in_oklab,var(--bg)_92%,transparent)_6%,color-mix(in_oklab,var(--bg)_55%,transparent)_34%,transparent_66%)]"
+        className="pointer-events-none absolute left-[38%] top-1/2 size-[46rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+        style={{ background: "var(--glow)" }}
       />
 
-      {/* ── HUD ── the hacker half of the theme, framing the cosmic half ── */}
       <div
         aria-hidden
         className={`pointer-events-none absolute inset-x-0 top-20 z-10 mx-auto flex max-w-6xl justify-between px-6 font-mono text-[10px] uppercase tracking-widest text-muted/70 transition-opacity duration-700 ${fade}`}
         style={at(900)}
       >
-        <span className="term-green">◆ sys.orbital — nominal</span>
-        <span className="hidden sm:inline">{featuredStack.length} systems online</span>
+        <span className="term-green">◆ sys.online — nominal</span>
+        <span className="hidden sm:inline">lahore · remote-first</span>
       </div>
 
-      <div className="pointer-events-none relative z-10 mx-auto mb-24 w-full max-w-6xl px-6">
+      <div className="relative z-10 mx-auto w-full max-w-6xl">
         <p
           className={`${BASE} ${fade} mb-6 font-mono text-xs text-muted sm:text-sm`}
           style={at(0)}
@@ -129,7 +76,7 @@ export function Hero() {
             <ScrambleText text="ASAD" trigger="manual" active={ready} duration={1100} />
           </span>
           <span
-            className={`${BASE} ${rise} block text-[clamp(1.6rem,5.2vw,4rem)] text-muted`}
+            className={`${BASE} ${rise} block text-[clamp(2rem,7vw,5.5rem)] text-muted`}
             style={at(320)}
           >
             <ScrambleText text="FULL-STACK" trigger="manual" active={ready} duration={1300} />
@@ -139,7 +86,7 @@ export function Hero() {
         </h1>
 
         <p
-          className={`${BASE} ${rise} mt-8 max-w-md text-base leading-relaxed text-muted sm:text-lg`}
+          className={`${BASE} ${rise} mt-8 max-w-xl text-base leading-relaxed text-muted sm:text-lg`}
           style={at(520)}
         >
           I design and ship complete products — web platforms, desktop apps,
@@ -158,13 +105,13 @@ export function Hero() {
             </span>
             available for work
           </span>
-          <span className="hidden sm:inline">drag to orbit · hover a planet</span>
+          <span>web · mobile · desktop · cloud · ai</span>
         </div>
       </div>
 
       <a
-        href="/#work"
-        aria-label="Scroll to work"
+        href="/#stack"
+        aria-label="Scroll to the stack"
         className={`${BASE} ${fade} absolute bottom-16 left-1/2 z-10 -translate-x-1/2 text-muted hover:text-accent`}
         style={at(1100)}
       >
