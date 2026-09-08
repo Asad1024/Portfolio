@@ -1,28 +1,12 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 /* ── palette ────────────────────────────────────────────────────────────────
-   Cyan is the primary accent and carries the cosmic half of the theme; violet
-   is the deep-space secondary. Terminal green survives as --green and is now
-   reserved for the shell, prompts, and anything that should read as a machine
-   talking back. Don't reach for it as a general accent. */
+   One palette. There is no light mode: the whole site is a dark sky with a
+   star in it, and a light variant of that is a contradiction rather than a
+   theme. Cyan is the primary accent and violet the deep-space secondary;
+   terminal green is reserved for the shell, prompts, and anything that should
+   read as a machine talking back — don't reach for it as a general accent. */
 :root {
-  --bg: #eef1f8;
-  --fg: #0b1020;
-  --muted: #5a6379;
-  --line: rgba(11, 16, 32, 0.12);
-  --accent: #0891b2;
-  --violet: #6d28d9;
-  --green: #157a3f;
-  --card: rgba(11, 16, 32, 0.03);
-  --glow: rgba(8, 145, 178, 0.1);
-  --ring: rgba(8, 145, 178, 0.45);
-  --star: rgba(11, 16, 32, 0.4);
-  --void: #dfe5f2;
-}
-
-.dark {
   --bg: #04050a;
   --fg: #e8ecf5;
   --muted: #8b93a7;
@@ -66,7 +50,6 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-sans);
-  transition: background-color 0.35s ease, color 0.35s ease;
   overflow-x: hidden;
 }
 
@@ -112,14 +95,8 @@ body::after {
 }
 
 /* shiki code blocks — theme follows the site, not the highlighter */
-.shiki,
-.shiki span {
-  color: var(--shiki-light);
+.shiki {
   background: transparent !important;
-}
-.dark .shiki,
-.dark .shiki span {
-  color: var(--shiki-dark);
 }
 .shiki code {
   counter-reset: ln;

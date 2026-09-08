@@ -38,7 +38,7 @@ export default async function CaseStudy({
   const next = projects[(idx + 1) % projects.length];
 
   return (
-    <article className="mx-auto max-w-4xl px-6 pb-40 pt-40">
+    <article className="mx-auto max-w-4xl px-6 pb-28 pt-36">
       {/* header */}
       <Reveal>
         <Link
@@ -220,7 +220,7 @@ export default async function CaseStudy({
 
       {/* full stack list */}
       <Reveal>
-        <div className="mt-28 flex flex-wrap gap-2">
+        <div className="mt-20 flex flex-wrap gap-2">
           {project.stack.map((s) => (
             <span key={s} className="flex items-center gap-2 rounded-full border border-line px-4 py-1.5 font-mono text-xs text-muted">
               <TechIcon name={s} size={13} />
@@ -234,7 +234,7 @@ export default async function CaseStudy({
       <Reveal>
         <Link
           href={`/work/${next.slug}`}
-          className="group mt-32 flex items-center justify-between rounded-2xl border border-line p-8 transition-colors hover:border-accent sm:p-10"
+          className="group mt-24 flex items-center justify-between rounded-2xl border border-line p-8 transition-colors hover:border-accent sm:p-10"
         >
           <div>
             <p className="font-mono text-xs text-muted">next_project →</p>
@@ -256,7 +256,7 @@ export default async function CaseStudy({
 function Section({ mono, children }: { mono: string; children: React.ReactNode }) {
   return (
     <Reveal>
-      <section className="relative mt-28 border-t border-line pt-12">
+      <section className="relative mt-20 border-t border-line pt-10">
         {/* node on the section rule, echoing the mission-log spine */}
         <span
           aria-hidden

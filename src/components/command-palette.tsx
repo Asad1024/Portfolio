@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import { contact, projects } from "@/lib/data";
 
 type Item = {
@@ -28,7 +27,6 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { resolvedTheme, setTheme } = useTheme();
 
   const close = useCallback(() => {
     setOpen(false);
@@ -68,15 +66,6 @@ export function CommandPalette() {
         },
       },
       {
-        label: "Toggle theme",
-        group: "Actions",
-        hint: resolvedTheme === "dark" ? "→ light" : "→ dark",
-        run: () => {
-          setTheme(resolvedTheme === "dark" ? "light" : "dark");
-          close();
-        },
-      },
-      {
         label: "Download resume",
         group: "Actions",
         hint: "PDF",
@@ -113,7 +102,7 @@ export function CommandPalette() {
         },
       },
     ];
-  }, [close, resolvedTheme, router, setTheme]);
+  }, [close, router]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();

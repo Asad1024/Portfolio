@@ -2,8 +2,8 @@ import { codeToHtml, type BundledLanguage } from "shiki";
 import { CopyButton } from "./copy-button";
 
 /* Real code from the real repo, highlighted at build time with shiki so it
-   ships as static HTML — no highlighter in the client bundle. Dual-theme via
-   CSS variables (see .shiki rules in globals.css). */
+   ships as static HTML — no highlighter in the client bundle. One theme, since
+   the site has one. */
 export async function CodeBlock({
   code,
   lang,
@@ -17,8 +17,7 @@ export async function CodeBlock({
 }) {
   const html = await codeToHtml(code.trim(), {
     lang,
-    themes: { light: "vitesse-light", dark: "vitesse-dark" },
-    defaultColor: false,
+    theme: "vitesse-dark",
   });
 
   return (

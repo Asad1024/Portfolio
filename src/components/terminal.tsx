@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import { AnimatePresence, motion } from "framer-motion";
 import { contact, projects, skillGroups, stackList } from "@/lib/data";
 
@@ -22,7 +21,6 @@ export function Terminal() {
   const inputRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { setTheme, resolvedTheme } = useTheme();
 
   useEffect(() => {
     const KONAMI = [
@@ -95,7 +93,6 @@ export function Terminal() {
             { type: "output", text: "skills        skill matrix by domain" },
             { type: "output", text: "resume        download my CV" },
             { type: "output", text: "contact       how to reach me" },
-            { type: "output", text: "theme         toggle dark/light" },
             { type: "output", text: "matrix        …you know what this does" },
             { type: "output", text: "clear         clear the screen" },
             { type: "output", text: "exit          close terminal" },
@@ -148,12 +145,6 @@ export function Terminal() {
             { type: "output", text: `linkedin  ${contact.linkedin}` },
           );
           break;
-        case "theme": {
-          const next = resolvedTheme === "dark" ? "light" : "dark";
-          setTheme(next);
-          out.push({ type: "accent", text: `theme → ${next}` });
-          break;
-        }
         case "neofetch": {
           const art = [
             "    ▄▄▄▄▄▄▄",
@@ -214,7 +205,7 @@ export function Terminal() {
       setHistIdx(-1);
       setValue("");
     },
-    [resolvedTheme, router, setTheme],
+    [router],
   );
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
-import { ThemeToggle } from "./theme-toggle";
 import { Magnetic } from "./magnetic";
 
 const links = [
@@ -19,6 +18,38 @@ export function Nav() {
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30 });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [active, setActive] = useState<string | null>(null);
+
+  /* Which section you're actually in. The nav had no idea before — every link
+     looked identical the whole way down the page, so it told you where you
+     could go but never where you were. The band is offset for the fixed
+     header, and picks the entry nearest the top when two overlap. */
+  useEffect(() => {
+    const ids = links.map((l) => l.href.split("#")[1]);
+    const sections = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => Boolean(el));
+    if (!sections.length) return;
+
+    /* Kept as a running set rather than read off each callback: a callback
+       only carries the entries that CHANGED, so a scroll that merely takes one
+       section out of the band arrives with nothing intersecting and would have
+       stranded the highlight on the section you just left. Document order then
+       picks the topmost of whatever is currently in the band. */
+    const inBand = new Set<string>();
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) inBand.add(e.target.id);
+          else inBand.delete(e.target.id);
+        }
+        setActive(ids.find((id) => inBand.has(id)) ?? null);
+      },
+      { rootMargin: "-72px 0px -55% 0px", threshold: 0 },
+    );
+    sections.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
 
   // close the mobile menu on Escape
   useEffect(() => {
@@ -47,21 +78,44 @@ export function Nav() {
           </Link>
         </Magnetic>
 
-        <div className="hidden items-center gap-7 md:flex">
-          {links.map((l, i) => (
-            <Magnetic key={l.href} strength={0.25}>
+        <div className="hidden items-center gap-1 md:flex">
+          {links.map((l, i) => {
+            const on = active === l.href.split("#")[1];
+            return (
               <Link
+                key={l.href}
                 href={l.href}
-                className="group font-mono text-xs text-muted transition-colors hover:text-fg"
+                aria-current={on ? "true" : undefined}
+                className="group relative rounded-full px-3 py-1.5 font-mono text-xs transition-colors"
               >
-                <span className="text-accent/70">0{i + 1}.</span> {l.label}
+                <span
+                  className={`transition-colors duration-300 ${
+                    on ? "text-accent" : "text-muted/45"
+                  }`}
+                >
+                  0{i + 1}
+                </span>{" "}
+                <span
+                  className={`transition-colors duration-300 ${
+                    on ? "text-fg" : "text-muted group-hover:text-fg"
+                  }`}
+                >
+                  {l.label}
+                </span>
+                {/* underline: held for the section you're in, wiped in on hover
+                    for the ones you aren't */}
+                <span
+                  aria-hidden
+                  className={`absolute inset-x-3 -bottom-px h-px origin-left bg-accent transition-transform duration-300 ${
+                    on ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
+                  }`}
+                />
               </Link>
-            </Magnetic>
-          ))}
+            );
+          })}
         </div>
 
         <div className="flex items-center gap-3">
-          <ThemeToggle />
           {/* hamburger — mobile only */}
           <button
             aria-label={menuOpen ? "Close menu" : "Open menu"}
