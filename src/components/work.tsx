@@ -80,7 +80,14 @@ export function Work() {
                 {/* the viewport: a screenshot read as something being observed
                     through an instrument rather than pasted into a tile */}
                 <div className="relative aspect-[16/10] overflow-hidden border-b border-line bg-card">
-                  <ProjectVisual slug={p.slug} />
+                  {/* Graded down at rest. These are bright white app UIs, and
+                      dropped in raw they read as three glaring rectangles
+                      punched through a dark page — the screenshot fights the
+                      theme instead of sitting inside it. Full colour returns on
+                      hover, when you are actually looking at that one. */}
+                  <div className="absolute inset-0 brightness-[0.55] contrast-[1.08] saturate-[0.7] transition-all duration-500 group-hover:brightness-100 group-hover:contrast-100 group-hover:saturate-100">
+                    <ProjectVisual slug={p.slug} />
+                  </div>
 
                   {/* survey grid, and a scan bar crossing it on a slow loop */}
                   <span
@@ -105,6 +112,14 @@ export function Work() {
                       className={`pointer-events-none absolute size-3 border-accent/50 transition-colors duration-300 group-hover:border-accent ${pos}`}
                     />
                   ))}
+
+                  {/* Melts the foot of the image into the body. Without it the
+                      card is two stacked rectangles — a bright one and a dark
+                      one — rather than one object. */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(0deg,var(--bg),color-mix(in_oklab,var(--bg)_55%,transparent)_45%,transparent)]"
+                  />
 
                   {/* keeps the readouts legible over any screenshot */}
                   <span
@@ -140,7 +155,12 @@ export function Work() {
                   <h3 className="mt-3 font-sans text-xl font-bold leading-snug tracking-tight transition-colors duration-300 group-hover:text-accent">
                     {p.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">{p.tagline}</p>
+                  {/* two lines reserved: taglines run one line or two, and
+                      letting them differ staggered the readout blocks across
+                      the row so nothing lined up */}
+                  <p className="mt-2 min-h-[2.85rem] text-sm leading-relaxed text-muted">
+                    {p.tagline}
+                  </p>
 
                   {/* Telemetry readout: the project's headline result, framed
                       as an instrument panel rather than a caption. This is the
