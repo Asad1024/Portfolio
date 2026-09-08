@@ -120,8 +120,15 @@ export function CommandPalette() {
         setOpen((o) => !o);
       }
     };
+    // the header button opens it the same way the terminal is opened, so the
+    // shortcut and the click share one path
+    const onOpen = () => setOpen(true);
+    window.addEventListener("open-palette", onOpen);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("open-palette", onOpen);
+      window.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   useEffect(() => {

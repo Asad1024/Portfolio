@@ -79,7 +79,7 @@ export function Nav() {
         </Magnetic>
 
         <div className="hidden items-center gap-1 md:flex">
-          {links.map((l, i) => {
+          {links.map((l) => {
             const on = active === l.href.split("#")[1];
             return (
               <Link
@@ -88,13 +88,6 @@ export function Nav() {
                 aria-current={on ? "true" : undefined}
                 className="group relative rounded-full px-3 py-1.5 font-mono text-xs transition-colors"
               >
-                <span
-                  className={`transition-colors duration-300 ${
-                    on ? "text-accent" : "text-muted/45"
-                  }`}
-                >
-                  0{i + 1}
-                </span>{" "}
                 <span
                   className={`transition-colors duration-300 ${
                     on ? "text-fg" : "text-muted group-hover:text-fg"
@@ -116,6 +109,34 @@ export function Nav() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Command palette, not the terminal. The palette already carries
+              "Open terminal" as one of its actions, so this one button reaches
+              both — whereas a terminal button would strand the palette behind
+              a shortcut. It is also self-describing: you type and it tells you
+              what it can do, where a bare prompt expects you to already know. */}
+          <button
+            aria-label="Open command palette"
+            title="Command palette — Ctrl/⌘ K"
+            onClick={() => window.dispatchEvent(new CustomEvent("open-palette"))}
+            className="flex h-9 items-center gap-2 rounded-full border border-line px-3 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-3.5-3.5" />
+            </svg>
+            <span className="hidden sm:inline">palette</span>
+          </button>
+
           {/* hamburger — mobile only */}
           <button
             aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -160,7 +181,6 @@ export function Nav() {
                       onClick={() => setMenuOpen(false)}
                       className="group flex items-baseline gap-4 border-b border-line py-5"
                     >
-                      <span className="font-mono text-sm text-accent">0{i + 1}.</span>
                       <span className="font-sans text-4xl font-bold tracking-tight transition-colors group-hover:text-accent">
                         {l.label}
                       </span>
