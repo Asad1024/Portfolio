@@ -5,7 +5,7 @@ import { TechIcon } from "./tech-icon";
 
 export function Capabilities() {
   return (
-    <section id="capabilities" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-24 sm:py-32">
+    <section id="capabilities" className="mx-auto max-w-shell scroll-mt-24 px-6 py-24 sm:py-32">
       <SectionHeading index="02" title="Capabilities" hint="one developer, every surface" />
 
       <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-2">

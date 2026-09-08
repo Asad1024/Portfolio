@@ -39,7 +39,7 @@ export function StatusBar() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/80 backdrop-blur-md">
-      <div className="mx-auto flex h-9 max-w-6xl items-center gap-4 px-4 font-mono text-[11px] text-muted sm:px-6">
+      <div className="mx-auto flex h-9 max-w-shell items-center gap-4 px-4 font-mono text-[11px] text-muted sm:px-6">
         {/* current location */}
         <span className="flex shrink-0 items-center gap-2">
           <span className="relative flex size-1.5">

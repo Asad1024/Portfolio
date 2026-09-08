@@ -70,7 +70,7 @@ export function Nav() {
         className="absolute inset-x-0 top-0 h-px origin-left bg-accent"
         style={{ scaleX: progress }}
       />
-      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+      <nav className="mx-auto flex h-16 max-w-shell items-center justify-between px-6">
         <Magnetic>
           <Link href="/" className="font-mono text-sm tracking-tight" onClick={() => setMenuOpen(false)}>
             <span className="text-accent">~/</span>asad

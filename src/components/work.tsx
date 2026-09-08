@@ -48,7 +48,7 @@ export function Work() {
   const active = shown.find((p) => p.slug === activeSlug) ?? shown[0];
 
   return (
-    <section id="work" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-24 sm:py-32">
+    <section id="work" className="mx-auto max-w-shell scroll-mt-24 px-6 py-24 sm:py-32">
       <SectionHeading index="01" title="Selected Work" hint="every project, one case study each" />
 
       <Reveal>

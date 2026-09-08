@@ -90,7 +90,7 @@ export function Hero() {
         <SolarSystem paused={!inView} />
       </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-6xl px-6 pb-40 pt-28 md:py-24">
+      <div className="relative z-10 mx-auto w-full max-w-shell px-6 pb-40 pt-28 md:py-24">
         <div className="md:max-w-[46%]">
           <p
             className={`${BASE} ${fade} font-mono text-xs tracking-wide text-muted`}

@@ -33,6 +33,11 @@
   --color-void: var(--void);
   --font-sans: var(--font-space), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jet), ui-monospace, "Cascadia Code", monospace;
+
+  /* One width for every section, so the page has a single left and right
+     edge to line up against. Wider than Tailwind's 6xl by a hair: the
+     gutters were eating more of a large screen than the content needed. */
+  --container-shell: 78rem;
 }
 
 html.lenis,

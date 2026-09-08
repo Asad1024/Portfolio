@@ -23,7 +23,7 @@ export function Contact() {
         />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-6 pb-44 pt-24 sm:pb-56 sm:pt-32">
+      <div className="relative mx-auto max-w-shell px-6 pb-44 pt-24 sm:pb-56 sm:pt-32">
         <Reveal>
           <p className="font-mono text-xs text-muted">
             <span className="term-green">$</span> ./start-a-project.sh
