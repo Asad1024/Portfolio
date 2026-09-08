@@ -8,7 +8,7 @@ import { featuredStack } from "@/lib/data";
 import { techColor, techGlyph } from "../tech-icon";
 
 /* ── the hero solar system ──────────────────────────────────────────────────
-   Fourteen technologies, each a body on its own visible orbit, tinted its own
+   Fourteen technologies across eleven orbit lines, each tinted its own
    brand colour and carrying its own inclination and rate. Every one travels
    the same way round — counterclockwise from above the plane, as every planet
    in the real solar system does; only the speed varies. Kepler sets the
@@ -20,9 +20,13 @@ import { techColor, techGlyph } from "../tech-icon";
    This file is only ever reached through a dynamic() import with ssr:false;
    WebGL has no meaning on the server and drei's Stars will throw there. */
 
+/** How many orbit lines are drawn. Fewer lines than technologies, so the
+ *  busiest rings carry two — which buys back the radial room that fourteen
+ *  separate rings had eaten. */
+const ORBIT_LINES = 11;
 /** Innermost orbit, and the gap to the next one out. */
 const MIN_RADIUS = 3.0;
-const RADIUS_STEP = 0.56;
+const RADIUS_STEP = 0.72;
 
 /** Deterministic 0..1 from a string. Same value every load, so nothing
  *  reshuffles between renders or between server and client — "random" here
@@ -46,32 +50,37 @@ type Body = {
   tilt: number;
 };
 
-/* One orbit per technology — no two bodies share a ring.
+/* Eleven orbit lines carrying fourteen technologies, so three rings hold two.
 
-   Sharing rings was what caused the collisions: co-orbiting bodies also share
-   a speed, so whatever gap they start with they keep forever, and any pair
-   that starts close stays overlapping for good. Giving every body its own
-   radius, phase, inclination and speed means the arrangement never settles —
-   anything that crosses drifts apart again a moment later.
+   Sharing a ring is only safe if it is done deliberately. A shared ring means
+   a shared speed, so two bodies on one hold whatever gap they start with
+   forever — which is what made an earlier version collide permanently, when
+   the phases happened to put a pair 19 degrees apart. Placed exactly opposite
+   each other they stay exactly opposite, which is stable and looks intended.
 
-   Inclination does most of the work. Orbits tilted differently separate
-   vertically even where their radii are close, which is what stops a dense
-   field of rings reading as one flat disc.
+   Tilt and rate therefore belong to the ring, not the body: bodies on one line
+   have to actually travel that line.
 
-   Everything is hashed from the technology's own name, so the scatter looks
-   arbitrary but is identical on every load and on both sides of hydration. */
+   Inclination does the separating between neighbouring rings — orbits tilted
+   differently pull apart vertically even where their radii are close, which is
+   what stops the field reading as one flat disc. Everything is hashed, so the
+   arrangement looks arbitrary but is identical on every load and on both sides
+   of hydration. */
 function buildBodies(): Body[] {
-  // shuffle the ring order so radius doesn't track the order in data.ts
+  // shuffle first so ring assignment doesn't track the order in data.ts
   const order = [...featuredStack].sort((a, b) => hash01(a, 7) - hash01(b, 7));
+  const rings: string[][] = Array.from({ length: ORBIT_LINES }, () => []);
+  order.forEach((tech, i) => rings[i % ORBIT_LINES].push(tech));
 
-  return order.map((tech, i) => {
-    const radius = MIN_RADIUS + i * RADIUS_STEP;
-    // Kepler sets the baseline — inner bodies genuinely outrun outer ones —
-    // and each is then knocked off it so the field doesn't turn as one rigid
-    // disc. Rate only: direction is shared, never reversed.
-    const rate = 0.55 + hash01(tech, 3) * 1.25;
+  return rings.flatMap((members, ring) => {
+    const radius = MIN_RADIUS + ring * RADIUS_STEP;
+    const key = `ring-${ring}`;
+    // Kepler sets the baseline — inner rings genuinely outrun outer ones — and
+    // each is then knocked off it so the field doesn't turn as one rigid disc.
+    // Rate only: direction is shared, never reversed.
+    const rate = 0.6 + hash01(key, 3) * 1.1;
 
-    return {
+    return members.map((tech, m) => ({
       tech,
       color: techColor(tech),
       size: 0.27 + hash01(tech, 11) * 0.1,
@@ -81,15 +90,11 @@ function buildBodies(): Body[] {
       // +z projects downward from a camera sitting above, so a positive rate
       // would have run the whole field backwards.
       speed: -(0.42 / Math.sqrt(radius)) * rate,
-      // Even coverage at t=0, nudged by a bounded jitter. A purely hashed
-      // phase can start half the field bunched on one side of the star, and a
-      // jitter wide enough to look properly random reintroduces the same
-      // collisions — 0.15rad keeps the smallest opening gap near 12 degrees.
-      // Because every body now runs at its own rate, the arrangement stops
-      // looking regular within a second anyway.
-      phase: (i / order.length) * Math.PI * 2 + (hash01(tech, 5) - 0.5) * 0.15,
-      tilt: (hash01(tech, 23) - 0.5) * 0.98,
-    };
+      // spread this ring's own members evenly around it, and offset each ring
+      // so they don't all line up along one spoke
+      phase: (m / members.length) * Math.PI * 2 + ring * 2.399,
+      tilt: (hash01(key, 23) - 0.5) * 0.98,
+    }));
   });
 }
 
@@ -433,7 +438,7 @@ function Planet({
   // Sized from the glyph, not the sprite: the sprite is mostly transparent
   // padding and label, so scaling it directly makes the icons far bigger than
   // intended. Solve for the sprite height that lands the icon at iconWorld.
-  const iconWorld = body.size * 2.4;
+  const iconWorld = body.size * 2.5;
   const spriteH = iconWorld / ICON_FRACTION;
   const spriteW = spriteH * (CANVAS_W / CANVAS_H);
 
