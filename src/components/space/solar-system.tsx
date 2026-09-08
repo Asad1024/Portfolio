@@ -425,9 +425,16 @@ function OrbitPath({ radius, tilt, color }: { radius: number; tilt: number; colo
    fighting the compositor, and it was the main source of the stutter. Baked
    into the texture the labels cost nothing to move, and they can no longer
    drift out of sync with the body they name. */
+/* The canvas is tall enough to hold a label on either side of the glyph with
+   the glyph itself dead centre. That centring is the point: the label side
+   flips while a body is in motion, and if the icon's place in the sprite
+   depended on the side, every flip would teleport the icon a third of the
+   sprite's height. The mark stays exactly where it is; the name is the only
+   thing that moves. */
 const CANVAS_W = 256;
-const CANVAS_H = 168;
+const CANVAS_H = 216;
 const ICON_PX = 96;
+const ICON_TOP = (CANVAS_H - ICON_PX) / 2;
 /** Icon height as a fraction of the sprite — used to size the sprite so the
  *  glyph itself lands at a predictable world size. */
 const ICON_FRACTION = ICON_PX / CANVAS_H;
@@ -455,12 +462,10 @@ function useGlyphTexture(
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
-    // the icon occupies the same box for every technology; only the label
-    // moves, and it moves to whichever side is free
-    const iconTop = side === "below" ? 6 : CANVAS_H - ICON_PX - 6;
-
+    // same box for every technology, and the same box whichever side the
+    // label ends up on
     ctx.save();
-    ctx.translate(0, iconTop);
+    ctx.translate(0, ICON_TOP);
     if (letters) {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -506,7 +511,7 @@ function useGlyphTexture(
     ctx.strokeStyle = "rgba(4, 5, 10, 0.92)";
     ctx.lineWidth = 5;
     ctx.lineJoin = "round";
-    const labelY = side === "below" ? ICON_PX + 32 : 22;
+    const labelY = side === "below" ? CANVAS_H - 20 : 20;
     ctx.strokeText(tech, CANVAS_W / 2, labelY);
     ctx.fillText(tech, CANVAS_W / 2, labelY);
 
@@ -550,7 +555,7 @@ function Planet({
   const spriteH = iconWorld / ICON_FRACTION;
   const spriteW = spriteH * (CANVAS_W / CANVAS_H);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
     const a = body.phase + t * body.speed;
     if (!group.current) return;
@@ -583,9 +588,20 @@ function Planet({
 
     if (mesh.current) {
       if (!texture) mesh.current.rotation.y = t * 0.6;
-      const target = (0.84 + depth * 0.32) * (hovered ? 1.25 : 1);
-      // eased toward target rather than snapped, so hover feels physical
-      mesh.current.scale.lerp(new THREE.Vector3(target, target, target), 0.14);
+
+      /* A narrow swing, and smoothed on wall-clock time rather than per
+         frame. The old ±16% was wide enough that the sprite was visibly
+         resampling as it grew, which reads as the icon shimmering rather than
+         approaching; ±7% still separates the near half of a ring from the far
+         half without the glyph ever looking unstable.
+
+         1 - e^(-dt/tau) rather than a fixed 0.14: a constant per-frame factor
+         converges at whatever rate the display runs at, so the same motion
+         was quicker on a 144Hz screen than on a 60Hz one. */
+      const target = (0.93 + depth * 0.14) * (hovered ? 1.25 : 1);
+      const k = 1 - Math.exp(-delta / 0.14);
+      const next = mesh.current.scale.x + (target - mesh.current.scale.x) * k;
+      mesh.current.scale.setScalar(next);
     }
   });
 
