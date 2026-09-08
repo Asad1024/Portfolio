@@ -279,6 +279,7 @@ export function Terminal() {
           >
             {/* hull: plating, a wash off the top edge, and a slow sweep */}
             <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+              <div className="hull-stars absolute inset-0 opacity-70" />
               <div className="hull-grid absolute inset-0 opacity-30" />
               <div
                 className="absolute inset-x-0 top-0 h-16"
