@@ -20,6 +20,7 @@ export function Nav() {
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30 });
   const [menuOpen, setMenuOpen] = useState(false);
   const [active, setActive] = useState<string | null>(null);
+  const [docked, setDocked] = useState(false);
 
   /* Which section you're actually in. The nav had no idea before — every link
      looked identical the whole way down the page, so it told you where you
@@ -52,6 +53,17 @@ export function Nav() {
     return () => io.disconnect();
   }, []);
 
+  /* The header has no panel at the top of the page and grows one as you
+     leave it. A permanently filled bar sits over the hero as a black stripe
+     across the sky; with nothing behind it, there is nothing for it to
+     separate from and nothing worth blurring. */
+  useEffect(() => {
+    const onScroll = () => setDocked(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   useScrollLock(menuOpen);
 
   // close the mobile menu on Escape
@@ -63,13 +75,45 @@ export function Nav() {
   }, [menuOpen]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-line bg-bg/70 backdrop-blur-md">
+    <header
+      className={`fixed inset-x-0 top-0 z-50 transition-[background-color,backdrop-filter] duration-500 ${
+        docked || menuOpen ? "bg-bg/55 backdrop-blur-xl backdrop-saturate-150" : "bg-transparent"
+      }`}
+    >
+      {/* Saturating the backdrop rather than covering it: the page behind is
+          a violet wash and a starfield, and a 70%-opaque black panel threw
+          all of that away. At 55% with saturation up, the nebula reads
+          through the glass and the bar takes its colour from the page. */}
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
+          docked || menuOpen ? "opacity-100" : "opacity-0"
+        }`}
+        style={{
+          background:
+            "linear-gradient(to bottom, color-mix(in oklab, var(--accent) 6%, transparent), transparent 78%)",
+        }}
+      />
+
+      {/* A hairline that fades out at both ends instead of running wall to
+          wall. A full-width rule draws a hard line across the page; one that
+          dissolves at the edges reads as the near edge of a surface. */}
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-x-0 bottom-0 h-px transition-opacity duration-500 ${
+          docked || menuOpen ? "opacity-100" : "opacity-0"
+        }`}
+        style={{
+          background:
+            "linear-gradient(to right, transparent, color-mix(in oklab, var(--accent) 38%, transparent) 18%, color-mix(in oklab, var(--fg) 16%, transparent) 50%, color-mix(in oklab, var(--accent) 38%, transparent) 82%, transparent)",
+        }}
+      />
       {/* scroll progress */}
       <motion.div
         className="absolute inset-x-0 top-0 h-px origin-left bg-accent"
         style={{ scaleX: progress }}
       />
-      <nav className="mx-auto flex h-16 max-w-shell items-center justify-between px-6">
+      <nav className="relative mx-auto flex h-16 max-w-shell items-center justify-between px-6">
         <Magnetic>
           <Link href="/" className="font-mono text-sm tracking-tight" onClick={() => setMenuOpen(false)}>
             <span className="text-accent">~/</span>asad

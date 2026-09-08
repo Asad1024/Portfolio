@@ -570,11 +570,12 @@ function Planet({
     );
     report(body.tech, group.current.position);
 
-    /* Depth is the only thing that changes a body's size or brightness. The
-       far half of a ring is further from the camera than the star is, so it
-       reads as being behind it — dimmer and smaller — and the near half comes
-       forward at full strength. The star's own sphere writes depth, so the
-       bodies genuinely pass behind it rather than being faded by hand. */
+    /* Depth changes a body's brightness, and only its brightness. The far
+       half of a ring is further from the camera than the star is, so it reads
+       as being behind it — dimmer and greyer — and the near half comes
+       forward at full strength. Every icon is the same size wherever it is.
+       The star's own sphere writes depth, so the bodies genuinely pass behind
+       it rather than being faded by hand. */
     const distance = group.current.position.distanceTo(state.camera.position);
     const centre = state.camera.position.length();
     const depth = clamp01((centre + body.radius - distance) / (2 * body.radius));
@@ -589,17 +590,18 @@ function Planet({
     if (mesh.current) {
       if (!texture) mesh.current.rotation.y = t * 0.6;
 
-      /* A narrow swing, and smoothed on wall-clock time rather than per
-         frame. The old ±16% was wide enough that the sprite was visibly
-         resampling as it grew, which reads as the icon shimmering rather than
-         approaching; ±7% still separates the near half of a ring from the far
-         half without the glyph ever looking unstable.
+      /* One size. Depth still reads — it is carried by opacity and by the
+         pull toward grey above — but it no longer touches scale, because a
+         sprite that is continuously resampling never looks still, however
+         gently it is eased. Hover is the only thing that resizes a body now,
+         and that is feedback rather than perspective.
 
-         1 - e^(-dt/tau) rather than a fixed 0.14: a constant per-frame factor
-         converges at whatever rate the display runs at, so the same motion
-         was quicker on a 144Hz screen than on a 60Hz one. */
-      const target = (0.93 + depth * 0.14) * (hovered ? 1.25 : 1);
-      const k = 1 - Math.exp(-delta / 0.14);
+         Smoothed on wall-clock time, 1 - e^(-dt/tau), rather than a fixed
+         per-frame factor: a constant factor converges at whatever rate the
+         display happens to run at, so the same gesture was quicker on a
+         144Hz screen than a 60Hz one. */
+      const target = hovered ? 1.25 : 1;
+      const k = 1 - Math.exp(-delta / 0.12);
       const next = mesh.current.scale.x + (target - mesh.current.scale.x) * k;
       mesh.current.scale.setScalar(next);
     }
