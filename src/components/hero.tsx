@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { ScrambleText } from "./scramble-text";
 
@@ -23,10 +24,25 @@ const SolarSystem = dynamic(() => import("./space/solar-system"), {
    opacity 0 — the worst possible failure for the first thing anyone sees. */
 const BASE = "transition-[opacity,transform] duration-700 ease-out";
 
+/* Whether the first-visit loader has finished is not really component state —
+   it is a fact about the session that the preloader writes down and then
+   announces. Reading it through a store keeps one source of truth (the flag,
+   not a copy of it), lets the server and the first paint agree on "not yet"
+   without a hydration mismatch, and means a visitor who has already booted
+   this session does not spend a render pretending otherwise. The preloader
+   sets the key before it dispatches, so the snapshot taken on the event is
+   always the settled one. */
+function subscribeToBoot(onChange: () => void) {
+  window.addEventListener("boot-complete", onChange);
+  return () => window.removeEventListener("boot-complete", onChange);
+}
+
+const hasBooted = () => sessionStorage.getItem("booted") === "1";
+
 export function Hero() {
   // The name only starts decrypting once BOTH curtains are gone: the
   // first-visit preloader and the route-transition veil.
-  const [bootDone, setBootDone] = useState(false);
+  const bootDone = useSyncExternalStore(subscribeToBoot, hasBooted, () => false);
   const [revealed, setRevealed] = useState(false);
   const [inView, setInView] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
@@ -45,21 +61,19 @@ export function Hero() {
   }, []);
 
   useEffect(() => {
-    const onBoot = () => setBootDone(true);
     const onRevealed = () => setRevealed(true);
-
-    if (sessionStorage.getItem("booted") === "1") setBootDone(true);
-    else window.addEventListener("boot-complete", onBoot);
     window.addEventListener("route-revealed", onRevealed);
 
-    // never let a missed event leave the hero invisible
+    /* Never let a missed event leave the hero invisible. It writes the flag
+       and announces it rather than flipping a local copy, so the failsafe and
+       the loader leave the session in exactly the same state. */
     const failsafe = setTimeout(() => {
-      setBootDone(true);
+      sessionStorage.setItem("booted", "1");
+      window.dispatchEvent(new CustomEvent("boot-complete"));
       setRevealed(true);
     }, 6000);
 
     return () => {
-      window.removeEventListener("boot-complete", onBoot);
       window.removeEventListener("route-revealed", onRevealed);
       clearTimeout(failsafe);
     };
@@ -142,7 +156,7 @@ export function Hero() {
         </div>
       </div>
 
-      <a
+      <Link
         href="/#work"
         aria-label="Scroll to work"
         className={`${BASE} ${fade} absolute bottom-16 left-1/2 z-10 -translate-x-1/2 text-muted transition-colors hover:text-accent`}
@@ -161,7 +175,7 @@ export function Hero() {
         >
           <path d="M12 4v16m0 0l-6-6m6 6l6-6" />
         </svg>
-      </a>
+      </Link>
     </section>
   );
 }

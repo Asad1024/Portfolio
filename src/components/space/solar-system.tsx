@@ -412,6 +412,16 @@ function useGlyphTexture(tech: string, color: string, labelColor: string) {
       size -= 1;
       ctx.font = font(size);
     }
+    /* Haloed before it is filled. Fourteen bodies on eleven rings will pass in
+       front of each other — that is the system working — but two bare labels
+       crossing turned both into an unreadable tangle, and the widest pair
+       ("OpenAI · Gemini" and "React Native") did it most. The sprites blend
+       normally and sort back to front, so a halo in the page's own background
+       lets the nearer label cover the farther one cleanly instead. */
+    ctx.strokeStyle = "rgba(4, 5, 10, 0.92)";
+    ctx.lineWidth = 5;
+    ctx.lineJoin = "round";
+    ctx.strokeText(tech, CANVAS_W / 2, ICON_PX + 32);
     ctx.fillText(tech, CANVAS_W / 2, ICON_PX + 32);
 
     const tex = new THREE.CanvasTexture(canvas);

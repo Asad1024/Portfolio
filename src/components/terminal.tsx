@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 import { contact, projects, skillGroups, stackList } from "@/lib/data";
+import { ConsolePanel } from "./console-panel";
 
 type Line = { type: "input" | "output" | "accent"; text: string };
 
@@ -48,7 +48,6 @@ export function Terminal() {
         e.preventDefault();
         setOpen((o) => !o);
       }
-      if (e.key === "Escape") setOpen(false);
       // konami code easter egg
       if (tag !== "INPUT" && tag !== "TEXTAREA") {
         konamiIdx = e.key === KONAMI[konamiIdx] ? konamiIdx + 1 : e.key === KONAMI[0] ? 1 : 0;
@@ -72,16 +71,6 @@ export function Terminal() {
       window.removeEventListener("open-terminal", onOpen);
     };
   }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    document.body.style.overflow = "hidden";
-    const t = setTimeout(() => inputRef.current?.focus(), 80);
-    return () => {
-      document.body.style.overflow = "";
-      clearTimeout(t);
-    };
-  }, [open]);
 
   useEffect(() => {
     bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight });
@@ -247,180 +236,90 @@ export function Terminal() {
   }
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[150] flex items-end justify-center bg-void/75 p-4 backdrop-blur-md sm:items-center"
-          onClick={() => setOpen(false)}
-        >
-          {/* The console is hardware on a ship, not a window on a laptop: no
-              traffic lights, no title bar pretending to be zsh. Hull plating,
-              corner brackets, a live reactor light and a sweep that keeps
-              crossing it — every part of the chrome says "instrument". It is the
-              same instrument as the nav computer, lit the same cyan, running a
-              different program. */}
-          <motion.div
-            initial={{ y: 40, scale: 0.98, opacity: 0 }}
-            animate={{ y: 0, scale: 1, opacity: 1 }}
-            exit={{ y: 40, scale: 0.98, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.21, 0.6, 0.35, 1] }}
-            className="relative flex h-[28rem] w-full max-w-2xl flex-col overflow-hidden rounded-lg border bg-[#04070a]/95 backdrop-blur-xl"
-            style={{
-              borderColor: "color-mix(in oklab, var(--accent) 30%, transparent)",
-              boxShadow:
-                "0 0 0 1px rgba(0,0,0,0.65), 0 26px 70px -52px color-mix(in oklab, var(--accent) 60%, transparent)",
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              inputRef.current?.focus();
-            }}
+    <ConsolePanel
+      open={open}
+      onClose={() => setOpen(false)}
+      label="Terminal"
+      title="orbital shell"
+      sub="asad-os v3.0.0"
+      initialFocusRef={inputRef}
+      size="max-w-2xl"
+      z={150}
+      footer={
+        <>
+          {/* ── soft keys ──
+              A console has labelled buttons under its screen, and this is the
+              answer to "what do I type?", so it sits outside the scroll area:
+              it can never scroll away, and it is still there after you have
+              run something and want to know what else there is. */}
+          <div
+            className="relative flex flex-wrap items-center gap-1.5 border-t px-4 py-2.5"
+            style={{ borderColor: "color-mix(in oklab, var(--accent) 16%, transparent)" }}
           >
-            {/* hull: plating, a wash off the top edge, and a slow sweep */}
-            <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-              <div className="hull-stars absolute inset-0 opacity-70" />
-              <div className="tele-grid absolute inset-0 opacity-25" />
-              <div
-                className="absolute inset-x-0 top-0 h-16"
-                style={{
-                  background:
-                    "radial-gradient(ellipse at 50% 0%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 72%)",
-                }}
-              />
-              <div
-                className="hull-scan absolute inset-x-0 h-24"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, transparent, color-mix(in oklab, var(--accent) 8%, transparent), transparent)",
-                }}
-              />
-            </div>
-
-            {/* corner brackets — the frame reads as machined, not drawn */}
-            {[
-              "left-2 top-2 border-l border-t",
-              "right-2 top-2 border-r border-t",
-              "bottom-2 left-2 border-b border-l",
-              "bottom-2 right-2 border-b border-r",
-            ].map((pos) => (
-              <span
-                key={pos}
-                aria-hidden
-                className={`pointer-events-none absolute z-10 size-4 border-accent/60 ${pos}`}
-              />
-            ))}
-
-            {/* ── instrument header ── */}
-            <div
-              className="relative flex items-center gap-3 border-b px-4 py-2.5"
-              style={{ borderColor: "color-mix(in oklab, var(--accent) 20%, transparent)" }}
-            >
-              <span className="relative flex size-2 shrink-0">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-70" />
-                <span className="relative inline-flex size-2 rounded-full bg-accent" />
-              </span>
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">
-                orbital shell
-              </p>
-              <span className="hidden h-px flex-1 bg-line sm:block" />
-              <p className="hidden font-mono text-[10px] uppercase tracking-widest text-muted/60 sm:block">
-                asad-os v3.0.0
-              </p>
-              {/* signal strength, because every console has one */}
-              <span aria-hidden className="hidden items-end gap-px sm:flex">
-                {[4, 7, 10, 13].map((h) => (
-                  <span key={h} className="w-[2px] bg-accent/70" style={{ height: h }} />
-                ))}
-              </span>
+            <span className="mr-1 font-mono text-[10px] uppercase tracking-widest text-muted/50">
+              try
+            </span>
+            {SUGGESTIONS.map((cmd) => (
               <button
-                onClick={() => setOpen(false)}
-                className="ml-auto rounded border border-line px-1.5 py-px font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:border-accent/60 hover:text-accent sm:ml-0"
-                aria-label="Close terminal"
+                key={cmd}
+                onClick={() => run(cmd)}
+                className="flex items-center gap-1.5 rounded-sm border border-accent/25 bg-accent/[0.07] px-2.5 py-1 font-mono text-[11px] text-accent/80 transition-colors hover:border-accent/70 hover:bg-accent/15 hover:text-accent"
               >
-                esc
+                <span className="text-accent/45">▸</span>
+                {cmd}
               </button>
-            </div>
+            ))}
+          </div>
 
-            {/* ── readout ── */}
-            <div
-              ref={bodyRef}
-              data-lenis-prevent
-              className="relative flex-1 space-y-1 overflow-y-auto px-4 py-3.5 font-mono text-[13px] leading-relaxed"
-            >
-              {lines.map((l, i) => (
-                <div
-                  key={i}
-                  className={
-                    l.type === "accent"
-                      ? "text-accent"
-                      : l.type === "input"
-                        ? "text-fg"
-                        : "text-muted"
-                  }
-                >
-                  {l.type === "input" && <span className="mr-2 text-accent">❯</span>}
-                  <span className="whitespace-pre-wrap">{l.text}</span>
-                </div>
-              ))}
+          {/* ── status rail ── */}
+          <div
+            className="relative flex items-center gap-2.5 border-t px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-muted/55"
+            style={{ borderColor: "color-mix(in oklab, var(--accent) 16%, transparent)" }}
+          >
+            <span className="text-accent/80">uplink stable</span>
+            <span className="hidden sm:inline">·</span>
+            <span className="hidden tabular-nums sm:inline">
+              {String(lines.length).padStart(3, "0")} lines
+            </span>
+            <span className="ml-auto normal-case tracking-normal">↑↓ history · type help</span>
+          </div>
+        </>
+      }
+    >
+      {/* ── readout ── */}
+      <div
+        ref={bodyRef}
+        data-lenis-prevent
+        onClick={() => inputRef.current?.focus()}
+        className="relative h-[22rem] space-y-1 overflow-y-auto px-4 py-3.5 font-mono text-[13px] leading-relaxed"
+      >
+        {lines.map((l, i) => (
+          <div
+            key={i}
+            className={
+              l.type === "accent" ? "text-accent" : l.type === "input" ? "text-fg" : "text-muted"
+            }
+          >
+            {l.type === "input" && <span className="mr-2 text-accent">❯</span>}
+            <span className="whitespace-pre-wrap">{l.text}</span>
+          </div>
+        ))}
 
-
-              <div className="flex items-center pt-1">
-                <span className="mr-2 text-accent">❯</span>
-                <input
-                  ref={inputRef}
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  onKeyDown={onKeyDown}
-                  className="w-full bg-transparent text-fg outline-none placeholder:text-muted/40"
-                  placeholder="type a command…"
-                  spellCheck={false}
-                  autoComplete="off"
-                />
-              </div>
-            </div>
-
-            {/* ── soft keys ──
-                A console has labelled buttons under its screen, and this is
-                the answer to "what do I type?", so it sits outside the scroll
-                area: it can never scroll away, and it is still there after
-                you have run something and want to know what else there is. */}
-            <div
-              className="relative flex flex-wrap items-center gap-1.5 border-t px-4 py-2.5"
-              style={{ borderColor: "color-mix(in oklab, var(--accent) 16%, transparent)" }}
-            >
-              <span className="mr-1 font-mono text-[10px] uppercase tracking-widest text-muted/50">
-                try
-              </span>
-              {SUGGESTIONS.map((cmd) => (
-                <button
-                  key={cmd}
-                  onClick={() => run(cmd)}
-                  className="flex items-center gap-1.5 rounded-sm border border-accent/25 bg-accent/[0.07] px-2.5 py-1 font-mono text-[11px] text-accent/80 transition-colors hover:border-accent/70 hover:bg-accent/15 hover:text-accent"
-                >
-                  <span className="text-accent/45">▸</span>
-                  {cmd}
-                </button>
-              ))}
-            </div>
-
-            {/* ── status rail ── */}
-            <div
-              className="relative flex items-center gap-2.5 border-t px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-muted/55"
-              style={{ borderColor: "color-mix(in oklab, var(--accent) 16%, transparent)" }}
-            >
-              <span className="text-accent/80">uplink stable</span>
-              <span className="hidden sm:inline">·</span>
-              <span className="hidden tabular-nums sm:inline">
-                {String(lines.length).padStart(3, "0")} lines
-              </span>
-              <span className="ml-auto normal-case tracking-normal">↑↓ history · type help</span>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        <div className="flex items-center pt-1">
+          <span className="mr-2 text-accent">❯</span>
+          <input
+            ref={inputRef}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={onKeyDown}
+            className="w-full bg-transparent text-fg outline-none placeholder:text-muted/40"
+            placeholder="type a command…"
+            spellCheck={false}
+            autoComplete="off"
+            aria-label="Terminal input"
+          />
+        </div>
+      </div>
+    </ConsolePanel>
   );
 }

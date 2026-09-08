@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 
 /* ── first visit: a star forms, then you fall into it ───────────────────────
    Two acts on one canvas.
@@ -66,6 +67,18 @@ export function Preloader() {
   const [progress, setProgress] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  /* The curtain holds the page still while it is up. Shared with the other
+     three things that freeze scrolling, so whichever closes last is the one
+     that gives the page back. */
+  useScrollLock(phase === "collapse" || phase === "warp");
+
+  /* Both branches below set state on mount, and that is the only shape this
+     can take. The phase cannot be seeded from sessionStorage in useState: the
+     server has no session and always renders the curtain, so deriving the
+     initial phase on the client would hydrate a mismatch — a returning
+     visitor would get a flash of the loader they were meant to skip. One
+     extra render on mount is the correct price. */
+  /* eslint-disable react-hooks/set-state-in-effect -- explained above */
   useEffect(() => {
     if (sessionStorage.getItem("booted") === "1") {
       setPhase("gone");
@@ -73,7 +86,6 @@ export function Preloader() {
       return;
     }
     setPhase("collapse");
-    document.body.style.overflow = "hidden";
 
     /* The readout is timer-driven and measured against the wall clock, never
        against tick count — a backgrounded tab throttles intervals, which would
@@ -96,7 +108,6 @@ export function Preloader() {
     const toExit = setTimeout(() => {
       sessionStorage.setItem("booted", "1");
       window.dispatchEvent(new CustomEvent("boot-complete"));
-      document.body.style.overflow = "";
       setPhase("exit");
     }, COLLAPSE_MS + WARP_MS);
 
@@ -110,9 +121,9 @@ export function Preloader() {
       clearTimeout(toWarp);
       clearTimeout(toExit);
       clearTimeout(goneTimer);
-      document.body.style.overflow = "";
     };
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   /* The canvas needs its own effect: the boot effect above sets phase in the
      same pass it would read the ref, and at that point the component has still

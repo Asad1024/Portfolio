@@ -43,7 +43,7 @@ export async function CodeBlock({
 
       {note && (
         <p className="border-t border-line px-5 py-3 font-mono text-xs leading-relaxed text-muted">
-          <span className="text-accent">//</span> {note}
+          <span className="text-accent">{"//"}</span> {note}
         </p>
       )}
     </div>

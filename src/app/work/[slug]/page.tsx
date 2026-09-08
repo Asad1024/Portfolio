@@ -133,6 +133,9 @@ export default async function CaseStudy({
                     src={project.image!}
                     alt={`${project.title} — product screenshot`}
                     priority
+                    // the column caps at max-w-4xl; without this it serves the
+                    // full ~1900px asset to every viewport wide enough to ask
+                    sizes="(max-width: 896px) 100vw, 896px"
                     className="w-full transition-transform duration-700 ease-out group-hover:scale-[1.015]"
                   />
                 </div>

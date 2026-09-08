@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
 import { Magnetic } from "./magnetic";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 
 const links = [
   { href: "/#work", label: "Work" },
@@ -51,16 +52,14 @@ export function Nav() {
     return () => io.disconnect();
   }, []);
 
+  useScrollLock(menuOpen);
+
   // close the mobile menu on Escape
   useEffect(() => {
     if (!menuOpen) return;
-    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
     window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
   return (

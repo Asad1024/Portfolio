@@ -61,7 +61,16 @@ export function ScrambleText({
     <span
       ref={ref}
       className={className}
-      onMouseEnter={rescrambleOnHover && startedRef.current ? () => run() : undefined}
+      /* The ref is read inside the handler, not while rendering. React does
+         not track refs, so deciding here whether the prop exists at all left
+         the element one render behind whatever startedRef actually held. */
+      onMouseEnter={
+        rescrambleOnHover
+          ? () => {
+              if (startedRef.current) run();
+            }
+          : undefined
+      }
       aria-label={text}
     >
       {display}

@@ -53,15 +53,32 @@ function destination(pathname: string) {
 
 export default function Template({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  /* Keyed on the whole path, not left to the template's own remount. A root
+     template is keyed by its FIRST segment, so /work/a -> /work/b keeps the
+     same instance and the veil would never replay between two case studies —
+     the exact navigation this site does most. The key gives the subtree fresh
+     state on every path change, which is what the effect used to do by
+     resetting two booleans on the way in. */
+  return (
+    <RouteVeil key={pathname} pathname={pathname}>
+      {children}
+    </RouteVeil>
+  );
+}
+
+function RouteVeil({
+  pathname,
+  children,
+}: {
+  pathname: string;
+  children: React.ReactNode;
+}) {
   const [lifting, setLifting] = useState(false);
   const [gone, setGone] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { name, sub } = destination(pathname);
 
   useEffect(() => {
-    setLifting(false);
-    setGone(false);
-
     const lift = setTimeout(() => {
       setLifting(true);
       // the hero holds its entrance until the veil is actually out of the way,
@@ -199,9 +216,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
           <canvas ref={canvasRef} className="absolute inset-0 size-full" />
 
           {/* the name resolves out of the light as you close on it */}
-          <div
-            key={pathname}
-            className="arrive absolute inset-0 flex flex-col items-center justify-center text-center"
+          <div className="arrive absolute inset-0 flex flex-col items-center justify-center text-center"
           >
             <p className="font-sans text-2xl font-bold tracking-tight text-fg drop-shadow-[0_0_18px_var(--ring)] sm:text-3xl">
               {name}

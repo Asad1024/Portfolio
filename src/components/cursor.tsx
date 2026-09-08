@@ -1,10 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 
+const POINTER = "(pointer: fine)";
+
+function subscribeToPointer(onChange: () => void) {
+  const mq = window.matchMedia(POINTER);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
+const hasFinePointer = () => window.matchMedia(POINTER).matches;
+
 export function Cursor() {
-  const [enabled, setEnabled] = useState(false);
+  /* Server and first paint say "no": a touch device must never be handed a
+     custom cursor, and guessing otherwise would flash one onto every phone. */
+  const enabled = useSyncExternalStore(subscribeToPointer, hasFinePointer, () => false);
   const [hovering, setHovering] = useState(false);
   const x = useMotionValue(-100);
   const y = useMotionValue(-100);
@@ -12,8 +24,7 @@ export function Cursor() {
   const springY = useSpring(y, { stiffness: 900, damping: 60, mass: 0.3 });
 
   useEffect(() => {
-    if (!window.matchMedia("(pointer: fine)").matches) return;
-    setEnabled(true);
+    if (!enabled) return;
     document.documentElement.classList.add("has-custom-cursor");
 
     const move = (e: MouseEvent) => {
@@ -27,7 +38,7 @@ export function Cursor() {
       window.removeEventListener("mousemove", move);
       document.documentElement.classList.remove("has-custom-cursor");
     };
-  }, [x, y]);
+  }, [enabled, x, y]);
 
   if (!enabled) return null;
 
