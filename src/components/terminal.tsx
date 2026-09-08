@@ -9,14 +9,22 @@ type Line = { type: "input" | "output" | "accent"; text: string };
 
 const WELCOME: Line[] = [
   { type: "accent", text: "asad-os v3.0.0 — orbital shell" },
-  { type: "output", text: "type a command, or pick one below." },
+  { type: "output", text: "type a command, or press one of the keys below." },
 ];
 
-/* Shown as buttons under the prompt on open. A shell that greets you with
-   nothing but "type help" is a dead end for anyone who doesn't already know
-   what it accepts — these make the useful half of it reachable in one click,
-   while still teaching the command by putting the real word on the chip. */
-const SUGGESTIONS = ["palette", "projects", "resume", "contact", "help"];
+/* The soft keys under the screen. A shell that greets you with nothing but
+   "type help" is a dead end for anyone who doesn't already know what it
+   accepts, so the useful half of it is one click away — and the chip carries
+   the real command word, so clicking it also teaches you to type it. */
+const SUGGESTIONS = [
+  "palette",
+  "projects",
+  "whoami",
+  "skills",
+  "resume",
+  "contact",
+  "help",
+];
 
 export function Terminal() {
   const [open, setOpen] = useState(false);
@@ -355,22 +363,6 @@ export function Terminal() {
                 </div>
               ))}
 
-              {/* only while the shell is untouched — once you have run
-                  something you know how it works and they are just noise */}
-              {lines === WELCOME && (
-                <div className="flex flex-wrap items-center gap-2 pb-1 pt-2.5">
-                  {SUGGESTIONS.map((cmd) => (
-                    <button
-                      key={cmd}
-                      onClick={() => run(cmd)}
-                      className="flex items-center gap-1.5 rounded-sm border border-green/25 bg-green/[0.06] px-2.5 py-1 font-mono text-[11px] text-green/85 transition-colors hover:border-green/70 hover:bg-green/15 hover:text-green"
-                    >
-                      <span className="text-green/50">▸</span>
-                      {cmd}
-                    </button>
-                  ))}
-                </div>
-              )}
 
               <div className="flex items-center pt-1">
                 <span className="mr-2 term-green">❯</span>
@@ -385,6 +377,30 @@ export function Terminal() {
                   autoComplete="off"
                 />
               </div>
+            </div>
+
+            {/* ── soft keys ──
+                A console has labelled buttons under its screen, and this is
+                the answer to "what do I type?", so it sits outside the scroll
+                area: it can never scroll away, and it is still there after
+                you have run something and want to know what else there is. */}
+            <div
+              className="relative flex flex-wrap items-center gap-1.5 border-t px-4 py-2.5"
+              style={{ borderColor: "color-mix(in oklab, var(--green) 18%, transparent)" }}
+            >
+              <span className="mr-1 font-mono text-[10px] uppercase tracking-widest text-muted/50">
+                try
+              </span>
+              {SUGGESTIONS.map((cmd) => (
+                <button
+                  key={cmd}
+                  onClick={() => run(cmd)}
+                  className="flex items-center gap-1.5 rounded-sm border border-green/25 bg-green/[0.06] px-2.5 py-1 font-mono text-[11px] text-green/80 transition-colors hover:border-green/70 hover:bg-green/15 hover:text-green"
+                >
+                  <span className="text-green/45">▸</span>
+                  {cmd}
+                </button>
+              ))}
             </div>
 
             {/* ── status rail ── */}
