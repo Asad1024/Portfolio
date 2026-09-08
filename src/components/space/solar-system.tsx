@@ -38,7 +38,7 @@ type Body = {
 function buildBodies(): Body[] {
   return featuredStack.map((tech, i) => {
     const shell = i % ORBITS;
-    const radius = 3.4 + shell * 1.25;
+    const radius = 3.2 + shell * 1.02;
     return {
       tech,
       color: techColor(tech),
@@ -252,7 +252,7 @@ function OrbitPath({ radius, tilt, color }: { radius: number; tilt: number; colo
       <meshBasicMaterial
         color={color}
         transparent
-        opacity={0.13}
+        opacity={0.2}
         side={THREE.DoubleSide}
         depthWrite={false}
       />
@@ -470,11 +470,11 @@ function Scene({
         />
       ))}
 
-      <Stars radius={110} depth={55} count={2600} factor={4.2} saturation={0} fade speed={0.7} />
+      <Stars radius={110} depth={55} count={1500} factor={3.6} saturation={0} fade speed={0.5} />
 
       <EffectComposer>
         <Bloom intensity={2.1} luminanceThreshold={0.06} luminanceSmoothing={0.5} mipmapBlur />
-        <Vignette eskil={false} offset={0.2} darkness={0.9} />
+        <Vignette eskil={false} offset={0.32} darkness={0.55} />
       </EffectComposer>
     </>
   );
@@ -511,7 +511,7 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
 
   return (
     <Canvas
-      camera={{ position: [0, 11, 22.5], fov: 48 }}
+      camera={{ position: [0, 11.5, 25.5], fov: 46 }}
       /* Stop the render loop entirely once the hero scrolls away. Left on
          "always" the scene keeps drawing twelve orbits behind every other
          section — burning battery and competing with the rest of the page for
@@ -538,7 +538,7 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
           on the sun's own vertical axis so autoRotate still spins around it
           rather than swinging it across the screen. */}
       <OrbitControls
-        target={[0, 3.4, 0]}
+        target={[0, 2.1, 0]}
         enablePan={false}
         enableZoom={false}
         autoRotate={!reduced}

@@ -73,8 +73,21 @@ export function Hero() {
 
   return (
     <section ref={sectionRef} className="relative flex min-h-screen flex-col justify-center overflow-hidden">
-      {/* the system itself — full bleed, drag-to-orbit */}
-      <div className={`absolute inset-0 transition-opacity duration-1000 ${fade}`}>
+      {/* The system itself — full bleed, drag-to-orbit.
+
+          Masked at the edges because the canvas carries its own glow and
+          vignette: ending it at the section boundary leaves a hard horizontal
+          seam straight across the page where the light abruptly stops. The
+          fade lets the scene dissolve into the section below instead. */}
+      <div
+        className={`absolute inset-0 transition-opacity duration-1000 ${fade}`}
+        style={{
+          maskImage:
+            "linear-gradient(180deg, transparent 0%, black 7%, black 83%, transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(180deg, transparent 0%, black 7%, black 83%, transparent 100%)",
+        }}
+      >
         <SolarSystem paused={!inView} />
       </div>
 
