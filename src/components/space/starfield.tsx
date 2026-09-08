@@ -63,7 +63,9 @@ export function Starfield() {
     };
 
     const build = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // 1.5 rather than 2: these are 1-2px dots on a dark ground, where the
+      // extra pixels cost real fill rate and buy nothing visible
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       w = canvas.offsetWidth;
       h = canvas.offsetHeight;
       canvas.width = w * dpr;
@@ -86,7 +88,20 @@ export function Starfield() {
       }
     };
 
+    /* Capped at ~30fps. This is a full-viewport 2D canvas that clears and
+       repaints every star each frame, sitting on top of the hero's WebGL
+       context — at 60fps on a hidpi display the two compete for the
+       compositor and the orbits visibly stutter. Twinkle and drift are slow
+       enough that half the frames look identical. */
+    const FRAME_MS = 33;
+    let last = 0;
+
     const draw = (t: number) => {
+      if (t - last < FRAME_MS) {
+        raf = requestAnimationFrame(draw);
+        return;
+      }
+      last = t;
       ctx.clearRect(0, 0, w, h);
 
       for (const s of stars) {

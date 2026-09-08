@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
-import { Html, OrbitControls, Stars } from "@react-three/drei";
+import { OrbitControls, Stars } from "@react-three/drei";
 import { Bloom, EffectComposer, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { featuredStack } from "@/lib/data";
@@ -240,9 +240,14 @@ function Sun({ color }: { color: string }) {
 
 /* ── orbits + planets ───────────────────────────────────────────────────── */
 
+/* The sign of the tilt matters and is easy to get backwards. A ring lies in
+   the XY plane, so Rx(-π/2 - tilt) sweeps (cos a, -sin a·sinθ, -sin a·cosθ),
+   which is the same closed curve the planet walks in useFrame traced in the
+   opposite direction. Rx(-π/2 + tilt) mirrors Z instead, and the planets then
+   ride an ellipse that visibly isn't the one drawn for them. */
 function OrbitPath({ radius, tilt, color }: { radius: number; tilt: number; color: string }) {
   return (
-    <mesh rotation={[-Math.PI / 2 + tilt, 0, 0]}>
+    <mesh rotation={[-Math.PI / 2 - tilt, 0, 0]}>
       <ringGeometry args={[radius - 0.006, radius + 0.006, 160]} />
       <meshBasicMaterial
         color={color}
@@ -255,27 +260,36 @@ function OrbitPath({ radius, tilt, color }: { radius: number; tilt: number; colo
   );
 }
 
-/* Paints a tech's glyph onto a canvas so it can orbit as a sprite. The icons
-   are 24x24 path data, so this is just a scaled Path2D fill — no SVG parsing,
-   no network, and the result is a texture that blooms like anything else in
-   the scene. */
-const GLYPH_PX = 128;
+/* Paints a tech's glyph AND its name onto one canvas, so a body is a single
+   sprite rather than a sprite plus a DOM label.
 
-function useGlyphTexture(tech: string, color: string) {
+   The label used to be a drei <Html>, which writes a CSS transform to a real
+   DOM node every frame. Nineteen of those is nineteen style writes per frame
+   fighting the compositor, and it was the main source of the stutter. Baked
+   into the texture the labels cost nothing to move, and they can no longer
+   drift out of sync with the body they name. */
+const CANVAS_W = 256;
+const CANVAS_H = 168;
+const ICON_PX = 96;
+/** Icon height as a fraction of the sprite — used to size the sprite so the
+ *  glyph itself lands at a predictable world size. */
+const ICON_FRACTION = ICON_PX / CANVAS_H;
+
+function useGlyphTexture(tech: string, color: string, labelColor: string) {
   const texture = useMemo(() => {
     const glyph = techGlyph(tech);
     if (!glyph) return null;
     const canvas = document.createElement("canvas");
-    canvas.width = GLYPH_PX;
-    canvas.height = GLYPH_PX;
+    canvas.width = CANVAS_W;
+    canvas.height = CANVAS_H;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
-    const pad = 12;
-    const scale = (GLYPH_PX - pad * 2) / 24;
-    ctx.translate(pad, pad);
+    // glyph, centred across the top
+    ctx.save();
+    const scale = ICON_PX / 24;
+    ctx.translate((CANVAS_W - ICON_PX) / 2, 6);
     ctx.scale(scale, scale);
-
     const path = new Path2D(glyph.path);
     if (glyph.stroked) {
       ctx.strokeStyle = color;
@@ -287,14 +301,29 @@ function useGlyphTexture(tech: string, color: string) {
       ctx.fillStyle = color;
       ctx.fill(path);
     }
+    ctx.restore();
+
+    // name underneath, shrunk to fit rather than clipped — "OpenAI · Gemini"
+    // and "React Native" are both wider than the icon
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = labelColor;
+    let size = 26;
+    const font = (n: number) => `500 ${n}px "JetBrains Mono", ui-monospace, monospace`;
+    ctx.font = font(size);
+    while (ctx.measureText(tech).width > CANVAS_W - 16 && size > 12) {
+      size -= 1;
+      ctx.font = font(size);
+    }
+    ctx.fillText(tech, CANVAS_W / 2, ICON_PX + 32);
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
     return tex;
-  }, [tech, color]);
+  }, [tech, color, labelColor]);
 
-  // textures hold GPU memory; the theme swap rebuilds them, so release the old
+  // textures hold GPU memory; a theme swap rebuilds them, so release the old
   useEffect(() => () => texture?.dispose(), [texture]);
 
   return texture;
@@ -304,15 +333,23 @@ function Planet({
   body,
   hovered,
   onHover,
+  labelColor,
 }: {
   body: Body;
   hovered: boolean;
   onHover: (tech: string | null) => void;
+  labelColor: string;
 }) {
   const group = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Object3D>(null);
-  const texture = useGlyphTexture(body.tech, body.color);
-  const glyphScale = body.size * 4.6;
+  const texture = useGlyphTexture(body.tech, body.color, labelColor);
+
+  // Sized from the glyph, not the sprite: the sprite is mostly transparent
+  // padding and label, so scaling it directly makes the icons far bigger than
+  // intended. Solve for the sprite height that lands the icon at iconWorld.
+  const iconWorld = body.size * 2.6;
+  const spriteH = iconWorld / ICON_FRACTION;
+  const spriteW = spriteH * (CANVAS_W / CANVAS_H);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -328,7 +365,7 @@ function Planet({
       // sprites always face the camera, so there's nothing to spin — only the
       // fallback sphere gets a rotation
       if (!texture) mesh.current.rotation.y = t * 0.6;
-      const target = hovered ? 1.45 : 1;
+      const target = hovered ? 1.25 : 1;
       // eased toward target rather than snapped, so hover feels physical
       mesh.current.scale.lerp(new THREE.Vector3(target, target, target), 0.14);
     }
@@ -336,12 +373,9 @@ function Planet({
 
   return (
     <group ref={group}>
-      {/* Hit proxy. The planets are small and permanently in motion, so aiming
-          at the visible sphere is genuinely hard — and since hovering is the
-          only way to read what a body is, a missed hover means the label is
-          unreachable. This invisible sphere gives the pointer something much
-          larger to catch. Opacity 0 rather than visible={false}, which some
-          raycaster paths skip entirely. */}
+      {/* Hit proxy: the bodies are small and permanently in motion, so aiming
+          at the glyph itself is hard. Opacity 0 rather than visible={false},
+          which some raycaster paths skip entirely. */}
       <mesh
         onPointerOver={(e: ThreeEvent<PointerEvent>) => {
           e.stopPropagation();
@@ -359,7 +393,7 @@ function Planet({
           to a lit sphere. */}
       <group ref={mesh}>
         {texture ? (
-          <sprite scale={[glyphScale, glyphScale, 1]} raycast={() => null}>
+          <sprite scale={[spriteW, spriteH, 1]} raycast={() => null}>
             <spriteMaterial
               map={texture}
               transparent
@@ -389,27 +423,6 @@ function Planet({
         </mesh>
       )}
 
-      {/* Labels are always on, not hover-only. These are small, fast-moving
-          targets and reading the stack is the entire point of the scene — a
-          name you can only reach by successfully chasing a planet with the
-          cursor is a name nobody reads. Hover just promotes one. */}
-      <Html
-        center
-        distanceFactor={17}
-        zIndexRange={[20, 0]}
-        position={[0, -glyphScale / 2 - 0.3, 0]}
-        style={{ pointerEvents: "none" }}
-      >
-        <div
-          className={`flex select-none items-center gap-1.5 whitespace-nowrap font-mono transition-all duration-300 ${
-            hovered
-              ? "rounded border border-accent/60 bg-black/80 px-2 py-1 text-[12px] text-white"
-              : "text-[11px] text-white/55"
-          }`}
-        >
-          {body.tech}
-        </div>
-      </Html>
     </group>
   );
 }
@@ -419,11 +432,13 @@ function Planet({
 function Scene({
   bodies,
   accent,
+  labelColor,
   onHover,
   hovered,
 }: {
   bodies: Body[];
   accent: string;
+  labelColor: string;
   onHover: (tech: string | null) => void;
   hovered: string | null;
 }) {
@@ -451,6 +466,7 @@ function Scene({
           body={b}
           hovered={hovered === b.tech}
           onHover={onHover}
+          labelColor={labelColor}
         />
       ))}
 
@@ -469,13 +485,19 @@ function Scene({
 export default function SolarSystem({ paused = false }: { paused?: boolean }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [accent, setAccent] = useState("#22d3ee");
+  const [labelColor, setLabelColor] = useState("rgba(232,236,245,0.75)");
   const bodies = useMemo(() => buildBodies(), []);
 
   // follow the site's theme rather than hard-coding the sun's colour
   useEffect(() => {
     const read = () => {
-      const v = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+      const style = getComputedStyle(document.documentElement);
+      const v = style.getPropertyValue("--accent").trim();
       if (v) setAccent(v);
+      // baked labels can't inherit a CSS colour, so the foreground is sampled
+      // and passed into the texture instead
+      const fg = style.getPropertyValue("--fg").trim();
+      if (fg) setLabelColor(fg);
     };
     read();
     const mo = new MutationObserver(read);
@@ -504,7 +526,13 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
         </div>
       }
     >
-      <Scene bodies={bodies} accent={accent} hovered={hovered} onHover={setHovered} />
+      <Scene
+        bodies={bodies}
+        accent={accent}
+        labelColor={labelColor}
+        hovered={hovered}
+        onHover={setHovered}
+      />
       {/* Target sits above the sun, which drops the whole system into the lower
           half of the frame and leaves the headline clean air. The target stays
           on the sun's own vertical axis so autoRotate still spins around it
