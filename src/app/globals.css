@@ -278,9 +278,24 @@ body::after {
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
 @media (pointer: fine) {
-  .has-custom-cursor,
-  .has-custom-cursor a,
-  .has-custom-cursor button {
-    cursor: none;
+  /* A star for a pointer. It's a native cursor image rather than an element
+     chased around by script, so the browser draws it outside the page and it
+     can't lag behind the mouse however busy the sky gets. Over anything
+     clickable it becomes a star in orbit. */
+  html {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 C12.70 8.80 15.20 11.30 22 12 C15.20 12.70 12.70 15.20 12 22 C11.30 15.20 8.80 12.70 2 12 C8.80 11.30 11.30 8.80 12 2 Z' fill='%23e8ecf5' stroke='%2304050a' stroke-width='1.2' stroke-linejoin='round'/%3E%3Ccircle cx='12' cy='12' r='1.8' fill='%2322d3ee'/%3E%3C/svg%3E") 12 12, auto;
+  }
+  a,
+  button,
+  [role="button"],
+  label,
+  select,
+  summary {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='none' stroke='%2304050a' stroke-width='2.4' opacity='.5'/%3E%3Ccircle cx='16' cy='16' r='14' fill='none' stroke='%2322d3ee' stroke-width='1' opacity='.75'/%3E%3Cpath d='M16 5 C16.77 12.48 19.52 15.23 27 16 C19.52 16.77 16.77 19.52 16 27 C15.23 19.52 12.48 16.77 5 16 C12.48 15.23 15.23 12.48 16 5 Z' fill='%2322d3ee' stroke='%2304050a' stroke-width='1.2' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='16' r='1.8' fill='%23ffffff'/%3E%3C/svg%3E") 16 16, pointer;
+  }
+  input,
+  textarea,
+  [contenteditable="true"] {
+    cursor: text;
   }
 }

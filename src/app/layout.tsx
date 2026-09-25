@@ -4,7 +4,6 @@ import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { Terminal } from "@/components/terminal";
-import { Cursor } from "@/components/cursor";
 import { Preloader } from "@/components/preloader";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { Starfield } from "@/components/space/starfield";
@@ -73,7 +72,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </a>
         <Preloader />
         <SmoothScroll />
-        <Cursor />
         <Nav />
         {/* Page-wide sky: starfield plus two nebula washes, fixed behind every
             section so the site reads as one continuous piece of space rather
