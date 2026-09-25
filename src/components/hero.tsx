@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { ScrambleText } from "./scramble-text";
-import { Magnetic } from "./magnetic";
 
 /* The WebGL scene is client-only and lazily chunked: three and drei must never
    land in the first-paint bundle, and none of it means anything during SSR. */
@@ -151,42 +150,9 @@ export function Hero() {
             production.
           </p>
 
-          {/* The two things a visitor came to do, above the fold: see the
-              work, or take the CV away. Styled as the contact section's pair
-              so the page's calls to action read as one family. */}
           <div
-            className={`${BASE} ${rise} mt-10 flex flex-wrap items-center gap-3`}
+            className={`${BASE} ${fade} mt-10 flex items-center gap-5 font-mono text-xs text-muted`}
             style={at(680)}
-          >
-            <Magnetic>
-              <Link
-                href="/#work"
-                className="flex items-center gap-2.5 rounded-full bg-fg px-6 py-3.5 font-mono text-sm text-bg transition-opacity hover:opacity-85"
-              >
-                view work
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M12 4v16m0 0l-6-6m6 6l6-6" />
-                </svg>
-              </Link>
-            </Magnetic>
-            <Magnetic>
-              <a
-                href="/Asad-Shah-Resume.pdf"
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2.5 rounded-full border border-line bg-bg/40 px-6 py-3.5 font-mono text-sm text-fg/85 backdrop-blur-sm transition-colors hover:border-accent hover:text-accent"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" />
-                </svg>
-                resume
-              </a>
-            </Magnetic>
-          </div>
-
-          <div
-            className={`${BASE} ${fade} mt-8 flex items-center gap-5 font-mono text-xs text-muted`}
-            style={at(860)}
           >
             <span className="flex items-center gap-2.5">
               <span className="relative flex size-2">
