@@ -13,7 +13,7 @@ export function ConsoleEgg() {
 
     console.log("%c ASAD SHAH ", badge);
     console.log(
-      "%cFull-Stack Developer — building AI products, modernizing legacy code.",
+      "%cFull Stack Developer — building AI products, modernizing legacy code.",
       muted,
     );
     console.log(

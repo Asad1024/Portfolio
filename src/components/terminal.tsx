@@ -163,7 +163,7 @@ export function Terminal() {
           const info = [
             "asad@portfolio",
             "──────────────────────────────",
-            "Role        Full-Stack Developer",
+            "Role        Full Stack Developer",
             "Company     Spark AI · Dubai",
             "Location    Lahore, PK",
             "Experience  3+ years",

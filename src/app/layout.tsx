@@ -32,11 +32,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   /* One name on every tab, case studies included: a portfolio is one site,
      and a tab reading a product name says nothing about whose it is. */
-  title: "Asad Shah — Full-Stack Developer",
+  title: "Asad Shah — Full Stack Developer",
   description: DESCRIPTION,
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Asad Shah — Full-Stack Developer",
+    title: "Asad Shah — Full Stack Developer",
     description: DESCRIPTION,
     url: "/",
     siteName: "Asad Shah",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Asad Shah — Full-Stack Developer",
+    title: "Asad Shah — Full Stack Developer",
     description: DESCRIPTION,
   },
 };

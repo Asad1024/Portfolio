@@ -1,18 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <radialGradient id="planet" cx="38%" cy="32%" r="75%">
+    <linearGradient id="code" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#a5f3fc"/>
-      <stop offset="0.45" stop-color="#22d3ee"/>
-      <stop offset="1" stop-color="#0e4a6b"/>
-    </radialGradient>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
   </defs>
   <rect width="64" height="64" rx="14" fill="#070a14"/>
   <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="13.25" fill="none" stroke="#22d3ee" stroke-opacity="0.22" stroke-width="1.5"/>
-  <g transform="rotate(-22 32 33)">
-    <path d="M8 33 A24 7.5 0 0 1 56 33" fill="none" stroke="#67e8f9" stroke-opacity="0.55" stroke-width="2.6" stroke-linecap="round"/>
-    <circle cx="32" cy="33" r="13" fill="url(#planet)"/>
-    <path d="M8 33 A24 7.5 0 0 0 56 33" fill="none" stroke="#67e8f9" stroke-width="2.6" stroke-linecap="round"/>
+  <g fill="none" stroke="url(#code)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 21 L11 32 L22 43"/>
+    <path d="M42 21 L53 32 L42 43"/>
+    <path d="M36 16 L28 48"/>
   </g>
-  <path d="M51 7 C51.4 10.6 52.4 11.6 56 12 C52.4 12.4 51.4 13.4 51 17 C50.6 13.4 49.6 12.4 46 12 C49.6 11.6 50.6 10.6 51 7 Z" fill="#e8ecf5"/>
-  <circle cx="12.5" cy="52" r="1.6" fill="#e8ecf5" fill-opacity="0.7"/>
+  <path d="M53 5 C53.3 8.2 54.2 9.1 57.4 9.4 C54.2 9.7 53.3 10.6 53 13.8 C52.7 10.6 51.8 9.7 48.6 9.4 C51.8 9.1 52.7 8.2 53 5 Z" fill="#e8ecf5"/>
 </svg>
