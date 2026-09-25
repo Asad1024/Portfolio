@@ -53,6 +53,21 @@ import {
   siPython,
   siFastapi,
   siModelcontextprotocol,
+  siHtml5,
+  siJavascript,
+  siOpenstreetmap,
+  siDotenv,
+  siCloudflare,
+  siBabel,
+  siChartdotjs,
+  siReactrouter,
+  siGunicorn,
+  siSqlalchemy,
+  siOpenapiinitiative,
+  siWebpack,
+  siPorkbun,
+  siUv,
+  siNsis,
 } from "simple-icons";
 
 /** A single-colour mark on a 24x24 grid — the shape simple-icons uses. */
@@ -162,6 +177,27 @@ const ICONS: Record<string, BrandMark> = {
   FastAPI: siFastapi,
   MCP: siModelcontextprotocol,
   "Electron Forge": siElectron,
+  HTML: siHtml5,
+  JavaScript: siJavascript,
+  "OpenStreetMap": siOpenstreetmap,
+  "python-dotenv": siDotenv,
+  Cloudflare: siCloudflare,
+  Babel: siBabel,
+  "Chart.js": siChartdotjs,
+  "React Router": siReactrouter,
+  Gunicorn: siGunicorn,
+  SQLAlchemy: siSqlalchemy,
+  OpenAPI: siOpenapiinitiative,
+  Webpack: siWebpack,
+  Porkbun: siPorkbun,
+  uv: siUv,
+  NSIS: siNsis,
+  /* the names projects write these under */
+  Express: siExpress,
+  Prisma: siPrisma,
+  "React Query": siReactquery,
+  Chromium: siChromium,
+  "Google · Microsoft Calendar": siGooglecalendar,
 };
 
 /* Accent-colored fallback glyphs for skills without a brand icon (stroke paths). */
@@ -190,6 +226,11 @@ const FALLBACKS: Record<string, string> = {
   "Apollo · enrichment APIs":
     "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 4a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 4a1 1 0 1 0 0 2 1 1 0 0 0 0-2z",
   // stacked layers — a job queue
+  Bull:
+    "M12 2l10 5.5-10 5.5L2 7.5 12 2zM2 12.5l10 5.5 10-5.5M2 17l10 5.5L22 17",
+  // documents + search
+  RAG: "M6 2h9l5 5v8M6 2v20h8M15 2v5h5M17 17a3 3 0 1 0 0 .01M19.2 19.2L22 22",
+  // stacked layers — a job queue
   BullMQ:
     "M12 2l10 5.5-10 5.5L2 7.5 12 2zM2 12.5l10 5.5 10-5.5M2 17l10 5.5L22 17",
   // stacked coins — state store
@@ -211,6 +252,40 @@ const FALLBACKS: Record<string, string> = {
   "Microsoft Calendar": "M3 5h18v16H3zM3 10h18M8 3v4M16 3v4",
   // envelope
   SendGrid: "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM22 6l-10 7L2 6",
+  /* libraries with no mark of their own, drawn as what they do */
+  // envelope — mail transport and mailboxes
+  Nodemailer: "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM22 6l-10 7L2 6",
+  ImapFlow: "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM22 6l-10 7L2 6",
+  Mailcow: "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM22 6l-10 7L2 6",
+  // speaker
+  "Text-to-speech": "M11 5L6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14",
+  // document
+  "pdf-parse": "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5",
+  TipTap: "M4 7V4h16v3M9 20h6M12 4v16",
+  // spreadsheet
+  ExcelJS: "M3 3h18v18H3zM3 9h18M3 15h18M9 3v18",
+  // archive
+  JSZip: "M21 8v13H3V8M1 3h22v5H1zM10 12h4",
+  // braces — config as data
+  "JSON site recipes": "M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 0 2 2 2 2 0 0 0-2 2v5a2 2 0 0 1-2 2h-1",
+  // request arrows
+  httpx: "M4 8h14l-3.5-3.5M20 16H6l3.5 3.5",
+  // target
+  "Prospeo API": "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 4a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 4a1 1 0 1 0 0 2 1 1 0 0 0 0-2z",
+  // editor window
+  "Monaco Editor": "M3 4h18v16H3zM3 8h18M8 12l-2 2 2 2M12 16h4",
+  // database
+  "electron-store": "M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3",
+  // shield — vulnerability data and reports
+  "OSV.dev": "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  CycloneDX: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  // drag handles
+  "react-dnd": "M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01",
+  "Hello Pangea DnD": "M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01",
+  // globe — translations
+  "next-intl": "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20",
+  // up-and-down arrows — schema migrations
+  Alembic: "M8 3v18M8 3L4 7M8 3l4 4M16 21V3M16 21l-4-4M16 21l4-4",
   // plug / connector
   Unipile:
     "M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-5 5 5 5 0 0 1-5-5V7zM12 16v5",
@@ -256,7 +331,37 @@ function brandColor(hex: string): string {
   return lum < 0.16 || lum > 0.85 ? "var(--fg)" : `#${hex}`;
 }
 
-export function TechIcon({ name, size = 16 }: { name: string; size?: number }) {
+/* Project stacks name things the way the project uses them — "Next.js 14",
+   "MySQL · Sequelize", "OpenAI (gpt-4o-mini)", "Twilio Voice" — while the
+   marks are keyed by the bare technology. Find the mark the label means:
+   the label as written, then without its note in brackets, then each half of
+   a pair with any version number dropped, then its words trimmed from the
+   end until one is known. */
+const VERSION = /\s+v?\d[\d.x]*$/i;
+const known = (n: string) => n in IMAGES || n in ICONS || n in FALLBACKS;
+
+function resolve(label: string): string | null {
+  if (known(label)) return label;
+  const bare = label.replace(/\s*\([^)]*\)/g, "").trim();
+  if (known(bare)) return bare;
+  for (const part of bare.split(/\s*·\s*/)) {
+    let words = part.replace(VERSION, "").trim();
+    while (words) {
+      if (known(words)) return words;
+      const cut = words.lastIndexOf(" ");
+      if (cut < 0) break;
+      words = words.slice(0, cut).replace(VERSION, "").trim();
+    }
+  }
+  return null;
+}
+
+/* For a tool with no mark of its own: a small code bracket, so every chip in a
+   list still carries an icon and the names stay aligned. */
+const GENERIC = "M8 6l-6 6 6 6M16 6l6 6-6 6";
+
+export function TechIcon({ name: label, size = 16 }: { name: string; size?: number }) {
+  const name = resolve(label) ?? "";
   const image = IMAGES[name];
   if (image) {
     return (
@@ -298,7 +403,22 @@ export function TechIcon({ name, size = 16 }: { name: string; size?: number }) {
       </svg>
     );
   }
-  return null;
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="var(--muted)"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="shrink-0"
+    >
+      <path d={GENERIC} />
+    </svg>
+  );
 }
 
 export function hasTechIcon(name: string) {
