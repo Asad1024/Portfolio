@@ -30,15 +30,13 @@ export const metadata: Metadata = {
      is what makes a shared link show a broken preview card. Set
      NEXT_PUBLIC_SITE_URL and the OG image, sitemap and robots all follow. */
   metadataBase: new URL(siteUrl),
-  title: {
-    default: "Asad — Full-Stack Developer",
-    // case studies set their own; this keeps the suffix off the home page
-    template: "%s",
-  },
+  /* One name on every tab, case studies included: a portfolio is one site,
+     and a tab reading a product name says nothing about whose it is. */
+  title: "Asad Shah — Full-Stack Developer",
   description: DESCRIPTION,
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Asad — Full-Stack Developer",
+    title: "Asad Shah — Full-Stack Developer",
     description: DESCRIPTION,
     url: "/",
     siteName: "Asad Shah",
@@ -46,7 +44,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Asad — Full-Stack Developer",
+    title: "Asad Shah — Full-Stack Developer",
     description: DESCRIPTION,
   },
 };

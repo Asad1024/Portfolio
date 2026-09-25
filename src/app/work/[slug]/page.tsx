@@ -18,10 +18,8 @@ export async function generateMetadata({
 }) {
   const { slug } = await params;
   const project = projects.find((p) => p.slug === slug);
-  return {
-    title: project ? `${project.title} — Asad` : "Work — Asad",
-    description: project?.tagline,
-  };
+  // the title stays the site's own (see the root layout); only the summary is per project
+  return { description: project?.tagline };
 }
 
 export default async function CaseStudy({
