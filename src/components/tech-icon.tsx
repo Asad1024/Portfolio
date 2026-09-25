@@ -34,6 +34,25 @@ import {
   siHubspot,
   siWhatsapp,
   siQuickbooks,
+  siZod,
+  siReactquery,
+  siReacthookform,
+  siGsap,
+  siThreedotjs,
+  siI18next,
+  siSocketdotio,
+  siSequelize,
+  siSwagger,
+  siDocker,
+  siVercel,
+  siRender,
+  siSentry,
+  siJest,
+  siVitest,
+  siExpo,
+  siPython,
+  siFastapi,
+  siModelcontextprotocol,
 } from "simple-icons";
 
 /** A single-colour mark on a 24x24 grid — the shape simple-icons uses. */
@@ -123,6 +142,26 @@ const ICONS: Record<string, BrandMark> = {
   WhatsApp: siWhatsapp,
   Twilio: siTwilio,
   OpenAI: siOpenai,
+  Zod: siZod,
+  "TanStack Query": siReactquery,
+  "React Hook Form": siReacthookform,
+  GSAP: siGsap,
+  "Three.js": siThreedotjs,
+  i18next: siI18next,
+  "Socket.IO": siSocketdotio,
+  Sequelize: siSequelize,
+  Swagger: siSwagger,
+  Docker: siDocker,
+  Vercel: siVercel,
+  Render: siRender,
+  Sentry: siSentry,
+  Jest: siJest,
+  Vitest: siVitest,
+  Expo: siExpo,
+  Python: siPython,
+  FastAPI: siFastapi,
+  MCP: siModelcontextprotocol,
+  "Electron Forge": siElectron,
 };
 
 /* Accent-colored fallback glyphs for skills without a brand icon (stroke paths). */
@@ -150,6 +189,28 @@ const FALLBACKS: Record<string, string> = {
   // target / enrichment
   "Apollo · enrichment APIs":
     "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 4a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 4a1 1 0 1 0 0 2 1 1 0 0 0 0-2z",
+  // stacked layers — a job queue
+  BullMQ:
+    "M12 2l10 5.5-10 5.5L2 7.5 12 2zM2 12.5l10 5.5 10-5.5M2 17l10 5.5L22 17",
+  // stacked coins — state store
+  Zustand:
+    "M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6",
+  // bar chart
+  Recharts: "M4 20V10M10 20V4M16 20v-8M22 20H2",
+  // padlock
+  NextAuth: "M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4",
+  // shield with key slot
+  "SSO · 2FA": "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM12 9v4",
+  // play triangle in a frame — browser test runner
+  Playwright: "M3 4h18v16H3zM10 9l5 3-5 3z",
+  // documents + search
+  "RAG · embeddings": "M6 2h9l5 5v8M6 2v20h8M15 2v5h5M17 17a3 3 0 1 0 0 .01M19.2 19.2L22 22",
+  // eye — OCR reads images
+  "Tesseract.js": "M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
+  // calendar
+  "Microsoft Calendar": "M3 5h18v16H3zM3 10h18M8 3v4M16 3v4",
+  // envelope
+  SendGrid: "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM22 6l-10 7L2 6",
   // plug / connector
   Unipile:
     "M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-5 5 5 5 0 0 1-5-5V7zM12 16v5",

@@ -31,9 +31,9 @@ const codevault = (
     <div className="space-y-1.5 font-mono text-[9px]">
       {(
         [
-          ["jsonwebtoken@8.5.1", "reachable · auth path", "#ff5f57"],
-          ["lodash@4.17.20", "reachable · api layer", "#febc2e"],
-          ["minimist@1.2.5", "installed, never called", "var(--muted)"],
+          ["sql injection · api/users.ts:42", "critical", "#ff5f57"],
+          ["aws key · config/prod.env", "high", "#febc2e"],
+          ["copyleft license · 1 package", "low", "var(--muted)"],
         ] as const
       ).map(([pkg, note, color], i) => (
         <div key={i} className="flex items-center gap-2 rounded border border-line bg-card px-2 py-1.5">
@@ -42,7 +42,7 @@ const codevault = (
           <span className="ml-auto shrink-0 text-muted">{note}</span>
         </div>
       ))}
-      <p className="pt-0.5 text-muted">10,412 deps resolved · 2 exploitable</p>
+      <p className="pt-0.5 text-muted">grade C · offline scan · 0 bytes uploaded</p>
     </div>
   </Chrome>
 );
@@ -66,8 +66,52 @@ const avatarStudio = (
   </Chrome>
 );
 
+const insyncx = (
+  <Chrome title="insyncx — vendor payouts">
+    <div className="space-y-1.5 font-mono text-[9px]">
+      {(
+        [
+          ["order #1042 · independent", "stripe connect", "var(--accent)"],
+          ["order #1043 · official store", "team credit", "#febc2e"],
+          ["payout · north studio", "pending", "var(--muted)"],
+        ] as const
+      ).map(([label, note, color], i) => (
+        <div key={i} className="flex items-center gap-2 rounded border border-line bg-card px-2 py-1.5">
+          <span className="size-1.5 shrink-0 rounded-full" style={{ background: color }} />
+          <span className="truncate text-fg">{label}</span>
+          <span className="ml-auto shrink-0 text-muted">{note}</span>
+        </div>
+      ))}
+      <p className="pt-0.5 text-muted">platform commission 10% · 2 payout paths</p>
+    </div>
+  </Chrome>
+);
+
+const ghertak = (
+  <Chrome title="ghertak — fulfillment queue">
+    <div className="space-y-1.5 font-mono text-[9px]">
+      {(
+        [
+          ["#GT-2281 · 3 items · lahore", "jazzcash", "var(--accent)"],
+          ["#GT-2282 · 1 item · karachi", "cod", "#febc2e"],
+          ["#GT-2283 · substitution", "needs review", "#ff5f57"],
+        ] as const
+      ).map(([label, note, color], i) => (
+        <div key={i} className="flex items-center gap-2 rounded border border-line bg-card px-2 py-1.5">
+          <span className="size-1.5 shrink-0 rounded-full" style={{ background: color }} />
+          <span className="truncate text-fg">{label}</span>
+          <span className="ml-auto shrink-0 text-muted">{note}</span>
+        </div>
+      ))}
+      <p className="pt-0.5 text-muted">load-out today · 42 orders · 6 vendors</p>
+    </div>
+  </Chrome>
+);
+
 const mockups: Record<string, React.ReactNode> = {
+  ghertak,
   codevault,
+  insyncx,
   "avatar-studio": avatarStudio,
 };
 

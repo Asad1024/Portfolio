@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { projects } from "@/lib/data";
+import { projects, showcase } from "@/lib/data";
 import { Reveal } from "./reveal";
 import { SectionHeading } from "./section-heading";
 import { ProjectVisual } from "./work-preview";
@@ -46,19 +46,34 @@ function designation(slug: string, index: string) {
   return `${(consonants + letters).slice(0, 3)}-${index}`;
 }
 
+/* The showcase projects lead, in their chosen order; everything else follows
+   in catalogue order behind "explore more". */
+const ordered = [
+  ...showcase.flatMap((slug) => projects.filter((p) => p.slug === slug)),
+  ...projects.filter((p) => !showcase.includes(p.slug)),
+];
+
 export function Work() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
-  const [activeSlug, setActiveSlug] = useState(projects[0].slug);
+  const [expanded, setExpanded] = useState(false);
+  const [activeSlug, setActiveSlug] = useState(ordered[0].slug);
 
   const shown = useMemo(
-    () => projects.filter((p) => filter === "all" || p.tags.includes(filter)),
+    () => ordered.filter((p) => filter === "all" || p.tags.includes(filter)),
     [filter],
   );
 
-  // The active project has to come from the filtered set: filtering away the
-  // selected one would otherwise leave the viewport showing something no
-  // longer in the list.
-  const active = shown.find((p) => p.slug === activeSlug) ?? shown[0];
+  /* Collapsed, the list is only the showcase projects that pass the filter —
+     unless the filter leaves none of them, in which case hiding everything
+     behind a button would show an empty list. */
+  const lead = shown.filter((p) => showcase.includes(p.slug));
+  const visible = expanded || lead.length === 0 ? shown : lead;
+  const hiddenCount = shown.length - lead.length;
+
+  // The active project has to come from the visible set: filtering or
+  // collapsing away the selected one would otherwise leave the viewport
+  // showing something no longer in the list.
+  const active = visible.find((p) => p.slug === activeSlug) ?? visible[0];
 
   /* The shot being faded out, kept underneath the incoming one so a switch is
      a crossfade rather than a flash of the black ground between two images. */
@@ -177,72 +192,87 @@ export function Work() {
       <Reveal delay={0.1}>
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14">
           {/* ── manifest ─────────────────────────────────────────────────── */}
-          <ul className="divide-y divide-line border-y border-line">
-            {shown.map((p) => {
-              const on = active?.slug === p.slug;
-              return (
-                <li key={p.slug}>
-                  <Link
-                    href={`/work/${p.slug}`}
-                    onPointerMove={(e) => intend(e, p.slug)}
-                    onPointerLeave={() => abandon(p.slug)}
-                    onFocus={() => select(p.slug)}
-                    className="group flex items-center gap-4 py-4 outline-none transition-colors sm:gap-5"
-                  >
-                    {/* selection marker — the row the viewport is showing */}
-                    <span
-                      aria-hidden
-                      className={`h-8 w-px shrink-0 transition-colors duration-300 ${
-                        on ? "bg-accent" : "bg-transparent"
-                      }`}
-                    />
-
-                    <span
-                      className={`shrink-0 font-mono text-xs tabular-nums transition-colors duration-300 ${
-                        on ? "text-accent" : "text-muted/80"
-                      }`}
+          <div>
+            <ul className="divide-y divide-line border-y border-line">
+              {visible.map((p) => {
+                const on = active?.slug === p.slug;
+                return (
+                  <li key={p.slug}>
+                    <Link
+                      href={`/work/${p.slug}`}
+                      onPointerMove={(e) => intend(e, p.slug)}
+                      onPointerLeave={() => abandon(p.slug)}
+                      onFocus={() => select(p.slug)}
+                      className="group flex items-center gap-4 py-4 outline-none transition-colors sm:gap-5"
                     >
-                      {designation(p.slug, p.index)}
-                    </span>
-
-                    <span className="min-w-0 flex-1">
-                      <span
-                        className={`block truncate font-sans text-base font-bold tracking-tight transition-colors duration-300 sm:text-lg ${
-                          on ? "text-accent" : "text-fg"
-                        }`}
-                      >
-                        {p.title}
-                      </span>
-                      <span className="mt-0.5 block truncate font-mono text-xs text-muted/90">
-                        {p.company ? `${p.company} · ` : ""}
-                        {p.platform}
-                      </span>
-                    </span>
-
-                    {p.link && (
+                      {/* selection marker — the row the viewport is showing */}
                       <span
                         aria-hidden
-                        title="live"
-                        className="relative flex size-1.5 shrink-0"
-                      >
-                        <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-70" />
-                        <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
-                      </span>
-                    )}
+                        className={`h-8 w-px shrink-0 transition-colors duration-300 ${
+                          on ? "bg-accent" : "bg-transparent"
+                        }`}
+                      />
 
-                    <span
-                      aria-hidden
-                      className={`shrink-0 font-mono text-xs transition-all duration-300 ${
-                        on ? "translate-x-0 text-accent opacity-100" : "-translate-x-1 opacity-0"
-                      }`}
-                    >
-                      →
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                      <span
+                        className={`shrink-0 font-mono text-xs tabular-nums transition-colors duration-300 ${
+                          on ? "text-accent" : "text-muted/80"
+                        }`}
+                      >
+                        {designation(p.slug, p.index)}
+                      </span>
+
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className={`block truncate font-sans text-base font-bold tracking-tight transition-colors duration-300 sm:text-lg ${
+                            on ? "text-accent" : "text-fg"
+                          }`}
+                        >
+                          {p.title}
+                        </span>
+                        <span className="mt-0.5 block truncate font-mono text-xs text-muted/90">
+                          {p.company ? `${p.company} · ` : ""}
+                          {p.platform}
+                        </span>
+                      </span>
+
+                      {p.link && (
+                        <span
+                          aria-hidden
+                          title="live"
+                          className="relative flex size-1.5 shrink-0"
+                        >
+                          <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-70" />
+                          <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
+                        </span>
+                      )}
+
+                      <span
+                        aria-hidden
+                        className={`shrink-0 font-mono text-xs transition-all duration-300 ${
+                          on ? "translate-x-0 text-accent opacity-100" : "-translate-x-1 opacity-0"
+                        }`}
+                      >
+                        →
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {lead.length > 0 && hiddenCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setExpanded((e) => !e)}
+                aria-expanded={expanded}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-full border border-line px-5 py-2.5 font-mono text-xs text-muted transition-colors hover:border-accent/50 hover:text-accent"
+              >
+                {expanded
+                  ? "show fewer ↑"
+                  : `explore ${hiddenCount} more ${hiddenCount === 1 ? "project" : "projects"} ↓`}
+              </button>
+            )}
+          </div>
 
           {/* ── viewport ─────────────────────────────────────────────────── */}
           {active && (
