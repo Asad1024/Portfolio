@@ -12,6 +12,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { MatrixRain } from "@/components/matrix-rain";
 import { ConsoleEgg } from "@/components/console-egg";
 import { StatusBar } from "@/components/status-bar";
+import { Flyby } from "@/components/space/flyby";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space",
@@ -87,6 +88,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <MatrixRain />
         <ConsoleEgg />
         <StatusBar />
+        <Flyby />
       </body>
     </html>
   );
