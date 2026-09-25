@@ -2,7 +2,6 @@ import { contact } from "@/lib/data";
 import { Reveal } from "./reveal";
 import { Magnetic } from "./magnetic";
 import { LocalTime } from "./local-time";
-import { SkyNote } from "./sky-note";
 import { GithubGraph } from "./github-graph";
 
 export function Contact() {
@@ -97,21 +96,11 @@ export function Contact() {
           <GithubGraph />
         </Reveal>
 
-        <div className="mt-14">
-          <SkyNote />
-        </div>
-
-        <div className="mt-8 flex flex-col items-start justify-between gap-4 border-t border-line pt-8 font-mono text-xs text-muted sm:flex-row sm:items-center">
+        <div className="mt-16 flex flex-col items-start justify-between gap-4 border-t border-line pt-8 font-mono text-xs text-muted sm:flex-row sm:items-center">
           <p>
             © {new Date().getFullYear()} Asad Shah — {contact.location}
           </p>
           <LocalTime />
-          <p className="text-muted/80">
-            built with Next.js 16 · Tailwind 4 · Three.js · GLSL shaders · CSS 3D
-          </p>
-          <p>
-            <span className="text-accent">exit 0</span>
-          </p>
         </div>
       </div>
     </section>

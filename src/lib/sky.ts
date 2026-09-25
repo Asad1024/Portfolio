@@ -45,37 +45,3 @@ export function projectZenith(altDeg: number, azDeg: number) {
   const az = azDeg * RAD;
   return { x: -r * Math.sin(az), y: -r * Math.cos(az) };
 }
-
-/* A short list of constellations people actually know by name, with the
-   centre of each figure. Used for the one line of copy that tells a visitor
-   what is overhead — "Orion is up" lands; "Camelopardalis is up" does not. */
-const FAMOUS: { name: string; ra: number; dec: number }[] = [
-  { name: "Orion", ra: 83.8, dec: 5.9 },
-  { name: "the Great Bear", ra: 165, dec: 56 },
-  { name: "Cassiopeia", ra: 15, dec: 60.5 },
-  { name: "Scorpius", ra: 253, dec: -30 },
-  { name: "Cygnus", ra: 310, dec: 42 },
-  { name: "Leo", ra: 160, dec: 16 },
-  { name: "Gemini", ra: 108, dec: 23 },
-  { name: "Taurus", ra: 66, dec: 17 },
-  { name: "Lyra", ra: 284, dec: 36.5 },
-  { name: "Sagittarius", ra: 285, dec: -28 },
-  { name: "Pegasus", ra: 340, dec: 20 },
-  { name: "Andromeda", ra: 12, dec: 38 },
-  { name: "Aquila", ra: 297, dec: 5 },
-  { name: "Boötes", ra: 218, dec: 30 },
-  { name: "Canis Major", ra: 104, dec: -22 },
-  { name: "Virgo", ra: 200, dec: -3 },
-];
-
-/** The best-known constellation standing highest over Lahore right now, or
- *  null if none of them is comfortably clear of the horizon. */
-export function highestFamous(date: Date) {
-  const lst = localSiderealDeg(date);
-  let best: { name: string; alt: number } | null = null;
-  for (const c of FAMOUS) {
-    const { alt } = toHorizontal(c.ra, c.dec, lst);
-    if (alt > 25 && (!best || alt > best.alt)) best = { name: c.name, alt };
-  }
-  return best?.name ?? null;
-}

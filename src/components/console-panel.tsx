@@ -37,10 +37,10 @@ export function ConsolePanel({
   onClose: () => void;
   /** what a screen reader announces when the dialog opens */
   label: string;
-  /** the instrument's name, in the header */
-  title: string;
+  /** the instrument's name, in the header — leave out for a bare panel */
+  title?: string;
   /** the readout beside it */
-  sub: string;
+  sub?: string;
   initialFocusRef?: RefObject<HTMLElement | null>;
   align?: "center" | "top";
   size?: string;
@@ -126,78 +126,60 @@ export function ConsolePanel({
             animate={{ y: 0, scale: 1, opacity: 1 }}
             exit={{ y: 40, scale: 0.98, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.21, 0.6, 0.35, 1] }}
-            className={`relative flex w-full flex-col overflow-hidden rounded-lg border bg-[#04070a]/95 backdrop-blur-xl ${size}`}
+            className={`relative flex w-full flex-col overflow-hidden rounded-xl border bg-[#05080c]/95 backdrop-blur-xl ${size}`}
             style={{
-              borderColor: "color-mix(in oklab, var(--accent) 30%, transparent)",
+              borderColor: "color-mix(in oklab, var(--accent) 22%, transparent)",
               boxShadow:
-                "0 0 0 1px rgba(0,0,0,0.65), 0 26px 70px -52px color-mix(in oklab, var(--accent) 60%, transparent)",
+                "0 24px 64px -24px rgba(0,0,0,0.8), 0 0 40px -18px color-mix(in oklab, var(--accent) 35%, transparent)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* hull: stars, survey grid, a wash off the top edge, a slow sweep */}
-            <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-              <div className="hull-stars absolute inset-0 opacity-70" />
-              <div className="tele-grid absolute inset-0 opacity-25" />
-              <div
-                className="absolute inset-x-0 top-0 h-16"
-                style={{
-                  background:
-                    "radial-gradient(ellipse at 50% 0%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 72%)",
-                }}
-              />
-              <div
-                className="hull-scan absolute inset-x-0 h-24"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, transparent, color-mix(in oklab, var(--accent) 8%, transparent), transparent)",
-                }}
-              />
-            </div>
-
-            {/* corner brackets — the frame reads as machined, not drawn */}
-            {[
-              "left-2 top-2 border-l border-t",
-              "right-2 top-2 border-r border-t",
-              "bottom-2 left-2 border-b border-l",
-              "bottom-2 right-2 border-b border-r",
-            ].map((pos) => (
-              <span
-                key={pos}
-                aria-hidden
-                className={`pointer-events-none absolute z-10 size-4 border-accent/60 ${pos}`}
-              />
-            ))}
-
-            {/* ── instrument header ── */}
+            {/* A single faint wash off the top edge. The stars, grid, sweep
+                and corner brackets that used to sit here made the panel feel
+                busy; the content is the interface, not the frame. */}
             <div
-              className="relative flex items-center gap-3 border-b px-4 py-2.5"
-              style={{ borderColor: "color-mix(in oklab, var(--accent) 20%, transparent)" }}
-            >
-              <span className="relative flex size-2 shrink-0">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-70" />
-                <span className="relative inline-flex size-2 rounded-full bg-accent" />
-              </span>
-              <p className="font-mono text-xs uppercase tracking-[0.22em] text-accent">
-                {title}
-              </p>
-              <span className="hidden h-px flex-1 bg-line sm:block" />
-              <p className="hidden font-mono text-[11px] uppercase tracking-widest text-muted/80 sm:block">
-                {sub}
-              </p>
-              {/* signal strength, because every console has one */}
-              <span aria-hidden className="hidden items-end gap-px sm:flex">
-                {[4, 7, 10, 13].map((h) => (
-                  <span key={h} className="w-[2px] bg-accent/70" style={{ height: h }} />
-                ))}
-              </span>
-              <button
-                onClick={onClose}
-                className="ml-auto rounded border border-line px-1.5 py-px font-mono text-[11px] uppercase tracking-widest text-muted transition-colors hover:border-accent/60 hover:text-accent sm:ml-0"
-                aria-label={`Close ${label.toLowerCase()}`}
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-20"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 50% 0%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 72%)",
+              }}
+            />
+
+            {/* ── instrument header: its name, a readout, signal, and the close key.
+                The console character lives here and in the colour — not in
+                brackets, grids or sweeps over the content. ── */}
+            {title && (
+              <div
+                className="relative flex items-center gap-3 border-b px-4 py-2.5"
+                style={{ borderColor: "color-mix(in oklab, var(--accent) 16%, transparent)" }}
               >
-                esc
-              </button>
-            </div>
+                <span
+                  aria-hidden
+                  className="size-2 shrink-0 rounded-full bg-accent"
+                  style={{ boxShadow: "0 0 8px var(--accent)" }}
+                />
+                <p className="font-mono text-xs uppercase tracking-[0.18em] text-accent">{title}</p>
+                {sub && (
+                  <p className="ml-auto hidden font-mono text-[11px] uppercase tracking-widest text-muted/70 sm:block">
+                    {sub}
+                  </p>
+                )}
+                {/* signal strength, because every console has one */}
+                <span aria-hidden className={`hidden items-end gap-px sm:flex ${sub ? "" : "ml-auto"}`}>
+                  {[4, 7, 10, 13].map((h) => (
+                    <span key={h} className="w-[2px] rounded-full bg-accent/70" style={{ height: h }} />
+                  ))}
+                </span>
+                <button
+                  onClick={onClose}
+                  className="ml-auto rounded-md border border-line px-1.5 py-px font-mono text-[11px] uppercase tracking-widest text-muted transition-colors hover:border-accent/60 hover:text-accent sm:ml-0"
+                  aria-label={`Close ${label.toLowerCase()}`}
+                >
+                  esc
+                </button>
+              </div>
+            )}
 
             {children}
             {footer}

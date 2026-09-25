@@ -12,6 +12,9 @@ type Item = {
   run: () => void;
 };
 
+/** The marker each kind of result carries, in its heading and on its rows. */
+const GLYPH: Record<string, string> = { destinations: "◆", bodies: "●", systems: "▸" };
+
 const SECTIONS = [
   ["Work", "#work"],
   ["Capabilities", "#capabilities"],
@@ -47,7 +50,6 @@ export function CommandPalette() {
       ...SECTIONS.map(([label, href]) => ({
         label,
         group: "destinations",
-        hint: href,
         run: go(href),
       })),
       ...projects.map((p) => ({
@@ -165,12 +167,12 @@ export function CommandPalette() {
       z={160}
       footer={
         <div
-          className="relative flex items-center gap-3 border-t px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-muted/80"
-          style={{ borderColor: "color-mix(in oklab, var(--accent) 16%, transparent)" }}
+          className="flex items-center gap-4 border-t px-4 py-2 font-mono text-[11px] text-muted/70"
+          style={{ borderColor: "color-mix(in oklab, var(--accent) 14%, transparent)" }}
         >
-          <span className="normal-case tracking-normal">↑↓ navigate</span>
-          <span className="normal-case tracking-normal">↵ select</span>
-          <span className="ml-auto tabular-nums text-accent/80">
+          <span>↑↓ navigate</span>
+          <span>↵ select</span>
+          <span className="ml-auto uppercase tabular-nums tracking-widest text-accent/80">
             {String(results.length).padStart(2, "0")} in range
           </span>
         </div>
@@ -197,7 +199,7 @@ export function CommandPalette() {
           spellCheck={false}
           autoComplete="off"
           aria-label="Search sections, projects and actions"
-          className="w-full bg-transparent py-3.5 font-mono text-sm text-fg outline-none placeholder:text-muted/70"
+          className="w-full bg-transparent py-3.5 font-mono text-sm text-fg outline-none placeholder:text-muted/60"
         />
       </div>
 
@@ -208,47 +210,42 @@ export function CommandPalette() {
         className="relative max-h-[46vh] overflow-y-auto p-2"
       >
         {results.length === 0 && (
-          <p className="px-3 py-8 text-center font-mono text-xs text-muted">
+          <p className="px-3 py-10 text-center text-sm text-muted">
             no signal for “{query}”
           </p>
         )}
         {results.map((item, i) => {
           const header = item.group !== lastGroup ? item.group : null;
           lastGroup = item.group;
-          const glyph = item.group === "bodies" ? "●" : item.group === "systems" ? "▸" : "◆";
+          const on = i === cursor;
+          const glyph = GLYPH[item.group] ?? "◆";
           return (
             <div key={`${item.group}-${item.label}`}>
               {header && (
-                <div className="flex items-center gap-2.5 px-3 pb-1.5 pt-3.5">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-accent/70">
-                    {header}
-                  </p>
-                  <span className="h-px flex-1 bg-line" />
-                </div>
+                <p className="flex items-center gap-2 px-3 pb-1.5 pt-3.5 font-mono text-[11px] uppercase tracking-[0.18em] text-accent/75">
+                  <span aria-hidden className="text-[9px]">{glyph}</span>
+                  {header}
+                </p>
               )}
               <button
                 data-idx={i}
                 onMouseEnter={() => setCursor(i)}
                 onClick={item.run}
-                className={`flex w-full items-center gap-3 rounded-sm border px-3 py-2.5 text-left transition-colors ${
-                  i === cursor
-                    ? "border-accent/40 bg-accent/[0.08] text-fg"
-                    : "border-transparent text-muted"
+                className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors duration-150 ${
+                  on ? "border-accent/30 bg-accent/[0.07] text-fg" : "border-transparent text-fg/80"
                 }`}
               >
                 <span
                   aria-hidden
-                  className={`shrink-0 font-mono text-[10px] ${
-                    i === cursor ? "text-accent" : "text-muted/70"
-                  }`}
+                  className={`shrink-0 font-mono text-[9px] transition-colors ${on ? "text-accent" : "text-muted/50"}`}
                 >
                   {glyph}
                 </span>
-                <span className="truncate font-sans text-sm">{item.label}</span>
+                <span className="truncate text-sm">{item.label}</span>
                 {item.hint && (
                   <span
-                    className={`ml-auto shrink-0 truncate font-mono text-xs ${
-                      i === cursor ? "text-accent/85" : "text-muted/80"
+                    className={`ml-auto shrink-0 truncate font-mono text-xs transition-colors ${
+                      on ? "text-accent/80" : "text-muted/60"
                     }`}
                   >
                     {item.hint}
