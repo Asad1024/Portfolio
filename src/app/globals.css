@@ -99,31 +99,6 @@ body::after {
   .attention-pulse { animation: none; opacity: 1; }
 }
 
-/* shiki code blocks — theme follows the site, not the highlighter */
-.shiki {
-  background: transparent !important;
-}
-.shiki code {
-  counter-reset: ln;
-  display: block;
-}
-.shiki .line {
-  display: block;
-  min-height: 1.7em;
-}
-.shiki .line::before {
-  counter-increment: ln;
-  content: counter(ln);
-  display: inline-block;
-  width: 2.2em;
-  margin-right: 1.4em;
-  text-align: right;
-  color: var(--muted);
-  opacity: 0.45;
-  user-select: none;
-}
-.code-scroll::-webkit-scrollbar { height: 8px; }
-
 /* ── space ──────────────────────────────────────────────────────────────────
    Atmosphere for the cosmic half of the theme. Everything here is decorative
    and must degrade to "nothing happens" rather than to a broken layout. */

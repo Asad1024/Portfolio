@@ -36,8 +36,6 @@ export type Project = {
   problem: string;
   built: string[];
   arch: { cols: ArchCol[]; caption: string };
-  /** A real, self-contained function lifted from the project's repo. */
-  snippet?: { file: string; lang: "ts" | "tsx" | "js" | "python"; note: string; code: string };
   decisions: { title: string; body: string }[];
   outcome: { value: string; label: string }[];
 };
@@ -104,28 +102,6 @@ export const projects: Project[] = [
         { title: "coach", items: ["mode rubric", "history + trends"] },
       ],
       caption: "two audio streams in, one readable line out in ~1–2s. Everything runs on the user's PC with the user's own keys; there's no backend",
-    },
-    snippet: {
-      file: "src/coach.js",
-      lang: "js",
-      note:
-        "The coaching half of the product. The rubric swaps with the mode — you don't grade a job interview on talk ratio — and the transcript is flattened to speaker-tagged lines before it ever reaches the model.",
-      code: `async function generateCoachReport({ apiKey, model, transcript, reference, modeId }) {
-  const client = new OpenAI({ apiKey });
-  const lines = transcript.map((t) => \`\${t.speaker}: \${t.text}\`).join('\\n');
-  const rubric = RUBRICS[modeId] || RUBRICS.sales;
-
-  const res = await client.chat.completions.create({
-    model,
-    max_tokens: 1600,
-    temperature: 0.5,
-    messages: [
-      { role: 'system', content: \`\${rubric}\\n\\n\${SECTIONS}\\n\\n=== REFERENCE MATERIAL ===\\n\${reference || '(none)'}\` },
-      { role: 'user', content: \`Transcript:\\n\\n\${lines}\` },
-    ],
-  });
-  return res.choices[0]?.message?.content || 'No report generated.';
-}`,
     },
     decisions: [
       {
@@ -353,33 +329,6 @@ export const projects: Project[] = [
       ],
       caption: "a real browser on the office network, not a cloud scraper. Nothing leaves the machine, and a blocked site is reported as blocked, not as an empty shelf",
     },
-    snippet: {
-      file: "src/main/extract/page-extractor.js",
-      lang: "js",
-      note:
-        "Scraped filter counts are meaningless without a denominator. This hunts the page's own \"N results\" figure across the likely containers, which both anchors share-of-shelf maths and cross-checks the summed facet counts.",
-      code: `// The page's own "N results / N products" figure — the correct denominator
-// for share-of-shelf, and a cross-check against summed filter counts.
-function statedResultTotal() {
-  // "of N products" / "N results found" is the TOTAL; "Showing 1–30 products"
-  // is just the current page. Prefer the total, so match "of N …" first.
-  const OF = /\\bof\\s+([\\d][\\d,\\.]{0,9})\\s*(?:results?|products?|items?|matches)\\b/i;
-  const FOUND = /\\b([\\d][\\d,\\.]{0,9})\\s*(?:results?|products?|items?|item\\(s\\)|matches)\\s*(?:found|for\\b)/i;
-  const RES = /\\b([\\d][\\d,\\.]{0,9})\\s*(?:results?|products?|items?|item\\(s\\)|matches)\\b/i;
-  const toN = (m) => { if (!m) return null; const n = parseInt(m[1].replace(/[,\\.]/g, ''), 10); return (Number.isFinite(n) && n > 0 && n < 10000000) ? n : null; };
-  const zones = document.querySelectorAll(
-    '[class*="result" i], [class*="count" i], [class*="total" i], [class*="showing" i], ' +
-    '[class*="toolbar" i], [class*="header" i], [class*="listing" i], h1, h2, main');
-  let ofHit = null, foundHit = null, resHit = null;
-  zones.forEach((z) => {
-    const t = clean(z.innerText || '').slice(0, 300);
-    if (ofHit === null) ofHit = toN(t.match(OF));
-    if (foundHit === null) foundHit = toN(t.match(FOUND));
-    if (resHit === null) resHit = toN(t.match(RES));
-  });
-  return ofHit != null ? ofHit : (foundHit != null ? foundHit : resHit);
-}`,
-    },
     decisions: [
       {
         title: "A desktop app, not a cloud scraper",
@@ -449,56 +398,6 @@ function statedResultTotal() {
         { title: "act", items: ["AI personalization", "CSV export"] },
       ],
       caption: "FastAPI + SQLite on one machine with no cloud and no login. Raw source JSON is kept on every lead, so fixing a mapping never costs another API call",
-    },
-    snippet: {
-      file: "app/scoring.py",
-      lang: "python",
-      note:
-        "Qualification scoring, component by component. Automated signals cap at 70; the remaining 30 are manual UI fields that count as zero while null — so an unreviewed lead can never fake its way into tier A.",
-      code: `def score_lead(lead: dict, geo_countries=None, geo_cities=None) -> dict:
-    """Compute automated components + total + tier. Preserves manual fields.
-
-    geo_countries/geo_cities override the default UAE/KSA targets. LeadCore
-    sectors pass their ICP's geography so a run outside the Gulf can still
-    earn the 10 ICP-fit points; every existing caller omits them and scores
-    exactly as before.
-    """
-    # ICP Fit (30): sourced via a sector-targeted run (10), geography (10), size known (10)
-    icp = 10 if lead.get("sector") else 0
-    countries = ({c.lower().strip() for c in geo_countries}
-                 if geo_countries is not None else TARGET_COUNTRIES)
-    cities = ({c.lower().strip() for c in geo_cities}
-              if geo_cities is not None else TARGET_CITIES)
-    country = (lead.get("country") or "").lower().strip()
-    city = (lead.get("city") or "").lower().strip()
-    if country in countries or city in cities:
-        icp += 10
-    if lead.get("employee_size"):
-        icp += 10
-
-    # Company Quality (15): website (8), employee count present (7)
-    company = (8 if lead.get("website") else 0) + (7 if lead.get("employee_size") else 0)
-
-    # Decision Maker (15): a named person with a job title
-    dm = 15 if (lead.get("decision_maker") and lead.get("title")) else 0
-
-    # Contactability (10): verified email (7), mobile (3)
-    contact = (7 if lead.get("dm_email") else 0) + (3 if lead.get("dm_mobile") else 0)
-
-    ai_opp = lead.get("score_ai_opportunity")
-    intent = lead.get("score_intent")
-    total = icp + company + dm + contact + (ai_opp or 0) + (intent or 0)
-
-    return {
-        "score_icp": icp,
-        "score_company": company,
-        "score_dm": dm,
-        "score_contact": contact,
-        "score_ai_opportunity": ai_opp,
-        "score_intent": intent,
-        "qualification_score": total,
-        "tier": tier_for(total),
-    }`,
     },
     decisions: [
       {
@@ -572,31 +471,6 @@ function statedResultTotal() {
       ],
       caption: "infrastructure, not a sequencer. It builds and warms the mailboxes, then hands them to whatever tool does the sending",
     },
-    snippet: {
-      file: "src/services/warmingService.ts",
-      lang: "ts",
-      note:
-        "Warm-up volume for a given day. A linear ramp is what burns domains, so progress runs through a smoothstep curve and starts at a floor of ~10% of target — early days stay deliberately, boringly low.",
-      code: `/**
- * Winnr-like daily volume: volumePerDay is the ceiling.
- * Progress eases in over ramp duration; day 0 starts at ~1.
- */
-export function todaysWarmingVolume(
-  volumePerDay: number,
-  ramp: WarmingRamp,
-  dayIndex: number,
-): number {
-  const max = clampVolumePerDay(volumePerDay);
-  const duration = rampDurationDays(ramp);
-  const day = Math.max(0, dayIndex);
-  const linear = Math.min(1, day / duration);
-  // Gentle ease-in so early days stay low
-  const eased = linear * linear * (3 - 2 * linear);
-  const floor = Math.max(1, Math.round(max * 0.1));
-  const today = Math.round(floor + (max - floor) * eased);
-  return Math.min(max, Math.max(1, today));
-}`,
-    },
     decisions: [
       {
         title: "Infrastructure, not a sequencer",
@@ -668,44 +542,6 @@ export function todaysWarmingVolume(
         { title: "report", items: ["PDF · HTML · SARIF", "SBOM · CSV"] },
       ],
       caption: "everything runs in the Electron process on your machine. The only optional network call sends a package name and version to OSV.dev, never code",
-    },
-    snippet: {
-      file: "src/scanner/riskScorer.js",
-      lang: "js",
-      note:
-        "Raw CVSS treats every finding as equal; this doesn't. Categories carry multipliers (injection outranks misconfiguration), and low-impact types count at 35% of their weight, so a weak .env value can't drown out a real injection path.",
-      code: `const CATEGORY_MULTIPLIERS = {
-  'Injection Attacks': 1.4,
-  'Cross-Site Scripting': 1.3,
-  'Hardcoded Secrets': 1.35,
-  'Insecure Deserialization': 1.3,
-  'Authentication & Session': 1.2,
-  'Vulnerable Dependencies': 1.15,
-  'Security Misconfiguration': 1.0,
-};
-
-const SEVERITY_WEIGHTS = {
-  CRITICAL: 22,
-  HIGH: 14,
-  MEDIUM: 6,
-  LOW: 2,
-  INFO: 0,
-};
-
-const LOW_IMPACT_TYPES = new Set([
-  'WEAK_ENV_SECRET',
-  'EMPTY_ENV_VALUE',
-  'ENV_NOT_GITIGNORED',
-]);
-
-// inside RiskScorer.calculate(), once per finding:
-let weight = SEVERITY_WEIGHTS[sev] || 2;
-if (LOW_IMPACT_TYPES.has(issue.type)) {
-  weight *= 0.35;
-}
-baseScore += weight * typePenalty;
-const mult = CATEGORY_MULTIPLIERS[issue.category] || 1;
-categoryBoost += weight * typePenalty * (mult - 1);`,
     },
     decisions: [
       {

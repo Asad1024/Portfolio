@@ -6,7 +6,6 @@ import { projects } from "@/lib/data";
 import { Reveal } from "@/components/reveal";
 import { StatValue } from "@/components/stat-value";
 import { ArchDiagram } from "@/components/arch-diagram";
-import { CodeBlock } from "@/components/code-block";
 
 export function generateStaticParams() {
   return projects.map((p) => ({ slug: p.slug }));
@@ -36,8 +35,8 @@ export default async function CaseStudy({
 
   const idx = projects.findIndex((p) => p.slug === slug);
 
-  /* Sections are numbered in the order they appear, and not every project
-     shows code, so the numbers are counted rather than written in. */
+  /* Sections are numbered in the order they appear, counted rather than
+     written in so adding or dropping one never leaves a gap. */
   let n = 0;
   const num = (name: string) => `${String(++n).padStart(2, "0")}_${name}`;
   const next = projects[(idx + 1) % projects.length];
@@ -195,18 +194,6 @@ export default async function CaseStudy({
           ))}
         </ul>
       </Section>
-
-      {/* real code */}
-      {project.snippet && (
-        <Section mono={num("code")}>
-          <CodeBlock
-            code={project.snippet.code}
-            lang={project.snippet.lang}
-            file={project.snippet.file}
-            note={project.snippet.note}
-          />
-        </Section>
-      )}
 
       {/* architecture */}
       <Section mono={num("architecture")}>
