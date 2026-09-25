@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
 import { Magnetic } from "./magnetic";
@@ -14,7 +14,15 @@ const links = [
   { href: "/#contact", label: "Contact" },
 ];
 
+/* Which modifier to print on the shortcut hint. Read through a store so the
+   server and the first client paint agree on "Ctrl" and a Mac swaps in ⌘
+   without a hydration mismatch. The platform never changes, so there is
+   nothing to subscribe to. */
+const noSubscribe = () => () => {};
+const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+
 export function Nav() {
+  const mac = useSyncExternalStore(noSubscribe, isMac, () => false);
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30 });
   const [menuOpen, setMenuOpen] = useState(false);
@@ -151,20 +159,26 @@ export function Nav() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Set exactly like the wordmark opposite it — cyan sigil, plain
-              word, blinking cyan underscore. The two ends of the header are
-              the same kind of object then: one is where you are, the other is
-              what you can talk to. */}
+          {/* Search: the command palette, which reaches every project,
+              section, link and action on the site. The key hint teaches the
+              shortcut; the whole chip is the button. */}
           <Magnetic>
             <button
-              aria-label="Open terminal"
-              title="Terminal — `"
-              onClick={() => window.dispatchEvent(new CustomEvent("open-terminal"))}
-              className="group flex h-9 items-center font-mono text-sm tracking-tight"
+              aria-label="Search and commands"
+              aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}
+              title={`Search — ${mac ? "⌘K" : "Ctrl K"}`}
+              onClick={() => window.dispatchEvent(new CustomEvent("open-palette"))}
+              className="group flex h-9 items-center gap-2.5 rounded-full border border-line bg-bg/40 pl-3 pr-1.5 font-mono text-xs text-muted backdrop-blur-sm transition-colors hover:border-accent/60 hover:text-fg"
             >
-              <span className="text-accent">&gt;_</span>
-              <span className="ml-1.5 transition-colors group-hover:text-accent">terminal</span>
-              <span className="caret-blink text-accent">_</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden className="transition-colors group-hover:text-accent">
+                <circle cx="11" cy="11" r="7" />
+                <path d="M20 20l-3.5-3.5" />
+              </svg>
+              <span className="hidden sm:inline">search</span>
+              <kbd className="flex h-6 items-center gap-0.5 rounded-full border border-line bg-card px-2 font-mono text-[11px] text-fg/85">
+                {mac ? "⌘" : "Ctrl"}
+                <span className="text-accent">K</span>
+              </kbd>
             </button>
           </Magnetic>
 

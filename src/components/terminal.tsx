@@ -23,7 +23,6 @@ const SUGGESTIONS = [
   "skills",
   "resume",
   "contact",
-  "launch",
   "help",
 ];
 
@@ -98,7 +97,6 @@ export function Terminal() {
             { type: "output", text: "resume        download my CV" },
             { type: "output", text: "contact       how to reach me" },
             { type: "output", text: "matrix        …you know what this does" },
-            { type: "output", text: "launch        clear the pad" },
             { type: "output", text: "palette       open the command palette" },
             { type: "output", text: "clear         clear the screen" },
             { type: "output", text: "exit          close terminal" },
@@ -191,16 +189,6 @@ export function Terminal() {
             setOpen(false);
             window.dispatchEvent(new CustomEvent("run-matrix"));
           }, 500);
-          break;
-        case "launch":
-          out.push(
-            { type: "output", text: "T-minus 3 … 2 … 1 …" },
-            { type: "accent", text: "liftoff. we have liftoff." },
-          );
-          setTimeout(() => {
-            setOpen(false);
-            window.dispatchEvent(new CustomEvent("launch-ship"));
-          }, 700);
           break;
         case "palette":
           out.push({ type: "accent", text: "opening command palette ..." });

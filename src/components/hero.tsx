@@ -87,6 +87,7 @@ export function Hero() {
   return (
     <section
       ref={sectionRef}
+      data-hero
       className="relative flex min-h-screen items-center overflow-hidden"
     >
       {/* The system owns the right half on desktop and the lower band on
