@@ -1,14 +1,14 @@
 import type { StaticImageData } from "next/image";
 
 import sparkcueImg from "@/assets/sparkcue.png";
-import circlevoiceImg from "@/assets/circlevoice.png";
-import leadsreachImg from "@/assets/leadsreach.png";
+import voiceAgentsImg from "@/assets/voice-agents.png";
+import outboundCopilotImg from "@/assets/outbound-copilot.png";
 import siteharvestImg from "@/assets/siteharvest.png";
 import leadgenImg from "@/assets/leadgen.png";
-import slotwiseImg from "@/assets/slotwise.png";
-import funnelflowImg from "@/assets/funnelflow.png";
-import sparkCrmImg from "@/assets/sparkai-crm.png";
-import matchifyImg from "@/assets/matchify.png";
+import bookingPlatformImg from "@/assets/booking-platform.png";
+import videoFunnelsImg from "@/assets/video-funnels.png";
+import salesCrmImg from "@/assets/sales-crm.png";
+import matchingAppImg from "@/assets/matching-app.png";
 import mailforgeImg from "@/assets/mailforge.png";
 
 export type ArchCol = { title: string; items: string[] };
@@ -42,11 +42,11 @@ export type Project = {
 /** The projects shown before "explore more", in this order. Each is also
  *  marked `featured` on its entry. */
 export const showcase = [
-  "leadsreach",
+  "outbound-copilot",
   "sparkcue",
-  "circlevoice",
-  "slotwise",
-  "sparkai-crm",
+  "voice-agents",
+  "booking-platform",
+  "sales-crm",
   "siteharvest",
   "codevault",
   "mailforge",
@@ -144,14 +144,13 @@ export const projects: Project[] = [
     ],
   },
   {
-    slug: "circlevoice",
+    slug: "voice-agents",
     index: "02",
     featured: true,
     tags: ["web", "ai", "cloud"],
     company: "Spark AI",
-    link: "https://circlevoiceai.vercel.app/",
-    image: circlevoiceImg,
-    title: "CircleVoice AI",
+    image: voiceAgentsImg,
+    title: "AI Voice Agents",
     tagline: "Multilingual AI voice agents that make and answer phone calls",
     year: "2026",
     role: "Architecture · Full build",
@@ -276,14 +275,13 @@ CRITICAL: This is a REAL conversation. Listen actively, respond naturally, and b
     ],
   },
   {
-    slug: "leadsreach",
+    slug: "outbound-copilot",
     index: "03",
     featured: true,
     tags: ["web", "ai", "cloud"],
     company: "Spark AI",
-    link: "https://leadsreachai.com/",
-    image: leadsreachImg,
-    title: "LeadsReach",
+    image: outboundCopilotImg,
+    title: "Outbound AI Copilot",
     tagline: "AI sales copilot — find people, reach out, book the meeting, close the deal",
     year: "2025 — 2026",
     role: "Product · Architecture · Full build",
@@ -321,7 +319,7 @@ CRITICAL: This is a REAL conversation. Listen actively, respond naturally, and b
       "AI SDR that reads replies, drafts answers from the workspace playbook, qualifies the lead, and either waits for approval or sends — behind a fail-closed content check",
       "In-browser dialer (Twilio Voice SDK) and AI voice calls (ElevenLabs), with call history, analytics, and call analysis feeding an AI coach",
       "Sales CRM: pipelines with drag-and-drop deals, contacts, companies, tasks, and funnel / campaign / pipeline reports — a lead becomes a contact, then a deal",
-      "Meetings via Slotwise with Google and Outlook calendars, and Ask Lea — an AI copilot in the top bar",
+      "Meetings booked through a scheduling integration with Google and Outlook calendars, and an AI copilot in the top bar",
       "Workspace roles (owner, admin, contributor, viewer), shared lead and AI credits, Stripe plans and checkout, a 7-day trial on platform keys, and a separate staff admin portal",
     ],
     arch: {
@@ -785,14 +783,13 @@ const LOW_IMPACT_TYPES = new Set([
     ],
   },
   {
-    slug: "slotwise",
+    slug: "booking-platform",
     index: "08",
     featured: true,
     tags: ["web"],
     company: "Spark AI",
-    link: "https://slotwiseai.vercel.app/",
-    image: slotwiseImg,
-    title: "Slotwise",
+    image: bookingPlatformImg,
+    title: "Booking Platform",
     tagline: "Multi-tenant appointment booking for service businesses",
     year: "2024 — 2025",
     role: "Product · Full build",
@@ -891,14 +888,13 @@ function applyBlocks(intervals: TimeInterval[], blocks: TimeInterval[]): TimeInt
     ],
   },
   {
-    slug: "funnelflow",
+    slug: "video-funnels",
     index: "09",
     featured: false,
     tags: ["web", "ai", "cloud"],
     company: "Spark AI",
-    link: "https://funnel-flow-frontend-v1.vercel.app/",
-    image: funnelflowImg,
-    title: "FunnelFlow AI",
+    image: videoFunnelsImg,
+    title: "AI Video Funnels",
     tagline: "Conversion funnels with talking AI videos",
     year: "2024 — 2025",
     role: "Architecture · Full build",
@@ -986,15 +982,14 @@ const normalizeStatus = (status, score) => {
     ],
   },
   {
-    slug: "sparkai-crm",
+    slug: "sales-crm",
     index: "10",
     featured: true,
     tags: ["web", "ai"],
     company: "Spark AI",
-    link: "https://spark-ai-crm.vercel.app/",
-    image: sparkCrmImg,
-    title: "SparkAI CRM",
-    tagline: "Multi-tenant sales CRM with SparkBot, the built-in AI assistant",
+    image: salesCrmImg,
+    title: "Sales CRM",
+    tagline: "Multi-tenant sales CRM with a built-in AI assistant",
     year: "2026",
     role: "Product · Architecture · Full build",
     platform: "Web — Multi-tenant SaaS",
@@ -1020,7 +1015,7 @@ const normalizeStatus = (status, score) => {
       "Vitest · Playwright",
     ],
     overview:
-      "A multi-tenant sales CRM where each organization gets its own workspace — contacts, deals, email, and billing — with roles, a subscription plan, and a 7-day trial. Teams run the whole sales cycle in one place: capture leads, move deals through pipelines, follow up by email and live chat, send quotes and invoices, and track pipeline and revenue on a dashboard. SparkBot, the built-in AI assistant, drafts emails and summarizes timelines.",
+      "A multi-tenant sales CRM where each organization gets its own workspace — contacts, deals, email, and billing — with roles, a subscription plan, and a 7-day trial. Teams run the whole sales cycle in one place: capture leads, move deals through pipelines, follow up by email and live chat, send quotes and invoices, and track pipeline and revenue on a dashboard. A built-in AI assistant drafts emails and summarizes timelines.",
     problem:
       "Small sales teams end up paying for a CRM, a separate email-sequence tool, a quoting and invoicing app, a live-chat widget, and a form builder, and still copy data between them by hand. Tools priced for enterprise also tend to assume US dollars and US time zones. The product had to cover the whole cycle from first form fill to paid invoice in one workspace, with enterprise-grade access control, and default to how teams in the Gulf actually work (AED and Asia/Dubai time, with exchange rates for other currencies).",
     built: [
@@ -1029,8 +1024,8 @@ const normalizeStatus = (status, score) => {
       "Quotes with public e-sign links and invoices with public payment-status pages, rendered to PDF with PDFKit — no login needed to view them",
       "Email templates, sequences, and campaigns sent through Resend or Gmail, with opens tracked on the contact timeline and sequences run on Bull queues",
       "Unified inbox, a live chat widget, and in-app notifications over Socket.IO",
-      "SparkBot on OpenAI for email drafts, timeline summaries, and chat",
-      "Tasks, reminders, and a calendar with Google Calendar sync, plus public booking pages through Slotwise",
+      "Built-in AI assistant on OpenAI for email drafts, timeline summaries, and chat",
+      "Tasks, reminders, and a calendar with Google Calendar sync, plus public booking pages through a scheduling integration",
       "Embeddable web forms and no-code workflows (assign, tag, notify, webhook), with round-robin lead assignment",
       "Reports on pipeline, funnels, goals, and team performance",
       "Enterprise auth: JWT access and refresh tokens, Google sign-in, SSO over SAML and OpenID, LDAP, and TOTP two-factor",
@@ -1042,7 +1037,7 @@ const normalizeStatus = (status, score) => {
         { title: "capture", items: ["forms · chat widget", "CSV · round-robin"] },
         { title: "qualify", items: ["lead stages", "rule-based scoring"] },
         { title: "sell", items: ["Kanban pipelines", "quotes + e-sign"] },
-        { title: "follow up", items: ["sequences on Bull", "SparkBot drafts"] },
+        { title: "follow up", items: ["sequences on Bull", "AI drafts"] },
         { title: "collect", items: ["invoices · PDF", "reports"] },
       ],
       caption: "Next.js → Express + Prisma → MySQL, with Socket.IO for chat and notifications, Bull on Redis for sequences and reminders, and public token pages for quotes, invoices, forms, and booking",
@@ -1111,14 +1106,13 @@ export function normalizeContactEnrichment(raw: Record<string, unknown>): Record
     ],
   },
   {
-    slug: "matchify",
+    slug: "matching-app",
     index: "11",
     featured: false,
     tags: ["web", "ai"],
     company: "Spark AI",
-    link: "https://matchify-frontend-v1.vercel.app/",
-    image: matchifyImg,
-    title: "Matchify",
+    image: matchingAppImg,
+    title: "Matching & Community App",
     tagline: "Where people and opportunities meet — matching, community, and coaching",
     year: "2025",
     role: "Product · Full build",
@@ -1141,14 +1135,14 @@ export function normalizeContactEnrichment(raw: Record<string, unknown>): Record
       "Stripe",
     ],
     overview:
-      "A relationship and community app. People set preferences, discover compatible matches, chat, join events and groups, and get coaching. Matching runs on the app's own rules: deal-breakers filter out poor fits, then the rest are ranked by values, lifestyle, and communication style. Luna, an AI assistant, helps with messages and relationship advice without ever deciding who matches. Three apps — web, iOS/Android, and a shared API — run on one backend.",
+      "A relationship and community app. People set preferences, discover compatible matches, chat, join events and groups, and get coaching. Matching runs on the app's own rules: deal-breakers filter out poor fits, then the rest are ranked by values, lifestyle, and communication style. An AI assistant helps with messages and relationship advice without ever deciding who matches. Three apps — web, iOS/Android, and a shared API — run on one backend.",
     problem:
       "Most dating apps are built around endless swiping and leave everything else to the user: what to say, where to meet people, how to grow the relationship. Handing matching to an AI model brings its own problem: the results can't be explained, and they can override what someone said they won't accept. The product had to rank matches with transparent rules that respect deal-breakers, learn from activity without overriding those boundaries, and add a social layer and coaching around the match.",
     built: [
       "Matching engine in two passes: hard deal-breaker filtering, then ranking by values, lifestyle, and communication style, with likes, passes, and chats refining later rankings",
       "Onboarding and an optional AI Matchmaker questionnaire, with swipe-style discovery, filtered people browsing, and curated picks",
       "Chat with message requests, reactions, and voice messages",
-      "Luna AI (OpenAI · Gemini) for rewriting messages, opening lines, tone, and relationship guidance — it never sends messages or overrides matches",
+      "AI assistant (OpenAI · Gemini) for rewriting messages, opening lines, tone, and relationship guidance — it never sends messages or overrides matches",
       "Community layer with posts, stories, likes, comments, groups, and a people directory",
       "Events with venues, RSVPs, and event-specific match questionnaires",
       "Relationship coaches with profiles and bookings, plus courses",
@@ -1161,7 +1155,7 @@ export function normalizeContactEnrichment(raw: Record<string, unknown>): Record
         { title: "profile", items: ["onboarding", "AI Matchmaker quiz"] },
         { title: "filter", items: ["deal-breakers", "hard boundaries"] },
         { title: "rank", items: ["values · lifestyle", "activity signals"] },
-        { title: "connect", items: ["requests · chat", "Luna assist"] },
+        { title: "connect", items: ["requests · chat", "AI assist"] },
         { title: "community", items: ["events · groups", "coaches · courses"] },
       ],
       caption: "rules decide the match and AI helps with the conversation. Web (React + Vite) and mobile (Expo) share one Express + MySQL API",
@@ -1197,7 +1191,7 @@ function jaccard(a: Set<string>, b: Set<string>): number {
     decisions: [
       {
         title: "Rules match, AI assists",
-        body: "Who you're matched with comes from deterministic filtering and ranking, not a language model. Luna helps you write and gives advice, but it can't send messages or change a match. Rankings stay explainable, and the AI never goes past what a user said is off-limits.",
+        body: "Who you're matched with comes from deterministic filtering and ranking, not a language model. The assistant helps you write and gives advice, but it can't send messages or change a match. Rankings stay explainable, and the AI never goes past what a user said is off-limits.",
       },
       {
         title: "Learn from activity, never past a boundary",
@@ -1569,7 +1563,7 @@ export const experience: Experience[] = [
     period: "2026 — present",
     location: "Remote · Dubai",
     bullets: [
-      "Built 5 production AI SaaS platforms from scratch — Slotwise, FunnelFlow AI, Avatar Studio AI, CircleVoice AI, and LeadsReach — all live and serving real users.",
+      "Built 5 production AI SaaS platforms from scratch — a booking platform, an AI video funnel builder, Avatar Studio AI, AI voice agents, and an outbound sales copilot — all live and serving real users.",
       "Architected multi-tenant systems with RBAC, JWT + CSRF auth, Stripe subscriptions, credit-based billing, and webhook integrations across every platform.",
       "Integrated OpenAI, HeyGen, Twilio, LiveKit, Google Calendar, and WhatsApp into production workflows; built async media pipelines with Cloudinary and BullMQ.",
     ],
