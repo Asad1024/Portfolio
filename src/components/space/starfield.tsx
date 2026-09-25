@@ -34,6 +34,9 @@ type Star = {
   phase: number;
 };
 
+/** A star with a proper name, projected like the rest, for the hover label. */
+type Named = { x: number; y: number; r: number; name: string; detail: string };
+
 type Shooting = { x: number; y: number; vx: number; vy: number; life: number; len: number };
 
 /** How far out from the zenith the viewport's corners reach, in projected
@@ -44,6 +47,22 @@ const CORNER_REACH = 1.55;
 const TURN_PER_PX = 0.00011;
 const REAIM_MS = 60_000;
 const FADE_IN_MS = 1400;
+/** How close, in pixels, the pointer has to come to a named star. */
+const PICK_RADIUS = 16;
+
+/* The label only answers on empty sky. Anything a visitor is reading or
+   using — text, links, controls, cards with their own ground, the hero's 3D
+   system — is not sky, so the pointer there never raises a name. */
+const INTERACTIVE = "a,button,input,textarea,select,label,p,h1,h2,h3,h4,h5,h6,li,pre,code,img,svg,canvas,video,header,nav,[role=dialog]";
+function overEmptySky(el: Element | null) {
+  for (let e = el; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+    if (e.matches(INTERACTIVE)) return false;
+    const bg = getComputedStyle(e).backgroundColor;
+    if (bg && bg !== "transparent" && !/rgba\([^)]*,\s*0\)$/.test(bg)) return false;
+    for (const n of e.childNodes) if (n.nodeType === 3 && n.textContent?.trim()) return false;
+  }
+  return true;
+}
 
 /* B-V colour index to a star's actual tint: blue-white for hot stars through
    to orange for cool ones. Mixed toward white, because at one or two pixels
@@ -90,15 +109,28 @@ export function Starfield() {
     let lines: number[][] = [];
     let shooting: Shooting[] = [];
     let starColor = "rgba(255,255,255,0.9)";
+    let accentRgb = "34,211,238";
     let raf = 0;
     let scrollY = window.scrollY;
     let shownAt = 0;
     let cancelled = false;
     let catalog: typeof import("@/lib/sky-catalog") | null = null;
+    let named: Named[] = [];
+    let monoFont = "ui-monospace, monospace";
+    // pointer, and whether it is over empty sky (re-checked only when it moves)
+    const pointer = { x: 0, y: 0, moved: false, active: false };
+    // the label being shown: which star, and how far faded in
+    let label: { star: Named; x: number; y: number } | null = null;
+    let labelAlpha = 0;
 
     const readColors = () => {
       const s = getComputedStyle(document.documentElement);
       starColor = s.getPropertyValue("--star").trim() || starColor;
+      const hex = (s.getPropertyValue("--accent").trim() || "#22d3ee").replace("#", "");
+      const n = parseInt(hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex, 16);
+      if (!Number.isNaN(n)) accentRgb = `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+      const mono = document.querySelector(".font-mono");
+      if (mono) monoFont = getComputedStyle(mono).fontFamily;
     };
 
     const size = () => {
@@ -155,6 +187,25 @@ export function Starfield() {
         if (run.length >= 4) nextLines.push(run);
       }
       lines = nextLines;
+
+      const nextNamed: Named[] = [];
+      const { NAMED_STARS, STAR_NAMES } = catalog;
+      for (let i = 0, k = 0; i < NAMED_STARS.length; i += 4, k++) {
+        const { alt, az } = toHorizontal(NAMED_STARS[i], NAMED_STARS[i + 1], lst);
+        if (alt <= 0) continue;
+        const { x, y } = projectZenith(alt, az);
+        const mag = NAMED_STARS[i + 2];
+        const ly = NAMED_STARS[i + 3];
+        const [name, con] = STAR_NAMES[k];
+        nextNamed.push({
+          x,
+          y,
+          r: Math.min(2.3, Math.max(0.45, (5.8 - mag) * 0.36)),
+          name,
+          detail: ly ? `${con} · ${ly.toLocaleString("en-US")} light-years` : con,
+        });
+      }
+      named = nextNamed;
     };
 
     /* Capped at ~30fps. This is a full-viewport 2D canvas that clears and
@@ -211,6 +262,33 @@ export function Starfield() {
             ctx.fill();
           }
         }
+
+        // ── the name of the star under the pointer, on empty sky only
+        if (pointer.moved) {
+          pointer.moved = false;
+          pointer.active = overEmptySky(document.elementFromPoint(pointer.x, pointer.y));
+        }
+        let hit: { star: Named; x: number; y: number } | null = null;
+        if (pointer.active) {
+          let best = PICK_RADIUS * PICK_RADIUS;
+          for (const n of named) {
+            const x = px(n.x, n.y);
+            const y = py(n.x, n.y);
+            const d = (x - pointer.x) ** 2 + (y - pointer.y) ** 2;
+            if (d < best) {
+              best = d;
+              hit = { star: n, x, y };
+            }
+          }
+        }
+        if (hit) label = hit;
+        else if (label) {
+          // keep following the star it names while it fades out
+          label = { ...label, x: px(label.star.x, label.star.y), y: py(label.star.x, label.star.y) };
+        }
+        labelAlpha += ((hit ? 1 : 0) - labelAlpha) * (reduced ? 1 : 0.2);
+        if (label && labelAlpha > 0.02) drawLabel(label, labelAlpha * fade);
+        else if (labelAlpha <= 0.02) label = null;
       }
 
       // the occasional streak — rare enough to feel like luck, not decoration
@@ -244,6 +322,85 @@ export function Starfield() {
       raf = requestAnimationFrame(draw);
     };
 
+    /* Where the label goes: to the right of the star, else the left, else
+       below — whichever box lies entirely on empty sky, checked at its corners
+       and middle. Worked out once per star, not per frame. If nowhere is
+       clear the star just gets its ring: a name is never printed over text. */
+    const LABEL_H = 34;
+    let placed: { star: Named; side: "right" | "left" | "below" | null } | null = null;
+    const measure = (text: string, size: number, weight: number) => {
+      ctx.font = `${weight} ${size}px ${monoFont}`;
+      return ctx.measureText(text).width;
+    };
+    const placeLabel = (l: { star: Named; x: number; y: number }) => {
+      const width = Math.max(measure(l.star.name, 13, 500), measure(l.star.detail, 11, 400)) + 16;
+      const gap = l.star.r + 12;
+      const boxes = {
+        right: { x: l.x + gap, y: l.y - LABEL_H / 2 },
+        left: { x: l.x - gap - width, y: l.y - LABEL_H / 2 },
+        // centred under the star, slid sideways as needed to stay on screen
+        below: { x: Math.min(w - 4 - width, Math.max(4, l.x - width / 2)), y: l.y + gap },
+      };
+      for (const side of ["right", "left", "below"] as const) {
+        const b = boxes[side];
+        if (b.x < 4 || b.y < 4 || b.x + width > w - 4 || b.y + LABEL_H > h - 4) continue;
+        const probes = [
+          [b.x, b.y], [b.x + width, b.y], [b.x, b.y + LABEL_H], [b.x + width, b.y + LABEL_H],
+          [b.x + width / 2, b.y + LABEL_H / 2],
+        ];
+        if (probes.every(([x, y]) => overEmptySky(document.elementFromPoint(x, y)))) return side;
+      }
+      return null;
+    };
+
+    const drawLabel = (l: { star: Named; x: number; y: number }, a: number) => {
+      if (!placed || placed.star !== l.star) placed = { star: l.star, side: placeLabel(l) };
+      const ring = l.star.r + 5;
+      ctx.strokeStyle = `rgba(${accentRgb},${0.75 * a})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(l.x, l.y, ring, 0, Math.PI * 2);
+      ctx.stroke();
+      if (!placed.side) return;
+
+      const width = Math.max(measure(l.star.name, 13, 500), measure(l.star.detail, 11, 400)) + 16;
+      const gap = l.star.r + 12;
+      const bx =
+        placed.side === "right"
+          ? l.x + gap
+          : placed.side === "left"
+            ? l.x - gap - width
+            : Math.min(w - 4 - width, Math.max(4, l.x - width / 2));
+      const by = placed.side === "below" ? l.y + gap : l.y - LABEL_H / 2;
+
+      // a faint backing, so the text stays crisp over a busy patch of sky
+      ctx.fillStyle = `rgba(4,5,10,${0.72 * a})`;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, width, LABEL_H, 6);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(${accentRgb},${0.22 * a})`;
+      ctx.stroke();
+
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      ctx.font = `500 13px ${monoFont}`;
+      ctx.fillStyle = `rgba(232,236,245,${0.95 * a})`;
+      ctx.fillText(l.star.name, bx + 8, by + 15);
+      ctx.font = `400 11px ${monoFont}`;
+      ctx.fillStyle = `rgba(139,147,167,${0.95 * a})`;
+      ctx.fillText(l.star.detail, bx + 8, by + 28);
+    };
+
+    const onPointer = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return;
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      pointer.moved = true;
+    };
+    const onLeave = () => {
+      pointer.active = false;
+    };
+
     const onScroll = () => {
       scrollY = window.scrollY;
     };
@@ -263,6 +420,8 @@ export function Starfield() {
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     window.addEventListener("resize", size);
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("pointermove", onPointer, { passive: true });
+    document.documentElement.addEventListener("pointerleave", onLeave);
 
     return () => {
       cancelled = true;
@@ -271,6 +430,8 @@ export function Starfield() {
       mo.disconnect();
       window.removeEventListener("resize", size);
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("pointermove", onPointer);
+      document.documentElement.removeEventListener("pointerleave", onLeave);
     };
   }, []);
 

@@ -29,6 +29,8 @@ export function SkyNote() {
           </>
         )}
         .
+        {/* hover only exists with a mouse, so the hint does too */}
+        <span className="hidden [@media(hover:hover)]:inline"> point at a bright star to learn its name.</span>
       </span>
     </p>
   );
