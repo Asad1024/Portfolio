@@ -8,7 +8,6 @@ import { Cursor } from "@/components/cursor";
 import { Preloader } from "@/components/preloader";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { Starfield } from "@/components/space/starfield";
-import { DeepSpace } from "@/components/space/deep-space";
 import { CommandPalette } from "@/components/command-palette";
 import { MatrixRain } from "@/components/matrix-rain";
 import { ConsoleEgg } from "@/components/console-egg";
@@ -81,7 +80,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             than a stack of separately dark panels. */}
         <div aria-hidden className="nebula pointer-events-none fixed inset-0 z-0">
           <Starfield />
-          <DeepSpace />
         </div>
         <main id="main" tabIndex={-1} className="relative z-10 flex-1 outline-none">{children}</main>
         <Terminal />
