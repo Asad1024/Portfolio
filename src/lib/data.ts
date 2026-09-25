@@ -28,6 +28,9 @@ export type Project = {
   year: string;
   role: string;
   platform: string;
+  /** The handful of technologies the project is really built on, shown with
+   *  its name. `stack` keeps the full list. */
+  keyStack: string[];
   stack: string[];
   overview: string;
   problem: string;
@@ -64,6 +67,7 @@ export const projects: Project[] = [
     year: "2026",
     role: "Design · Architecture · Full build",
     platform: "Desktop — Electron (Windows x64)",
+    keyStack: ["Electron", "Node.js", "OpenAI", "ElevenLabs"],
     stack: [
       "Electron 36",
       "Node.js",
@@ -155,6 +159,7 @@ export const projects: Project[] = [
     year: "2026",
     role: "Architecture · Full build",
     platform: "Web — Cloud + Telephony",
+    keyStack: ["React", "Node.js", "MySQL", "Twilio", "ElevenLabs", "OpenAI"],
     stack: [
       "React 18",
       "Node.js · Express",
@@ -200,60 +205,6 @@ export const projects: Project[] = [
       ],
       caption: "Twilio carries the call and a WebSocket media stream carries the audio live to the voice agent. Afterward, everything is stored in MySQL and billed against credits",
     },
-    snippet: {
-      file: "src/services/elevenlabsService.js",
-      lang: "js",
-      note:
-        "Prompt construction is the actual craft in a voice agent. The campaign's own opening is templated in when it exists, the knowledge base is folded into the system persona, and the style rules exist to stop the agent sounding like a bot on a real phone line.",
-      code: `  generateConversationalPrompt(campaignData) {
-    const leadName = campaignData.leadName || 'there';
-    const agentName = campaignData.agentName || 'Sarah';
-
-    // Use the campaign's script opening if available, otherwise use default
-    let opening;
-    if (campaignData.scriptOpening) {
-      opening = campaignData.scriptOpening
-        .replace(/{name}/g, leadName)
-        .replace(/\\{\\{agent_name\\}\\}/g, agentName)
-        .replace(/\\{agent_name\\}/g, agentName);
-    } else {
-      opening = \`Hi \${leadName}, this is \${agentName} calling. I hope I'm not catching you at a bad time? I wanted to reach out about something that might be really helpful for you. Do you have a quick moment to chat?\`;
-    }
-
-    // Enhanced system prompt with campaign context
-    const knowledgeBase = campaignData.knowledgeBase || [];
-    const knowledgeContext = knowledgeBase.length > 0 ? 
-      \`\\n\\nKnowledge Base Information:\\n\${knowledgeBase.map(kb => \`- \${kb.name || kb.description || 'Product information'}\`).join('\\n')}\` : '';
-
-    const system = \`You are \${agentName}, a warm, friendly, and highly conversational sales representative. You're having a genuine, human conversation over the phone.
-
-CONVERSATION STYLE:
-- Be extremely natural and human-like - use "um", "you know", "actually", "really"
-- Show genuine interest in what they're saying
-- React emotionally to their responses (excited, concerned, understanding)
-- Use their name naturally throughout the conversation
-- Ask follow-up questions that show you're listening
-- Share brief personal touches when appropriate
-- Use conversational fillers and natural speech patterns
-
-RESPONSE GUIDELINES:
-- Keep responses natural and conversational (10-20 seconds)
-- Ask open-ended questions to keep them talking
-- Show empathy and understanding
-- Use phrases like "I totally understand", "That makes sense", "I hear you"
-- If they seem busy, offer to call back at a better time
-- If interested, guide them naturally toward next steps
-- If not interested, gracefully end the call
-
-KNOWLEDGE & CONTEXT:
-Campaign Context: \${campaignData.firstPrompt || 'General business outreach'}
-System Persona: \${campaignData.systemPersona || 'Professional sales representative'}\${knowledgeContext}
-
-CRITICAL: This is a REAL conversation. Listen actively, respond naturally, and be genuinely helpful. Use the knowledge base to provide accurate, helpful information when relevant.\`;
-
-    return { opening, system };
-  }`,
-    },
     decisions: [
       {
         title: "Stream the audio, don't batch it",
@@ -286,6 +237,7 @@ CRITICAL: This is a REAL conversation. Listen actively, respond naturally, and b
     year: "2025 — 2026",
     role: "Product · Architecture · Full build",
     platform: "Web — Cloud (Vercel + Render)",
+    keyStack: ["Next.js", "TypeScript", "Node.js", "MySQL", "BullMQ", "OpenAI"],
     stack: [
       "Next.js 14",
       "TypeScript",
@@ -332,29 +284,6 @@ CRITICAL: This is a REAL conversation. Listen actively, respond naturally, and b
       ],
       caption: "Next.js → Express API → MySQL; sends, enrichment, and AI SDR work are queued on BullMQ + Redis and run by workers, never inside the HTTP request",
     },
-    snippet: {
-      file: "src/jobs/aiSdr.worker.ts",
-      lang: "ts",
-      note:
-        "The fail-closed gate. Before any autonomous send, the draft is re-inspected; findings are reused if already stored, recomputed if not. A blocking finding returns a reason string instead of sending — the agent never ships copy it cannot justify.",
-      code: `async function contentBlockSkipReason(actionId: number): Promise<string | null> {
-  const action = await AiSdrPendingAction.findByPk(actionId);
-  if (!action) return null;
-
-  const stored = Array.isArray(action.content_findings)
-    ? (action.content_findings as ContentFinding[])
-    : null;
-  const findings =
-    stored ??
-    inspectDraftContent(
-      action.edited_body ?? action.proposed_body,
-      action.edited_subject ?? action.proposed_subject
-    );
-
-  if (!hasBlockingFinding(findings)) return null;
-  return \`content_blocked:\${summarizeFindings(findings)}\`.slice(0, 64);
-}`,
-    },
     decisions: [
       {
         title: "Queue everything that can be slow",
@@ -386,6 +315,7 @@ CRITICAL: This is a REAL conversation. Listen actively, respond naturally, and b
     year: "2026",
     role: "Architecture · Full build",
     platform: "Desktop — Electron (Windows)",
+    keyStack: ["Electron", "Node.js", "Headless Chromium", "Tesseract.js"],
     stack: [
       "Electron 33",
       "Node.js",
@@ -446,7 +376,9 @@ function statedResultTotal() {
     if (ofHit === null) ofHit = toN(t.match(OF));
     if (foundHit === null) foundHit = toN(t.match(FOUND));
     if (resHit === null) resHit = toN(t.match(RES));
-  });`,
+  });
+  return ofHit != null ? ofHit : (foundHit != null ? foundHit : resHit);
+}`,
     },
     decisions: [
       {
@@ -479,6 +411,7 @@ function statedResultTotal() {
     year: "2025",
     role: "Architecture · Full build",
     platform: "Web — Local (single machine)",
+    keyStack: ["Python", "FastAPI", "SQLite", "OpenAI"],
     stack: [
       "Python",
       "FastAPI · Uvicorn",
@@ -598,6 +531,7 @@ function statedResultTotal() {
     year: "2025",
     role: "Architecture · Full build",
     platform: "Web — Self-hosted (VPS)",
+    keyStack: ["Next.js", "TypeScript", "PostgreSQL", "Prisma ORM", "Docker"],
     stack: [
       "Next.js 15",
       "TypeScript",
@@ -693,6 +627,7 @@ export function todaysWarmingVolume(
     year: "2026",
     role: "Architecture · Full build",
     platform: "Desktop — Electron",
+    keyStack: ["Electron", "React", "Node.js", "Jest"],
     stack: [
       "Electron 33",
       "React 18",
@@ -738,7 +673,7 @@ export function todaysWarmingVolume(
       file: "src/scanner/riskScorer.js",
       lang: "js",
       note:
-        "Raw CVSS treats every finding as equal; this doesn't. Categories carry multipliers (injection outranks misconfiguration), and a set of low-impact types is held back so a weak .env value can't drown out a real injection path.",
+        "Raw CVSS treats every finding as equal; this doesn't. Categories carry multipliers (injection outranks misconfiguration), and low-impact types count at 35% of their weight, so a weak .env value can't drown out a real injection path.",
       code: `const CATEGORY_MULTIPLIERS = {
   'Injection Attacks': 1.4,
   'Cross-Site Scripting': 1.3,
@@ -760,7 +695,17 @@ const SEVERITY_WEIGHTS = {
 const LOW_IMPACT_TYPES = new Set([
   'WEAK_ENV_SECRET',
   'EMPTY_ENV_VALUE',
-  'ENV_NOT_GITIGNORED',`,
+  'ENV_NOT_GITIGNORED',
+]);
+
+// inside RiskScorer.calculate(), once per finding:
+let weight = SEVERITY_WEIGHTS[sev] || 2;
+if (LOW_IMPACT_TYPES.has(issue.type)) {
+  weight *= 0.35;
+}
+baseScore += weight * typePenalty;
+const mult = CATEGORY_MULTIPLIERS[issue.category] || 1;
+categoryBoost += weight * typePenalty * (mult - 1);`,
     },
     decisions: [
       {
@@ -794,6 +739,7 @@ const LOW_IMPACT_TYPES = new Set([
     year: "2024 — 2025",
     role: "Product · Full build",
     platform: "Web — Multi-tenant SaaS",
+    keyStack: ["Next.js", "NestJS", "Prisma ORM", "MySQL", "Redis", "Stripe"],
     stack: [
       "Next.js 14",
       "NestJS 10",
@@ -839,34 +785,6 @@ const LOW_IMPACT_TYPES = new Set([
       ],
       caption: "one platform, many organizations: Next.js → NestJS + Prisma → MySQL, with slot rules and types in shared packages",
     },
-    snippet: {
-      file: "packages/scheduling-core/src/slots.ts",
-      lang: "ts",
-      note:
-        "Availability is interval arithmetic, not a calendar loop. A block splits a window into the parts that survive it, and applying every block is a flatMap over that — which is why overlapping staff, buffers and multi-location rules compose without special cases.",
-      code: `function subtractInterval(
-  base: TimeInterval,
-  block: TimeInterval,
-): TimeInterval[] {
-  if (!overlaps(base, block)) return [base];
-  const result: TimeInterval[] = [];
-  if (block.startUtc > base.startUtc) {
-    result.push({ startUtc: base.startUtc, endUtc: block.startUtc });
-  }
-  if (block.endUtc < base.endUtc) {
-    result.push({ startUtc: block.endUtc, endUtc: base.endUtc });
-  }
-  return result;
-}
-
-function applyBlocks(intervals: TimeInterval[], blocks: TimeInterval[]): TimeInterval[] {
-  let current = intervals;
-  for (const block of blocks) {
-    current = current.flatMap((i) => subtractInterval(i, block));
-  }
-  return current;
-}`,
-    },
     decisions: [
       {
         title: "Scheduling rules in a shared package",
@@ -899,6 +817,7 @@ function applyBlocks(intervals: TimeInterval[], blocks: TimeInterval[]): TimeInt
     year: "2024 — 2025",
     role: "Architecture · Full build",
     platform: "Web — SaaS",
+    keyStack: ["React", "Vite", "Node.js", "MySQL", "HeyGen", "OpenAI"],
     stack: [
       "React 18",
       "Vite 5",
@@ -943,24 +862,6 @@ function applyBlocks(intervals: TimeInterval[], blocks: TimeInterval[]): TimeInt
       ],
       caption: "React + Vite SPA → Express 5 API → MySQL. HeyGen renders the video, Cloudinary stores media, and Stripe credits pay for every AI generation",
     },
-    snippet: {
-      file: "src/services/avatarQualityService.js",
-      lang: "js",
-      note:
-        "The model returns a quality score, but never gets to decide the verdict alone. The score is clamped to a sane range and mapped to a status by fixed thresholds — so a hallucinated 900 can't wave a bad photo through to render.",
-      code: `const clampScore = (value) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return 60;
-  return Math.max(0, Math.min(100, Math.round(numeric)));
-};
-
-const normalizeStatus = (status, score) => {
-  if (['accepted', 'needs_enhancement', 'rejected'].includes(status)) return status;
-  if (score >= 80) return 'accepted';
-  if (score >= 55) return 'needs_enhancement';
-  return 'rejected';
-};`,
-    },
     decisions: [
       {
         title: "Check the photo before paying for a render",
@@ -993,6 +894,7 @@ const normalizeStatus = (status, score) => {
     year: "2026",
     role: "Product · Architecture · Full build",
     platform: "Web — Multi-tenant SaaS",
+    keyStack: ["Next.js", "Node.js", "Prisma ORM", "MySQL", "Socket.IO", "OpenAI"],
     stack: [
       "Next.js 14",
       "Express · TypeScript",
@@ -1042,49 +944,6 @@ const normalizeStatus = (status, score) => {
       ],
       caption: "Next.js → Express + Prisma → MySQL, with Socket.IO for chat and notifications, Bull on Redis for sequences and reminders, and public token pages for quotes, invoices, forms, and booking",
     },
-    snippet: {
-      file: "src/lib/enrichment.ts",
-      lang: "ts",
-      note:
-        "Every enrichment provider names its fields differently. Rather than branching per provider, the first non-empty candidate key wins — so adding a new source means extending an array, not rewriting the mapper.",
-      code: `export function pickEnrichmentString(
-  data: Record<string, unknown>,
-  keys: string[],
-): string | undefined {
-  for (const key of keys) {
-    const value = data[key];
-    if (typeof value === 'string' && value.trim()) return value.trim();
-  }
-  return undefined;
-}
-
-export function normalizeContactEnrichment(raw: Record<string, unknown>): Record<string, unknown> {
-  const suggestedTitle = pickEnrichmentString(raw, ['suggestedTitle', 'title', 'jobTitle', 'job_title']);
-  const linkedinUrl = pickEnrichmentString(raw, [
-    'linkedinUrl',
-    'linkedin',
-    'linkedInUrl',
-    'linkedin_url',
-    'linkedIn',
-  ]);
-  const summary = pickEnrichmentString(raw, [
-    'summary',
-    'leadInsights',
-    'insights',
-    'overview',
-    'description',
-    'lead_insights',
-  ]);
-  const industry = pickEnrichmentString(raw, ['industry', 'suggestedIndustry', 'companyIndustry']);
-
-  return {
-    ...raw,
-    ...(suggestedTitle ? { suggestedTitle } : {}),
-    ...(linkedinUrl ? { linkedinUrl } : {}),
-    ...(summary ? { summary } : {}),
-    ...(industry ? { industry } : {}),
-  };`,
-    },
     decisions: [
       {
         title: "Public pages without logins",
@@ -1117,6 +976,7 @@ export function normalizeContactEnrichment(raw: Record<string, unknown>): Record
     year: "2025",
     role: "Product · Full build",
     platform: "Web + Mobile (Expo)",
+    keyStack: ["React", "React Native", "Expo", "Node.js", "MySQL", "Gemini"],
     stack: [
       "React 18",
       "React Native · Expo",
@@ -1135,14 +995,14 @@ export function normalizeContactEnrichment(raw: Record<string, unknown>): Record
       "Stripe",
     ],
     overview:
-      "A relationship and community app. People set preferences, discover compatible matches, chat, join events and groups, and get coaching. Matching runs on the app's own rules: deal-breakers filter out poor fits, then the rest are ranked by values, lifestyle, and communication style. An AI assistant helps with messages and relationship advice without ever deciding who matches. Three apps — web, iOS/Android, and a shared API — run on one backend.",
+      "A relationship and community app. People set preferences, discover compatible matches, chat, join events and groups, and get coaching. Matching is rules-first: deal-breakers filter out poor fits, the rest are ranked by values, lifestyle, and communication style, and an AI model (Gemini, falling back to OpenAI) adds 28% of each score. A separate AI assistant helps with messages and relationship advice. Three apps — web, iOS/Android, and a shared API — run on one backend.",
     problem:
-      "Most dating apps are built around endless swiping and leave everything else to the user: what to say, where to meet people, how to grow the relationship. Handing matching to an AI model brings its own problem: the results can't be explained, and they can override what someone said they won't accept. The product had to rank matches with transparent rules that respect deal-breakers, learn from activity without overriding those boundaries, and add a social layer and coaching around the match.",
+      "Most dating apps are built around endless swiping and leave everything else to the user: what to say, where to meet people, how to grow the relationship. Handing matching entirely to an AI model brings its own problem: the results can't be explained, and they can override what someone said they won't accept. The product had to rank matches mainly on transparent rules that respect deal-breakers, use AI only for nuance, learn from activity without overriding those boundaries, and add a social layer and coaching around the match.",
     built: [
-      "Matching engine in two passes: hard deal-breaker filtering, then ranking by values, lifestyle, and communication style, with likes, passes, and chats refining later rankings",
+      "Matching engine in two passes: hard deal-breaker filtering, then ranking by values, lifestyle, and communication style, blended 72 / 28 with a Gemini or OpenAI score and refined by likes, passes, and chats",
       "Onboarding and an optional AI Matchmaker questionnaire, with swipe-style discovery, filtered people browsing, and curated picks",
       "Chat with message requests, reactions, and voice messages",
-      "AI assistant (OpenAI · Gemini) for rewriting messages, opening lines, tone, and relationship guidance — it never sends messages or overrides matches",
+      "AI assistant (OpenAI · Gemini) for rewriting messages, opening lines, tone, and relationship guidance — it never sends messages on its own",
       "Community layer with posts, stories, likes, comments, groups, and a people directory",
       "Events with venues, RSVPs, and event-specific match questionnaires",
       "Relationship coaches with profiles and bookings, plus courses",
@@ -1158,40 +1018,12 @@ export function normalizeContactEnrichment(raw: Record<string, unknown>): Record
         { title: "connect", items: ["requests · chat", "AI assist"] },
         { title: "community", items: ["events · groups", "coaches · courses"] },
       ],
-      caption: "rules decide the match and AI helps with the conversation. Web (React + Vite) and mobile (Expo) share one Express + MySQL API",
-    },
-    snippet: {
-      file: "src/aiMatchRank.ts",
-      lang: "ts",
-      note:
-        "Compatibility as plain, explainable maths. Intent is scored as a graded relation rather than an equality check, and questionnaire overlap is Jaccard similarity — deterministic scores that can be explained, with no model deciding who matches.",
-      code: `function intentCompatibility(a: unknown, b: unknown): number {
-  const x = normalizeIntent(a);
-  const y = normalizeIntent(b);
-  if (!x || !y) return 0;
-  if (x === y) return 1;
-  if (
-    (x === 'marriage' && y === 'serious') ||
-    (x === 'serious' && (y === 'marriage' || y === 'casual')) ||
-    (x === 'casual' && y === 'serious')
-  ) {
-    return 0.55;
-  }
-  return 0.1;
-}
-
-function jaccard(a: Set<string>, b: Set<string>): number {
-  if (a.size === 0 && b.size === 0) return 0;
-  let inter = 0;
-  for (const x of a) if (b.has(x)) inter++;
-  const union = a.size + b.size - inter;
-  return union > 0 ? inter / union : 0;
-}`,
+      caption: "rules carry 72% of every match score and AI adds the rest. Web (React + Vite) and mobile (Expo) share one Express + MySQL API",
     },
     decisions: [
       {
-        title: "Rules match, AI assists",
-        body: "Who you're matched with comes from deterministic filtering and ranking, not a language model. The assistant helps you write and gives advice, but it can't send messages or change a match. Rankings stay explainable, and the AI never goes past what a user said is off-limits.",
+        title: "Rules first, AI for nuance",
+        body: "The deterministic score carries 72% of every match and the model 28%, so rankings stay explainable while the AI picks up what rules miss. If Gemini and OpenAI are both down, matching falls back to rules alone and never stops working.",
       },
       {
         title: "Learn from activity, never past a boundary",
@@ -1205,7 +1037,7 @@ function jaccard(a: Set<string>, b: Set<string>): number {
     outcome: [
       { value: "3", label: "apps: web, mobile, shared API" },
       { value: "2-pass", label: "matching: filter, then rank" },
-      { value: "0", label: "matches decided by the AI" },
+      { value: "72 / 28", label: "rules / AI blend per match" },
     ],
   },
   {
@@ -1219,6 +1051,7 @@ function jaccard(a: Set<string>, b: Set<string>): number {
     year: "2026",
     role: "Architecture · Full build",
     platform: "Web — SaaS",
+    keyStack: ["Next.js", "NestJS", "HeyGen", "OpenAI", "Stripe"],
     stack: ["Next.js", "NestJS", "OpenAI · Gemini", "HeyGen", "Cloudinary", "Stripe"],
     overview:
       "An AI creative platform that turns a structured brief into finished marketing assets — avatar videos, product videos, and image ads — with AI script strategy, reusable creative recipes, and market-trend style analysis.",
@@ -1268,6 +1101,7 @@ function jaccard(a: Set<string>, b: Set<string>): number {
     year: "2026",
     role: "Full Stack Developer",
     platform: "Web — Marketplace (3 apps, 1 API)",
+    keyStack: ["Next.js", "Python", "FastAPI", "PostgreSQL", "JazzCash · PayFast"],
     stack: [
       "Next.js 15 · 16",
       "Python 3.12 · FastAPI",
@@ -1339,6 +1173,7 @@ function jaccard(a: Set<string>, b: Set<string>): number {
     year: "2025",
     role: "Architecture · Full build",
     platform: "Web — Marketplace",
+    keyStack: ["Next.js", "TypeScript", "Prisma ORM", "MySQL", "Stripe", "Three.js"],
     stack: [
       "Next.js 14 (App Router)",
       "TypeScript",

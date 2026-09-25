@@ -299,3 +299,64 @@ body::after {
     cursor: text;
   }
 }
+
+/* ── architecture pipeline ──────────────────────────────────────────────
+   One period is a trip of the signal plus a rest. The signal travels the
+   first 78% of it; each node and card flares when the signal arrives, which
+   the diagram sets as that element's animation-delay. Nothing runs until the
+   diagram is on screen (.arch-live), so every loop starts in the same frame
+   and stays in step. */
+.arch-signal-x,
+.arch-signal-y,
+.arch-node-flare,
+.arch-card-glow {
+  animation-duration: var(--arch-period);
+  animation-iteration-count: infinite;
+  animation-play-state: paused;
+}
+.arch-live .arch-signal-x,
+.arch-live .arch-signal-y,
+.arch-live .arch-node-flare,
+.arch-live .arch-card-glow {
+  animation-play-state: running;
+}
+.arch-signal-x { animation-name: arch-signal-x; animation-timing-function: linear; transform: translateX(-100%); }
+.arch-signal-y { animation-name: arch-signal-y; animation-timing-function: linear; transform: translateY(-100%); }
+.arch-node-flare { animation-name: arch-node-flare; animation-timing-function: ease-out; opacity: 0; }
+.arch-card-glow {
+  animation-name: arch-card-flare;
+  animation-timing-function: ease-out;
+  opacity: 0;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 50%, transparent), inset 0 0 30px -8px var(--accent);
+}
+
+@keyframes arch-signal-x {
+  0% { transform: translateX(-100%); opacity: 0; }
+  4% { opacity: 1; }
+  78% { transform: translateX(0); opacity: 1; }
+  86%, 100% { transform: translateX(0); opacity: 0; }
+}
+@keyframes arch-signal-y {
+  0% { transform: translateY(-100%); opacity: 0; }
+  4% { opacity: 1; }
+  78% { transform: translateY(0); opacity: 1; }
+  86%, 100% { transform: translateY(0); opacity: 0; }
+}
+@keyframes arch-node-flare {
+  0% { transform: scale(1); opacity: 0.9; }
+  18% { transform: scale(1.9); opacity: 0; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+@keyframes arch-card-flare {
+  0% { opacity: 1; }
+  24%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arch-signal-x,
+  .arch-signal-y,
+  .arch-node-flare,
+  .arch-card-glow {
+    animation: none;
+  }
+}

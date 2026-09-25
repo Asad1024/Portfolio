@@ -35,6 +35,11 @@ export default async function CaseStudy({
   if (!project) notFound();
 
   const idx = projects.findIndex((p) => p.slug === slug);
+
+  /* Sections are numbered in the order they appear, and not every project
+     shows code, so the numbers are counted rather than written in. */
+  let n = 0;
+  const num = (name: string) => `${String(++n).padStart(2, "0")}_${name}`;
   const next = projects[(idx + 1) % projects.length];
 
   return (
@@ -62,6 +67,20 @@ export default async function CaseStudy({
           {project.title}
         </h1>
         <p className="mt-4 max-w-2xl text-xl text-muted">{project.tagline}</p>
+
+        {/* the few technologies it's really built on — the full list closes the page */}
+        <ul aria-label="Main technologies" className="mt-7 flex flex-wrap gap-2.5">
+          {project.keyStack.map((s, i) => (
+            <li
+              key={s}
+              className="animate-[fade-in_0.5s_ease-out_both] flex items-center gap-2.5 rounded-full border border-line bg-card px-4 py-2 font-mono text-sm text-fg backdrop-blur-sm transition-colors hover:border-accent/50"
+              style={{ animationDelay: `${0.15 + i * 0.06}s` }}
+            >
+              <TechIcon name={s} size={16} />
+              {s}
+            </li>
+          ))}
+        </ul>
         <div className="mt-8 flex flex-wrap items-center gap-3">
           {project.link ? (
             <a
@@ -92,12 +111,11 @@ export default async function CaseStudy({
 
       {/* meta strip */}
       <Reveal delay={0.1}>
-        <div className="mt-12 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line font-mono text-xs sm:grid-cols-4">
+        <div className="mt-12 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line bg-line font-mono text-xs sm:grid-cols-3">
           {[
             ["year", project.year],
             ["role", project.role],
             [project.company ? "built at" : "platform", project.company ?? project.platform],
-            ["stack", project.stack.slice(0, 3).join(", ") + " +"],
           ].map(([k, v]) => (
             <div key={k} className="bg-bg/70 p-4 backdrop-blur-sm">
               <p className="text-accent">{k}</p>
@@ -162,12 +180,12 @@ export default async function CaseStudy({
       </Reveal>
 
       {/* problem */}
-      <Section mono="01_problem">
+      <Section mono={num("problem")}>
         <p className="text-lg leading-relaxed text-muted">{project.problem}</p>
       </Section>
 
       {/* built */}
-      <Section mono="02_what-i-built">
+      <Section mono={num("what-i-built")}>
         <ul className="space-y-4">
           {project.built.map((b, i) => (
             <li key={i} className="flex gap-4 text-lg leading-relaxed text-muted">
@@ -180,7 +198,7 @@ export default async function CaseStudy({
 
       {/* real code */}
       {project.snippet && (
-        <Section mono="03_code">
+        <Section mono={num("code")}>
           <CodeBlock
             code={project.snippet.code}
             lang={project.snippet.lang}
@@ -191,12 +209,12 @@ export default async function CaseStudy({
       )}
 
       {/* architecture */}
-      <Section mono="04_architecture">
+      <Section mono={num("architecture")}>
         <ArchDiagram cols={project.arch.cols} caption={project.arch.caption} />
       </Section>
 
       {/* decisions */}
-      <Section mono="05_decisions">
+      <Section mono={num("decisions")}>
         <div className="grid gap-6 sm:grid-cols-2">
           {project.decisions.map((d) => (
             <div key={d.title} className="rounded-xl border border-line bg-bg/50 p-7 backdrop-blur-sm transition-colors hover:border-accent/45">
@@ -208,7 +226,7 @@ export default async function CaseStudy({
       </Section>
 
       {/* outcome */}
-      <Section mono="06_outcome">
+      <Section mono={num("outcome")}>
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3">
           {project.outcome.map((o) => (
             <div key={o.label} className="bg-bg/70 p-8 text-center backdrop-blur-sm">
@@ -221,17 +239,22 @@ export default async function CaseStudy({
         </div>
       </Section>
 
-      {/* full stack list */}
-      <Reveal>
-        <div className="mt-20 flex flex-wrap gap-2">
+      {/* full stack */}
+      <Section mono={num("stack")}>
+        <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {project.stack.map((s) => (
-            <span key={s} className="flex items-center gap-2 rounded-full border border-line px-4 py-1.5 font-mono text-xs text-muted">
-              <TechIcon name={s} size={13} />
-              {s}
-            </span>
+            <li
+              key={s}
+              className="flex min-w-0 items-center gap-3 rounded-lg border border-line bg-card px-4 py-3 font-mono text-sm text-fg/90 backdrop-blur-sm transition-colors hover:border-accent/45"
+            >
+              <span className="flex w-5 shrink-0 justify-center">
+                <TechIcon name={s} size={17} />
+              </span>
+              <span className="truncate">{s}</span>
+            </li>
           ))}
-        </div>
-      </Reveal>
+        </ul>
+      </Section>
 
       {/* next project */}
       <Reveal>
