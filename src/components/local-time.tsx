@@ -6,7 +6,9 @@ export function LocalTime() {
   const [time, setTime] = useState<string | null>(null);
 
   useEffect(() => {
+    // Lahore's clock, not the visitor's — the label says "my" local time
     const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Karachi",
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
