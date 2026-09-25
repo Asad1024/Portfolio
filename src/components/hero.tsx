@@ -82,6 +82,12 @@ export function Hero() {
 
   const rise = ready ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0";
   const fade = ready ? "opacity-100" : "opacity-0";
+  /* The name moves in but never fades up from nothing. It is the largest
+     thing on the first screen, and browsers only count a page as painted once
+     that is visible — held at opacity 0 behind the intro it read as a
+     five-second paint on a phone. The intro curtain and the decrypt already
+     hide it and bring it on; the slide is all the entrance it needs. */
+  const lift = ready ? "translate-y-0" : "translate-y-10";
   const at = (ms: number) => ({ transitionDelay: `${ms}ms` });
 
   return (
@@ -121,7 +127,7 @@ export function Hero() {
 
           <h1 className="mt-10 select-none font-sans font-bold leading-[0.92] tracking-tighter">
             <span
-              className={`${BASE} ${rise} block text-[clamp(3.5rem,8.5vw,7rem)] text-glow`}
+              className={`${BASE} ${lift} block text-[clamp(3.5rem,8.5vw,7rem)] text-glow`}
               style={at(150)}
             >
               <ScrambleText text="ASAD" trigger="manual" active={ready} duration={1100} />

@@ -117,6 +117,16 @@ export function Starfield() {
     let catalog: typeof import("@/lib/sky-catalog") | null = null;
     let named: Named[] = [];
     let monoFont = "ui-monospace, monospace";
+    /* The sky is drawn once into an off-screen layer — every star and figure,
+       at the scale the viewport needs — and each frame only rotates and
+       stamps that one image. Redrawing ~1,400 stars one by one every frame
+       was the single most expensive thing on the page on a phone. The
+       brightest few dozen are left out of the layer and drawn live on top,
+       so the stars people actually notice still twinkle. */
+    let layer: HTMLCanvasElement | null = null;
+    let layerSize = 0;
+    let twinklers: Star[] = [];
+
     // pointer, and whether it is over empty sky (re-checked only when it moves)
     const pointer = { x: 0, y: 0, moved: false, active: false };
     // the label being shown: which star, and how far faded in
@@ -131,6 +141,7 @@ export function Starfield() {
       if (!Number.isNaN(n)) accentRgb = `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
       const mono = document.querySelector(".font-mono");
       if (mono) monoFont = getComputedStyle(mono).fontFamily;
+      buildLayer();
     };
 
     const size = () => {
@@ -142,7 +153,50 @@ export function Starfield() {
       canvas.width = w * dpr;
       canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildLayer();
     };
+
+    function buildLayer() {
+      if (!stars.length || !w || !h) return;
+      const scale = Math.hypot(w, h) / 2 / CORNER_REACH;
+      // square, and large enough that it still covers the screen when turned
+      layerSize = Math.ceil(Math.hypot(w, h)) + 8;
+      const ld = Math.min(window.devicePixelRatio || 1, 1.25);
+      layer ??= document.createElement("canvas");
+      layer.width = layerSize * ld;
+      layer.height = layerSize * ld;
+      const lc = layer.getContext("2d");
+      if (!lc) return;
+      lc.setTransform(ld, 0, 0, ld, layerSize * ld / 2, layerSize * ld / 2);
+      lc.clearRect(-layerSize, -layerSize, layerSize * 2, layerSize * 2);
+
+      // the figures first, so every star sits on top of its own line
+      lc.strokeStyle = rgba(starColor, 0.075);
+      lc.lineWidth = 0.8;
+      lc.beginPath();
+      for (const line of lines) {
+        lc.moveTo(line[0] * scale, line[1] * scale);
+        for (let i = 2; i < line.length; i += 2) lc.lineTo(line[i] * scale, line[i + 1] * scale);
+      }
+      lc.stroke();
+
+      twinklers = [];
+      for (const s of stars) {
+        if (s.r >= 1.3) {
+          twinklers.push(s);
+          continue;
+        }
+        // the average of the twinkle, baked in
+        lc.fillStyle = `rgba(${s.color},${s.alpha * 0.86})`;
+        if (s.r < 0.9) {
+          lc.fillRect(s.x * scale - s.r, s.y * scale - s.r, s.r * 2, s.r * 2);
+        } else {
+          lc.beginPath();
+          lc.arc(s.x * scale, s.y * scale, s.r, 0, Math.PI * 2);
+          lc.fill();
+        }
+      }
+    }
 
     /* Recomputes where every star is from the clock. Only stars above the
        horizon are kept; everything else is on the far side of the planet. */
@@ -206,6 +260,7 @@ export function Starfield() {
         });
       }
       named = nextNamed;
+      buildLayer();
     };
 
     /* Capped at ~30fps. This is a full-viewport 2D canvas that clears and
@@ -237,17 +292,18 @@ export function Starfield() {
         const px = (x: number, y: number) => cx + (x * cos - y * sin) * scale;
         const py = (x: number, y: number) => cy + (x * sin + y * cos) * scale;
 
-        // the figures first, so every star sits on top of its own line
-        ctx.strokeStyle = rgba(starColor, 0.075 * fade);
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        for (const line of lines) {
-          ctx.moveTo(px(line[0], line[1]), py(line[0], line[1]));
-          for (let i = 2; i < line.length; i += 2) ctx.lineTo(px(line[i], line[i + 1]), py(line[i], line[i + 1]));
+        // the whole baked sky, turned for the scroll, in one draw
+        if (layer) {
+          ctx.save();
+          ctx.globalAlpha = fade;
+          ctx.translate(cx, cy);
+          ctx.rotate(turn);
+          ctx.drawImage(layer, -layerSize / 2, -layerSize / 2, layerSize, layerSize);
+          ctx.restore();
         }
-        ctx.stroke();
 
-        for (const s of stars) {
+        // then only the bright ones, live, so they can twinkle
+        for (const s of twinklers) {
           const x = px(s.x, s.y);
           const y = py(s.x, s.y);
           if (x < -4 || y < -4 || x > w + 4 || y > h + 4) continue;
@@ -322,12 +378,12 @@ export function Starfield() {
       raf = requestAnimationFrame(draw);
     };
 
-    /* Where the label goes: to the right of the star, else the left, else
-       below — whichever box lies entirely on empty sky, checked at its corners
+    /* Where the label goes: to the right of the star, else the left, below
+       or above — whichever box lies entirely on empty sky, checked at its corners
        and middle. Worked out once per star, not per frame. If nowhere is
        clear the star just gets its ring: a name is never printed over text. */
     const LABEL_H = 34;
-    let placed: { star: Named; side: "right" | "left" | "below" | null } | null = null;
+    let placed: { star: Named; side: "right" | "left" | "below" | "above" | null } | null = null;
     const measure = (text: string, size: number, weight: number) => {
       ctx.font = `${weight} ${size}px ${monoFont}`;
       return ctx.measureText(text).width;
@@ -340,8 +396,9 @@ export function Starfield() {
         left: { x: l.x - gap - width, y: l.y - LABEL_H / 2 },
         // centred under the star, slid sideways as needed to stay on screen
         below: { x: Math.min(w - 4 - width, Math.max(4, l.x - width / 2)), y: l.y + gap },
+        above: { x: Math.min(w - 4 - width, Math.max(4, l.x - width / 2)), y: l.y - gap - LABEL_H },
       };
-      for (const side of ["right", "left", "below"] as const) {
+      for (const side of ["right", "left", "below", "above"] as const) {
         const b = boxes[side];
         if (b.x < 4 || b.y < 4 || b.x + width > w - 4 || b.y + LABEL_H > h - 4) continue;
         const probes = [
@@ -371,7 +428,8 @@ export function Starfield() {
           : placed.side === "left"
             ? l.x - gap - width
             : Math.min(w - 4 - width, Math.max(4, l.x - width / 2));
-      const by = placed.side === "below" ? l.y + gap : l.y - LABEL_H / 2;
+      const by =
+        placed.side === "below" ? l.y + gap : placed.side === "above" ? l.y - gap - LABEL_H : l.y - LABEL_H / 2;
 
       // a faint backing, so the text stays crisp over a busy patch of sky
       ctx.fillStyle = `rgba(4,5,10,${0.72 * a})`;
