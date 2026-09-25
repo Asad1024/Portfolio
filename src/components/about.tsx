@@ -11,7 +11,7 @@ const principles = [
 export function About() {
   return (
     <section id="about" className="mx-auto max-w-shell scroll-mt-24 px-6 py-24 sm:py-32">
-      <SectionHeading index="05" title="About" hint="$ cat about.md" />
+      <SectionHeading index="04" title="About" hint="$ cat about.md" />
 
       <div className="grid gap-20 lg:grid-cols-[3fr_2fr]">
         <Reveal>

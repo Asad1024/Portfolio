@@ -61,7 +61,7 @@ export async function GithubGraph() {
 
   return (
     <div className="mt-20 overflow-hidden rounded-2xl border border-line">
-      <div className="flex items-center justify-between gap-4 border-b border-line bg-card px-4 py-2.5 font-mono text-[11px] text-muted">
+      <div className="flex items-center justify-between gap-4 border-b border-line bg-card px-4 py-2.5 font-mono text-xs text-muted">
         <span className="truncate">
           <span className="term-green">$</span> git log --author=
           {contact.github.split("/").pop()} --since=&quot;{year}-01-01&quot;
@@ -78,19 +78,19 @@ export async function GithubGraph() {
 
       <div className="overflow-x-auto p-5">
         <div className="mx-auto w-max">
-          <div className="flex items-baseline justify-between gap-6 pb-3 font-mono text-[11px]">
+          <div className="flex items-baseline justify-between gap-6 pb-3 font-mono text-xs">
             <span className="text-fg">
               {data.total.toLocaleString()}{" "}
               <span className="text-muted">contributions in {year}</span>
             </span>
-            <span className="text-muted/60">Jan 1 — Dec 31</span>
+            <span className="text-muted/80">Jan 1 — Dec 31</span>
           </div>
 
           <div className="flex gap-1.5">
             {/* weekday gutter — every other row, as GitHub labels it */}
             <div
               aria-hidden
-              className="grid shrink-0 grid-rows-7 gap-[3px] pr-1 font-mono text-[9px] leading-[11px] text-muted/60"
+              className="grid shrink-0 grid-rows-7 gap-[3px] pr-1 font-mono text-[10px] leading-[11px] text-muted/80"
             >
               {["", "Mon", "", "Wed", "", "Fri", ""].map((d, i) => (
                 <span key={i} className="h-[11px]">
@@ -100,7 +100,7 @@ export async function GithubGraph() {
             </div>
 
             <div>
-              <div aria-hidden className="mb-1 flex gap-[3px] font-mono text-[9px] text-muted/60">
+              <div aria-hidden className="mb-1 flex gap-[3px] font-mono text-[10px] text-muted/80">
                 {monthAt.map((m, i) => (
                   <span key={i} className="w-[11px] shrink-0 whitespace-nowrap">
                     {m}
@@ -129,7 +129,7 @@ export async function GithubGraph() {
             </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-end gap-1.5 font-mono text-[9px] text-muted/60">
+          <div className="mt-3 flex items-center justify-end gap-1.5 font-mono text-[10px] text-muted/80">
             <span>Less</span>
             {LEVEL_CLASS.map((c, i) => (
               <span key={i} className={`size-[11px] rounded-[2px] ${c}`} />

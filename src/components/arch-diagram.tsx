@@ -17,14 +17,14 @@ export function ArchDiagram({ cols, caption }: { cols: ArchCol[]; caption: strin
               transition={{ duration: 0.5, delay: i * 0.12, ease: [0.21, 0.6, 0.35, 1] }}
               className="flex-1 rounded-xl border border-line bg-card p-4"
             >
-              <p className="font-mono text-[11px] uppercase tracking-wider text-accent">
+              <p className="font-mono text-xs uppercase tracking-wider text-accent">
                 {String(i + 1).padStart(2, "0")} {col.title}
               </p>
               <div className="mt-3 space-y-2">
                 {col.items.map((item) => (
                   <div
                     key={item}
-                    className="rounded-md border border-line bg-bg px-3 py-2 font-mono text-[11px] text-muted"
+                    className="rounded-md border border-line bg-bg px-3 py-2 font-mono text-xs text-muted"
                   >
                     {item}
                   </div>

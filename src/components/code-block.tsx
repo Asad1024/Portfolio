@@ -26,11 +26,11 @@ export async function CodeBlock({
         <span className="size-2.5 rounded-full bg-[#ff5f57]" />
         <span className="size-2.5 rounded-full bg-[#febc2e]" />
         <span className="size-2.5 rounded-full bg-[#28c840]" />
-        <span className="ml-3 truncate font-mono text-[11px] text-muted">{file}</span>
-        <span className="ml-auto hidden rounded border border-accent/40 px-1.5 py-px font-mono text-[10px] text-accent sm:inline">
+        <span className="ml-3 truncate font-mono text-xs text-muted">{file}</span>
+        <span className="ml-auto hidden rounded border border-accent/40 px-1.5 py-px font-mono text-[11px] text-accent sm:inline">
           real code · from the repo
         </span>
-        <span className="rounded border border-line px-1.5 py-px font-mono text-[10px] text-muted">
+        <span className="rounded border border-line px-1.5 py-px font-mono text-[11px] text-muted">
           {lang}
         </span>
         <CopyButton code={code.trim()} />

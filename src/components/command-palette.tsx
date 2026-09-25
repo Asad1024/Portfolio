@@ -15,7 +15,6 @@ type Item = {
 const SECTIONS = [
   ["Work", "#work"],
   ["Capabilities", "#capabilities"],
-  ["Skills", "#skills"],
   ["Experience", "#experience"],
   ["About", "#about"],
   ["Contact", "#contact"],
@@ -166,7 +165,7 @@ export function CommandPalette() {
       z={160}
       footer={
         <div
-          className="relative flex items-center gap-3 border-t px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-muted/55"
+          className="relative flex items-center gap-3 border-t px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-muted/80"
           style={{ borderColor: "color-mix(in oklab, var(--accent) 16%, transparent)" }}
         >
           <span className="normal-case tracking-normal">↑↓ navigate</span>
@@ -198,7 +197,7 @@ export function CommandPalette() {
           spellCheck={false}
           autoComplete="off"
           aria-label="Search sections, projects and actions"
-          className="w-full bg-transparent py-3.5 font-mono text-sm text-fg outline-none placeholder:text-muted/45"
+          className="w-full bg-transparent py-3.5 font-mono text-sm text-fg outline-none placeholder:text-muted/70"
         />
       </div>
 
@@ -221,7 +220,7 @@ export function CommandPalette() {
             <div key={`${item.group}-${item.label}`}>
               {header && (
                 <div className="flex items-center gap-2.5 px-3 pb-1.5 pt-3.5">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent/70">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-accent/70">
                     {header}
                   </p>
                   <span className="h-px flex-1 bg-line" />
@@ -239,8 +238,8 @@ export function CommandPalette() {
               >
                 <span
                   aria-hidden
-                  className={`shrink-0 font-mono text-[9px] ${
-                    i === cursor ? "text-accent" : "text-muted/35"
+                  className={`shrink-0 font-mono text-[10px] ${
+                    i === cursor ? "text-accent" : "text-muted/70"
                   }`}
                 >
                   {glyph}
@@ -248,8 +247,8 @@ export function CommandPalette() {
                 <span className="truncate font-sans text-sm">{item.label}</span>
                 {item.hint && (
                   <span
-                    className={`ml-auto shrink-0 truncate font-mono text-[11px] ${
-                      i === cursor ? "text-accent/85" : "text-muted/60"
+                    className={`ml-auto shrink-0 truncate font-mono text-xs ${
+                      i === cursor ? "text-accent/85" : "text-muted/80"
                     }`}
                   >
                     {item.hint}

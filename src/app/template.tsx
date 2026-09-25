@@ -246,11 +246,11 @@ function RouteVeil({
             <p className="font-sans text-2xl font-bold tracking-tight text-fg drop-shadow-[0_0_18px_var(--ring)] sm:text-3xl">
               {name}
             </p>
-            <p className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.3em] text-fg/60">
+            <p className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.3em] text-fg/60">
               {sub}
             </p>
             {body && (
-              <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.3em] text-accent/80">
+              <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.3em] text-accent/80">
                 ◆ lock acquired
               </p>
             )}

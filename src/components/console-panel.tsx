@@ -177,11 +177,11 @@ export function ConsolePanel({
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-70" />
                 <span className="relative inline-flex size-2 rounded-full bg-accent" />
               </span>
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">
+              <p className="font-mono text-xs uppercase tracking-[0.22em] text-accent">
                 {title}
               </p>
               <span className="hidden h-px flex-1 bg-line sm:block" />
-              <p className="hidden font-mono text-[10px] uppercase tracking-widest text-muted/60 sm:block">
+              <p className="hidden font-mono text-[11px] uppercase tracking-widest text-muted/80 sm:block">
                 {sub}
               </p>
               {/* signal strength, because every console has one */}
@@ -192,7 +192,7 @@ export function ConsolePanel({
               </span>
               <button
                 onClick={onClose}
-                className="ml-auto rounded border border-line px-1.5 py-px font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:border-accent/60 hover:text-accent sm:ml-0"
+                className="ml-auto rounded border border-line px-1.5 py-px font-mono text-[11px] uppercase tracking-widest text-muted transition-colors hover:border-accent/60 hover:text-accent sm:ml-0"
                 aria-label={`Close ${label.toLowerCase()}`}
               >
                 esc

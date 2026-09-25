@@ -9,7 +9,6 @@ import { useScrollLock } from "@/lib/use-scroll-lock";
 const links = [
   { href: "/#work", label: "Work" },
   { href: "/#capabilities", label: "Capabilities" },
-  { href: "/#skills", label: "Skills" },
   { href: "/#experience", label: "Experience" },
   { href: "/#about", label: "About" },
   { href: "/#contact", label: "Contact" },

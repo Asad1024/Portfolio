@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { projects } from "@/lib/data";
 import { Reveal } from "./reveal";
@@ -25,6 +25,19 @@ import { TechIcon } from "./tech-icon";
 
 const FILTERS = ["all", "web", "desktop", "ai", "cloud"] as const;
 
+/** How long the pointer has to rest on a row before the viewport follows it.
+ *  Long enough that sweeping across the list toward the viewport doesn't
+ *  cycle through everything on the way; short enough to still feel instant. */
+const HOVER_INTENT_MS = 120;
+/** Quiet period after the last scroll or wheel event before hover counts
+ *  again. Long enough to cover Lenis easing out after the final wheel tick. */
+const SCROLL_SETTLE_MS = 300;
+/** How far the pointer must move after a scroll before hover counts again. */
+const MIN_TRAVEL_PX = 10;
+/** Matches the fade-in keyframe, so the outgoing shot is dropped only once
+ *  the incoming one fully covers it. */
+const CROSSFADE_MS = 450;
+
 /** Catalogue code for a project, e.g. sparkcue 01 -> SPR-01. Consonants first
  *  so the letters stay distinctive: SPR reads better than SPA. */
 function designation(slug: string, index: string) {
@@ -47,6 +60,92 @@ export function Work() {
   // longer in the list.
   const active = shown.find((p) => p.slug === activeSlug) ?? shown[0];
 
+  /* The shot being faded out, kept underneath the incoming one so a switch is
+     a crossfade rather than a flash of the black ground between two images. */
+  const [outgoing, setOutgoing] = useState<string | null>(null);
+  const outgoingTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const select = (slug: string) => {
+    if (!active || slug === active.slug) return;
+    setOutgoing(active.slug);
+    setActiveSlug(slug);
+    clearTimeout(outgoingTimer.current);
+    outgoingTimer.current = setTimeout(() => setOutgoing(null), CROSSFADE_MS);
+  };
+
+  /* Scrolling moves the list under a pointer that hasn't moved, and the
+     browser reports every row that slides beneath it as hovered — which made
+     an ordinary scroll flick the viewport through half the projects.
+
+     Two gates, because either alone leaks. The page has to be still (Lenis
+     keeps it gliding well after the last wheel tick, hence the wheel listener
+     and the generous settle). And the pointer has to have genuinely travelled
+     since the scroll: a hand on a mouse drifts a pixel or two while it works
+     the wheel, and Chrome fires a synthetic move at the old coordinates once
+     scrolling ends to refresh hover state — neither is someone choosing a
+     project. */
+  const scrolling = useRef(false);
+  const travel = useRef(Infinity);
+  const pending = useRef<{ slug: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+
+  useEffect(() => {
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    let last: { x: number; y: number } | null = null;
+
+    const onScroll = () => {
+      scrolling.current = true;
+      travel.current = 0;
+      if (pending.current) {
+        clearTimeout(pending.current.timer);
+        pending.current = null;
+      }
+      clearTimeout(settle);
+      settle = setTimeout(() => {
+        scrolling.current = false;
+      }, SCROLL_SETTLE_MS);
+    };
+    const onMove = (e: PointerEvent) => {
+      if (last) travel.current += Math.hypot(e.clientX - last.x, e.clientY - last.y);
+      last = { x: e.clientX, y: e.clientY };
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onScroll, { passive: true });
+    // capture, so the distance is counted before the row's own handler reads it
+    window.addEventListener("pointermove", onMove, { passive: true, capture: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", onScroll);
+      window.removeEventListener("pointermove", onMove, { capture: true });
+      clearTimeout(settle);
+      clearTimeout(outgoingTimer.current);
+      if (pending.current) clearTimeout(pending.current.timer);
+    };
+  }, []);
+
+  /* Driven by pointer movement rather than enter, so a row that scrolled
+     under a resting cursor waits for the cursor to actually move. Touch has
+     no hover — a tap there opens the case study. */
+  const intend = (e: React.PointerEvent, slug: string) => {
+    if (e.pointerType === "touch" || scrolling.current) return;
+    if (travel.current < MIN_TRAVEL_PX) return;
+    if (slug === active?.slug || pending.current?.slug === slug) return;
+    if (pending.current) clearTimeout(pending.current.timer);
+    pending.current = {
+      slug,
+      timer: setTimeout(() => {
+        pending.current = null;
+        select(slug);
+      }, HOVER_INTENT_MS),
+    };
+  };
+
+  const abandon = (slug: string) => {
+    if (pending.current?.slug !== slug) return;
+    clearTimeout(pending.current.timer);
+    pending.current = null;
+  };
+
   return (
     <section id="work" className="mx-auto max-w-shell scroll-mt-24 px-6 py-24 sm:py-32">
       <SectionHeading index="01" title="Selected Work" hint="every project, one case study each" />
@@ -55,7 +154,7 @@ export function Work() {
         <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
           <p className="font-mono text-sm text-muted">
             <span className="term-green">$</span> ls ./projects{" "}
-            <span className="text-muted/60">({shown.length})</span>
+            <span className="text-muted/80">({shown.length})</span>
           </p>
           <div className="flex flex-wrap gap-2">
             {FILTERS.map((f) => (
@@ -85,8 +184,9 @@ export function Work() {
                 <li key={p.slug}>
                   <Link
                     href={`/work/${p.slug}`}
-                    onMouseEnter={() => setActiveSlug(p.slug)}
-                    onFocus={() => setActiveSlug(p.slug)}
+                    onPointerMove={(e) => intend(e, p.slug)}
+                    onPointerLeave={() => abandon(p.slug)}
+                    onFocus={() => select(p.slug)}
                     className="group flex items-center gap-4 py-4 outline-none transition-colors sm:gap-5"
                   >
                     {/* selection marker — the row the viewport is showing */}
@@ -98,8 +198,8 @@ export function Work() {
                     />
 
                     <span
-                      className={`shrink-0 font-mono text-[11px] tabular-nums transition-colors duration-300 ${
-                        on ? "text-accent" : "text-muted/50"
+                      className={`shrink-0 font-mono text-xs tabular-nums transition-colors duration-300 ${
+                        on ? "text-accent" : "text-muted/80"
                       }`}
                     >
                       {designation(p.slug, p.index)}
@@ -113,7 +213,7 @@ export function Work() {
                       >
                         {p.title}
                       </span>
-                      <span className="mt-0.5 block truncate font-mono text-[11px] text-muted/70">
+                      <span className="mt-0.5 block truncate font-mono text-xs text-muted/90">
                         {p.company ? `${p.company} · ` : ""}
                         {p.platform}
                       </span>
@@ -132,7 +232,7 @@ export function Work() {
 
                     <span
                       aria-hidden
-                      className={`shrink-0 font-mono text-[11px] transition-all duration-300 ${
+                      className={`shrink-0 font-mono text-xs transition-all duration-300 ${
                         on ? "translate-x-0 text-accent opacity-100" : "-translate-x-1 opacity-0"
                       }`}
                     >
@@ -159,17 +259,24 @@ export function Work() {
                     cropped — against black the small letterboxing reads as a
                     screen showing content; against the card it read as a gap. */}
                 <div className="relative isolate aspect-[16/10] overflow-hidden border-b border-line bg-black">
-                  {/* keyed on the slug so React remounts it per project and the
-                      fade replays, rather than swapping the pixels in place */}
+                  {/* Keyed on the slug, so the incoming shot mounts fresh and
+                      its fade plays, while the outgoing one keeps its element
+                      — and its finished animation — and simply sits beneath
+                      until it is covered. That is the crossfade: no frame
+                      where neither is showing. */}
                   {/* Inset past the corner ticks, so the brackets sit just
                       outside the picture and frame it rather than lying on top
                       of it. The black ground fills the margin. */}
-                  <div
-                    key={active.slug}
-                    className="absolute inset-5 animate-[fade-in_0.45s_ease-out]"
-                  >
-                    <ProjectVisual slug={active.slug} />
-                  </div>
+                  {[outgoing, active.slug]
+                    .filter((slug, i): slug is string => !!slug && (i === 1 || slug !== active.slug))
+                    .map((slug) => (
+                      <div
+                        key={slug}
+                        className="absolute inset-5 animate-[fade-in_0.45s_ease-out]"
+                      >
+                        <ProjectVisual slug={slug} />
+                      </div>
+                    ))}
 
                   <span
                     aria-hidden
@@ -197,11 +304,11 @@ export function Work() {
                     aria-hidden
                     className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--bg)_85%,transparent),transparent)]"
                   />
-                  <span className="absolute left-5 top-4 font-mono text-[11px] text-accent">
+                  <span className="absolute left-5 top-4 font-mono text-xs text-accent">
                     {designation(active.slug, active.index)}
                   </span>
-                  <span className="absolute right-5 top-4 font-mono text-[10px] uppercase tracking-widest text-muted/80">
-                    {active.link ? "live" : "archived"}
+                  <span className="absolute right-5 top-4 font-mono text-xs uppercase tracking-widest text-muted/80">
+                    {active.link ? "live" : "private build"}
                   </span>
                 </div>
 
@@ -210,7 +317,7 @@ export function Work() {
                     <h3 className="font-sans text-2xl font-bold tracking-tight transition-colors duration-300 group-hover:text-accent">
                       {active.title}
                     </h3>
-                    <span className="shrink-0 font-mono text-[11px] text-muted/70">
+                    <span className="shrink-0 font-mono text-xs text-muted/90">
                       {active.year}
                     </span>
                   </div>
@@ -221,7 +328,7 @@ export function Work() {
                       <span className="font-sans text-3xl font-bold leading-none tracking-tight text-accent">
                         {active.outcome[0].value}
                       </span>
-                      <span className="font-mono text-[11px] text-muted">
+                      <span className="font-mono text-xs text-muted">
                         {active.outcome[0].label}
                       </span>
                     </p>
@@ -235,12 +342,12 @@ export function Work() {
                         </span>
                       ))}
                       {active.stack.length > 5 && (
-                        <span className="font-mono text-[10px] text-muted/60">
+                        <span className="font-mono text-xs text-muted/80">
                           +{active.stack.length - 5}
                         </span>
                       )}
                     </span>
-                    <span className="flex items-center gap-2 font-mono text-[11px] text-muted transition-colors group-hover:text-accent">
+                    <span className="flex items-center gap-2 font-mono text-xs text-muted transition-colors group-hover:text-accent">
                       open dossier
                       <span className="transition-transform duration-300 group-hover:translate-x-1">
                         →

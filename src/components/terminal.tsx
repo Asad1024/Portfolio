@@ -139,7 +139,7 @@ export function Terminal() {
               text: `${g.dir.padEnd(18)}${g.skills.join(", ")}`,
             }),
           );
-          out.push({ type: "accent", text: "full matrix at /#skills" });
+          out.push({ type: "accent", text: "full matrix at /#capabilities" });
           break;
         case "contact":
           out.push(
@@ -262,14 +262,14 @@ export function Terminal() {
             className="relative flex flex-wrap items-center gap-1.5 border-t px-4 py-2.5"
             style={{ borderColor: "color-mix(in oklab, var(--accent) 16%, transparent)" }}
           >
-            <span className="mr-1 font-mono text-[10px] uppercase tracking-widest text-muted/50">
+            <span className="mr-1 font-mono text-[11px] uppercase tracking-widest text-muted/80">
               try
             </span>
             {SUGGESTIONS.map((cmd) => (
               <button
                 key={cmd}
                 onClick={() => run(cmd)}
-                className="flex items-center gap-1.5 rounded-sm border border-accent/25 bg-accent/[0.07] px-2.5 py-1 font-mono text-[11px] text-accent/80 transition-colors hover:border-accent/70 hover:bg-accent/15 hover:text-accent"
+                className="flex items-center gap-1.5 rounded-sm border border-accent/25 bg-accent/[0.07] px-2.5 py-1 font-mono text-xs text-accent/80 transition-colors hover:border-accent/70 hover:bg-accent/15 hover:text-accent"
               >
                 <span className="text-accent/45">▸</span>
                 {cmd}
@@ -279,7 +279,7 @@ export function Terminal() {
 
           {/* ── status rail ── */}
           <div
-            className="relative flex items-center gap-2.5 border-t px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-muted/55"
+            className="relative flex items-center gap-2.5 border-t px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-muted/80"
             style={{ borderColor: "color-mix(in oklab, var(--accent) 16%, transparent)" }}
           >
             <span className="text-accent/80">uplink stable</span>
@@ -318,7 +318,7 @@ export function Terminal() {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={onKeyDown}
-            className="w-full bg-transparent text-fg outline-none placeholder:text-muted/40"
+            className="w-full bg-transparent text-fg outline-none placeholder:text-muted/70"
             placeholder="type a command…"
             spellCheck={false}
             autoComplete="off"

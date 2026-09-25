@@ -49,7 +49,7 @@ export default async function CaseStudy({
           system map
         </Link>
 
-        <div className="mt-10 flex items-center gap-3 font-mono text-[10px] uppercase tracking-widest text-muted/70">
+        <div className="mt-10 flex items-center gap-3 font-mono text-[11px] uppercase tracking-widest text-muted/90">
           <span className="term-green">◆ body dossier</span>
           <span className="h-px flex-1 bg-line" />
           <span>designation {project.slug}</span>
@@ -117,13 +117,13 @@ export default async function CaseStudy({
                   <span className="size-2.5 rounded-full bg-[#ff5f57]" />
                   <span className="size-2.5 rounded-full bg-[#febc2e]" />
                   <span className="size-2.5 rounded-full bg-[#28c840]" />
-                  <span className="ml-3 truncate font-mono text-[11px] text-muted">
+                  <span className="ml-3 truncate font-mono text-xs text-muted">
                     {project.link
                       ? project.link.replace("https://", "").replace(/\/$/, "")
                       : project.title.toLowerCase().replace(/\s+/g, "-")}
                   </span>
                   {project.link && (
-                    <span className="ml-auto hidden font-mono text-[11px] text-muted transition-colors group-hover:text-accent sm:block">
+                    <span className="ml-auto hidden font-mono text-xs text-muted transition-colors group-hover:text-accent sm:block">
                       open ↗
                     </span>
                   )}

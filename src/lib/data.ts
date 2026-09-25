@@ -987,12 +987,50 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   },
 ];
 
+/* One card per surface, each carrying the full set of tools used on it.
+   This used to be two sections — these cards with a handful of icons, and a
+   separate Skills grid listing the same technologies again by category — and
+   the repetition made the page read longer than it was. Every skill in
+   skillGroups appears on exactly the card it belongs to.
+
+   Ordered in pairs of similar weight, since the grid runs two to a row and a
+   row is as tall as its busier card. */
 export const capabilities = [
   {
     label: "Web",
     mono: "web/",
-    techs: ["React", "Next.js", "TypeScript", "NestJS", "PostgreSQL"],
+    techs: [
+      "React",
+      "Next.js",
+      "TypeScript",
+      "Tailwind CSS",
+      "Redux",
+      "Radix UI",
+      "Node.js",
+      "NestJS",
+      "Express.js",
+      "JWT",
+      "WebSockets",
+    ],
     body: "Production SaaS end to end — Next.js and React frontends, NestJS and Node APIs, multi-tenant architecture with RBAC, and the unglamorous details that make software feel finished.",
+  },
+  {
+    label: "Cloud & data",
+    mono: "cloud/",
+    techs: ["PostgreSQL", "MySQL", "MongoDB", "Firestore", "Prisma ORM", "Redis", "Cloudinary", "CI/CD"],
+    body: "The infrastructure under it all — schemas that survive multi-tenancy, Redis and BullMQ job queues, async media pipelines, webhooks, and deployments that don't need babysitting.",
+  },
+  {
+    label: "AI systems",
+    mono: "ai/",
+    techs: ["OpenAI", "Gemini", "ElevenLabs", "HeyGen", "LiveKit", "Twilio"],
+    body: "LLMs put to work, not demoed — OpenAI and Gemini pipelines, voice agents with ElevenLabs and Twilio, avatar video with HeyGen, and latency budgets in milliseconds.",
+  },
+  {
+    label: "Payments & integrations",
+    mono: "payments/",
+    techs: ["Stripe", "JazzCash", "PayFast", "QuickBooks", "Zapier", "Google Calendar"],
+    body: "The connective tissue of SaaS — Stripe, JazzCash, and PayFast checkouts, subscription and credit-based billing, Google Calendar and OAuth, HMAC webhooks, and CRM and enrichment APIs.",
   },
   {
     label: "Mobile",
@@ -1005,24 +1043,6 @@ export const capabilities = [
     mono: "desktop/",
     techs: ["Electron", "TypeScript", "Node.js"],
     body: "Electron apps that feel native, not wrapped — system integrations, always-on-top overlays, auto-updates, and cross-platform builds from one codebase.",
-  },
-  {
-    label: "Cloud",
-    mono: "cloud/",
-    techs: ["Redis", "Node.js", "CI/CD"],
-    body: "The infrastructure under it all — Redis and BullMQ job queues, async media pipelines, webhooks, observability, and deployments that don't need babysitting.",
-  },
-  {
-    label: "AI systems",
-    mono: "ai/",
-    techs: ["OpenAI", "Gemini", "ElevenLabs", "Twilio", "LiveKit"],
-    body: "LLMs put to work, not demoed — OpenAI and Gemini pipelines, voice agents with ElevenLabs and Twilio, avatar video with HeyGen, and latency budgets in milliseconds.",
-  },
-  {
-    label: "Payments & integrations",
-    mono: "payments/",
-    techs: ["Stripe", "JazzCash", "PayFast", "QuickBooks"],
-    body: "The connective tissue of SaaS — Stripe, JazzCash, and PayFast checkouts, subscription and credit-based billing, Google Calendar and OAuth, HMAC webhooks, and CRM and enrichment APIs.",
   },
 ];
 
@@ -1044,11 +1064,11 @@ export const stackOrbits: StackBand[] = [
   { band: "core", members: ["TypeScript", "Node.js"] },
   {
     band: "frameworks",
-    members: ["React", "Next.js", "NestJS", "React Native", "Electron", "Tailwind CSS"],
+    members: ["React", "Next.js", "NestJS", "Flutter", "Electron", "Tailwind CSS"],
   },
   {
     band: "services",
-    members: ["PostgreSQL", "MongoDB", "Redis", "Stripe", "Twilio", "OpenAI", "Gemini"],
+    members: ["PostgreSQL", "MongoDB", "Redis", "Prisma ORM", "Stripe", "Twilio", "OpenAI"],
   },
 ];
 

@@ -7,9 +7,9 @@ import { SectionHeading } from "./section-heading";
 export function Experience() {
   return (
     <section id="experience" className="mx-auto max-w-shell scroll-mt-24 px-6 py-24 sm:py-32">
-      <SectionHeading index="04" title="Mission Log" hint="$ git log --career" />
+      <SectionHeading index="03" title="Mission Log" hint="$ git log --career" />
 
-      <div className="mb-12 flex items-center gap-3 font-mono text-[10px] uppercase tracking-widest text-muted/70">
+      <div className="mb-12 flex items-center gap-3 font-mono text-[11px] uppercase tracking-widest text-muted/90">
         <span className="term-green">◆ transmission archive</span>
         <span className="h-px flex-1 bg-line" />
         <span>{experience.length} postings</span>

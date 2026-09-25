@@ -19,7 +19,7 @@ export function CopyButton({ code }: { code: string }) {
     <button
       onClick={copy}
       aria-label="Copy code"
-      className="rounded px-2 py-1 font-mono text-[10px] text-muted transition-colors hover:bg-card hover:text-fg"
+      className="rounded px-2 py-1 font-mono text-[11px] text-muted transition-colors hover:bg-card hover:text-fg"
     >
       {copied ? <span className="text-accent">copied ✓</span> : "copy"}
     </button>

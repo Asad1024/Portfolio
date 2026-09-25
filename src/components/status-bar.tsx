@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 /* An editor-style status line pinned to the bottom of the viewport: where you
    are in the page, and how far down it you have travelled. */
-const SECTIONS = ["work", "capabilities", "skills", "experience", "about", "contact"];
+const SECTIONS = ["work", "capabilities", "experience", "about", "contact"];
 
 export function StatusBar() {
   const [section, setSection] = useState("");
@@ -39,7 +39,7 @@ export function StatusBar() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/80 backdrop-blur-md">
-      <div className="mx-auto flex h-9 max-w-shell items-center gap-4 px-4 font-mono text-[11px] text-muted sm:px-6">
+      <div className="mx-auto flex h-9 max-w-shell items-center gap-4 px-4 font-mono text-xs text-muted sm:px-6">
         {/* current location */}
         <span className="flex shrink-0 items-center gap-2">
           <span className="relative flex size-1.5">
@@ -47,7 +47,7 @@ export function StatusBar() {
             <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
           </span>
           <span className="text-accent">~/asad</span>
-          <span className="hidden text-muted/70 sm:inline">
+          <span className="hidden text-muted/90 sm:inline">
             {section ? `/${section}` : ""}
           </span>
         </span>

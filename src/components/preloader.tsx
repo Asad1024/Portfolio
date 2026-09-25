@@ -19,7 +19,11 @@ import { useScrollLock } from "@/lib/use-scroll-lock";
    lengths. That is the whole reason to chain them.
 
    Shown once per browser session, not once per page load: sessionStorage
-   survives a refresh, so a reload doesn't sit through it again. */
+   survives a refresh, so a reload doesn't sit through it again.
+
+   Kept short — under two seconds end to end — because it stands between a
+   recruiter and the work, and any click, key, wheel or tap skips straight to
+   the page. */
 
 const PHASES = [
   { at: 0.0, status: "gravity well forming" },
@@ -28,8 +32,8 @@ const PHASES = [
   { at: 0.86, status: "ignition →" },
 ];
 
-const COLLAPSE_MS = 2600;
-const WARP_MS = 950;
+const COLLAPSE_MS = 1100;
+const WARP_MS = 600;
 const FADE_MS = 450;
 
 const MAX_DUST = 1400;
@@ -105,22 +109,34 @@ export function Preloader() {
        hits 100. The hero holds its entrance on this event, and releasing it a
        second early would run the name's decrypt behind a curtain that is still
        up, landing it already finished. */
-    const toExit = setTimeout(() => {
+    let goneTimer: ReturnType<typeof setTimeout> | undefined;
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      clearInterval(tick);
+      clearTimeout(toWarp);
+      clearTimeout(toExit);
+      detach();
+      setProgress(100);
       sessionStorage.setItem("booted", "1");
       window.dispatchEvent(new CustomEvent("boot-complete"));
       setPhase("exit");
-    }, COLLAPSE_MS + WARP_MS);
+      goneTimer = setTimeout(() => setPhase("gone"), FADE_MS + 120);
+    };
+    const toExit = setTimeout(finish, COLLAPSE_MS + WARP_MS);
 
-    const goneTimer = setTimeout(
-      () => setPhase("gone"),
-      COLLAPSE_MS + WARP_MS + FADE_MS + 120,
-    );
+    // anything that says "I'm here for the site" ends the intro early
+    const SKIP = ["keydown", "pointerdown", "wheel", "touchstart"] as const;
+    const detach = () => SKIP.forEach((type) => window.removeEventListener(type, finish));
+    SKIP.forEach((type) => window.addEventListener(type, finish, { passive: true }));
 
     return () => {
       clearInterval(tick);
       clearTimeout(toWarp);
       clearTimeout(toExit);
       clearTimeout(goneTimer);
+      detach();
     };
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -357,6 +373,7 @@ export function Preloader() {
         }`}
       >
         <span className="text-accent">▸</span> {status}
+        <span className="float-right text-muted/80">press any key to skip</span>
       </p>
     </div>
   );
