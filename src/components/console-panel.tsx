@@ -59,6 +59,11 @@ export function ConsolePanel({
   useEffect(() => {
     if (!open) return;
     returnTo.current = document.activeElement as HTMLElement | null;
+    /* Only hand focus back to someone who was navigating by keyboard. Closing
+       with Esc is itself a keypress, so restoring focus to a button that was
+       clicked makes the browser ring it as if it had been tabbed to — a focus
+       ring nobody asked for, left on the search pill after every close. */
+    const keyboardUser = !!returnTo.current?.matches?.(":focus-visible");
 
     const t = setTimeout(() => {
       const target =
@@ -68,7 +73,8 @@ export function ConsolePanel({
 
     return () => {
       clearTimeout(t);
-      returnTo.current?.focus?.();
+      if (keyboardUser) returnTo.current?.focus?.();
+      else (document.activeElement as HTMLElement | null)?.blur?.();
     };
   }, [open, initialFocusRef]);
 
