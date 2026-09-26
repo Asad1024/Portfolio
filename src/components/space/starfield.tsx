@@ -337,13 +337,13 @@ export function Starfield() {
             const y = py(n.x, n.y);
             if (x < -16 || y < -16 || x > w + 16 || y > h + 16) continue;
             // a sine raised to a power: quiet most of the cycle, then a clear flash
-            const blink = (0.5 + 0.5 * Math.sin((t / 1000) * n.rate + n.phase)) ** 4;
+            const blink = (0.5 + 0.5 * Math.sin((t / 1000) * n.rate + n.phase)) ** 6;
             if (blink < 0.03) continue;
             const a = blink * fade;
 
-            const glowR = n.r + 4 + blink * 9;
+            const glowR = n.r + 3 + blink * 4.5;
             const glow = ctx.createRadialGradient(x, y, 0, x, y, glowR);
-            glow.addColorStop(0, `rgba(${accentRgb},${0.55 * a})`);
+            glow.addColorStop(0, `rgba(${accentRgb},${0.4 * a})`);
             glow.addColorStop(1, `rgba(${accentRgb},0)`);
             ctx.fillStyle = glow;
             ctx.beginPath();
@@ -351,9 +351,9 @@ export function Starfield() {
             ctx.fill();
 
             // the glint: a thin cross, longest at the peak of the flash
-            const spike = n.r + 3 + blink * 10;
-            ctx.strokeStyle = rgba(starColor, 0.85 * a);
-            ctx.lineWidth = 1;
+            const spike = n.r + 1.5 + blink * 4.5;
+            ctx.strokeStyle = rgba(starColor, 0.6 * a);
+            ctx.lineWidth = 0.8;
             ctx.beginPath();
             ctx.moveTo(x - spike, y);
             ctx.lineTo(x + spike, y);
@@ -363,7 +363,7 @@ export function Starfield() {
 
             ctx.fillStyle = rgba(starColor, a);
             ctx.beginPath();
-            ctx.arc(x, y, n.r + 0.6 + blink * 0.8, 0, Math.PI * 2);
+            ctx.arc(x, y, n.r + 0.3 + blink * 0.4, 0, Math.PI * 2);
             ctx.fill();
           }
         }
