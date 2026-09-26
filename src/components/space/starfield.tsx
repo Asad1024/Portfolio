@@ -34,8 +34,9 @@ type Star = {
   phase: number;
 };
 
-/** A star with a proper name, projected like the rest, for the hover label. */
-type Named = { x: number; y: number; r: number; name: string; detail: string };
+/** A star with a proper name, projected like the rest, for the hover label.
+ *  `rate` and `phase` set its blink, which marks it out as one you can hover. */
+type Named = { x: number; y: number; r: number; name: string; detail: string; rate: number; phase: number };
 
 type Shooting = { x: number; y: number; vx: number; vy: number; life: number; len: number };
 
@@ -257,6 +258,12 @@ export function Starfield() {
           r: Math.min(2.3, Math.max(0.45, (5.8 - mag) * 0.36)),
           name,
           detail: ly ? `${con} · ${ly.toLocaleString("en-US")} light-years` : con,
+          /* Seeded from the star's index, not Math.random: aim() re-runs every
+             minute, and a fresh random phase would make every star jump
+             mid-blink. The golden angle spreads the phases so no two
+             neighbours in the list flash together. */
+          rate: 1.1 + ((k * 0.618) % 1) * 1.1,
+          phase: (k * 2.39996) % (Math.PI * 2),
         });
       }
       named = nextNamed;
@@ -315,6 +322,29 @@ export function Starfield() {
           } else {
             ctx.beginPath();
             ctx.arc(x, y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        /* The named stars blink — a brief flash and a faint accent halo, each
+           on its own beat — so the ones that answer a hover can be told apart
+           from the ones that don't. Held steady under reduced motion. */
+        if (!reduced) {
+          for (const n of named) {
+            const x = px(n.x, n.y);
+            const y = py(n.x, n.y);
+            if (x < -8 || y < -8 || x > w + 8 || y > h + 8) continue;
+            // a sine raised to a high power: dark most of the cycle, then a short flash
+            const blink = (0.5 + 0.5 * Math.sin((t / 1000) * n.rate + n.phase)) ** 8;
+            if (blink < 0.02) continue;
+            const a = blink * fade;
+            ctx.fillStyle = `rgba(${accentRgb},${0.22 * a})`;
+            ctx.beginPath();
+            ctx.arc(x, y, n.r + 2 + blink * 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = rgba(starColor, a);
+            ctx.beginPath();
+            ctx.arc(x, y, n.r + 0.4, 0, Math.PI * 2);
             ctx.fill();
           }
         }
