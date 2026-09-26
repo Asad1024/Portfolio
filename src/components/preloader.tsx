@@ -21,7 +21,7 @@ import { useScrollLock } from "@/lib/use-scroll-lock";
    Shown once per browser session, not once per page load: sessionStorage
    survives a refresh, so a reload doesn't sit through it again.
 
-   Kept short — about two and a half seconds end to end — because it stands
+   Kept short — about three seconds end to end — because it stands
    between a recruiter and the work, and any click, key, wheel or tap skips
    straight to the page. */
 
@@ -32,7 +32,7 @@ const PHASES = [
   { at: 0.86, status: "ignition →" },
 ];
 
-const COLLAPSE_MS = 1800;
+const COLLAPSE_MS = 2600;
 const WARP_MS = 600;
 const FADE_MS = 450;
 

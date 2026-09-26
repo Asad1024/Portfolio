@@ -262,7 +262,7 @@ export function Starfield() {
              minute, and a fresh random phase would make every star jump
              mid-blink. The golden angle spreads the phases so no two
              neighbours in the list flash together. */
-          rate: 1.1 + ((k * 0.618) % 1) * 1.1,
+          rate: 0.9 + ((k * 0.618) % 1) * 0.9,
           phase: (k * 2.39996) % (Math.PI * 2),
         });
       }
@@ -326,25 +326,44 @@ export function Starfield() {
           }
         }
 
-        /* The named stars blink — a brief flash and a faint accent halo, each
-           on its own beat — so the ones that answer a hover can be told apart
-           from the ones that don't. Held steady under reduced motion. */
+        /* The named stars blink — a bright flash with a soft accent glow and a
+           four-point glint, each on its own beat — so the ones that answer a
+           hover can be told apart from the ones that don't. Held steady under
+           reduced motion. */
         if (!reduced) {
+          ctx.lineCap = "round";
           for (const n of named) {
             const x = px(n.x, n.y);
             const y = py(n.x, n.y);
-            if (x < -8 || y < -8 || x > w + 8 || y > h + 8) continue;
-            // a sine raised to a high power: dark most of the cycle, then a short flash
-            const blink = (0.5 + 0.5 * Math.sin((t / 1000) * n.rate + n.phase)) ** 8;
-            if (blink < 0.02) continue;
+            if (x < -16 || y < -16 || x > w + 16 || y > h + 16) continue;
+            // a sine raised to a power: quiet most of the cycle, then a clear flash
+            const blink = (0.5 + 0.5 * Math.sin((t / 1000) * n.rate + n.phase)) ** 4;
+            if (blink < 0.03) continue;
             const a = blink * fade;
-            ctx.fillStyle = `rgba(${accentRgb},${0.22 * a})`;
+
+            const glowR = n.r + 4 + blink * 9;
+            const glow = ctx.createRadialGradient(x, y, 0, x, y, glowR);
+            glow.addColorStop(0, `rgba(${accentRgb},${0.55 * a})`);
+            glow.addColorStop(1, `rgba(${accentRgb},0)`);
+            ctx.fillStyle = glow;
             ctx.beginPath();
-            ctx.arc(x, y, n.r + 2 + blink * 2.5, 0, Math.PI * 2);
+            ctx.arc(x, y, glowR, 0, Math.PI * 2);
             ctx.fill();
+
+            // the glint: a thin cross, longest at the peak of the flash
+            const spike = n.r + 3 + blink * 10;
+            ctx.strokeStyle = rgba(starColor, 0.85 * a);
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x - spike, y);
+            ctx.lineTo(x + spike, y);
+            ctx.moveTo(x, y - spike);
+            ctx.lineTo(x, y + spike);
+            ctx.stroke();
+
             ctx.fillStyle = rgba(starColor, a);
             ctx.beginPath();
-            ctx.arc(x, y, n.r + 0.4, 0, Math.PI * 2);
+            ctx.arc(x, y, n.r + 0.6 + blink * 0.8, 0, Math.PI * 2);
             ctx.fill();
           }
         }
