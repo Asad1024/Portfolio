@@ -146,10 +146,14 @@ export function Hero() {
   return (
     <section
       ref={sectionRef}
-      className="relative flex min-h-[92svh] items-center overflow-hidden md:min-h-[84vh]"
+      className="relative flex min-h-[92svh] flex-col overflow-hidden md:min-h-[84vh] md:flex-row md:items-center"
     >
-      {/* The system owns the right half on desktop and the lower band on
-          mobile — never the same pixels as the type.
+      {/* The system owns the right half on desktop and its own block under
+          the buttons on a phone — never the same pixels as the type. On a
+          phone it used to be laid over the bottom 44% of the hero, which
+          started above the buttons: the outer orbit ran behind "Get in touch"
+          and the whole system was squeezed into a strip. It now sits in the
+          flow after the text, in a near-square box the camera is framed for.
 
           Inset from the right edge rather than flush to it. Flush put a hard
           viewport edge on one side of the system and a gap to the type on the
@@ -164,7 +168,7 @@ export function Hero() {
           transparent and the page's own starfield and nebula read straight
           through it. */}
       <div
-        className={`absolute inset-x-0 bottom-0 h-[44%] transition-opacity duration-1000 md:inset-y-0 md:bottom-auto md:left-auto md:right-[2.5%] md:h-full md:w-[52%] md:max-w-[907px] ${
+        className={`relative order-last mb-6 h-[min(100vw,26rem)] w-full shrink-0 transition-opacity duration-1000 md:absolute md:inset-y-0 md:right-[2.5%] md:order-none md:mb-0 md:h-full md:w-[52%] md:max-w-[907px] ${
           ready && sceneDrawn ? "opacity-100" : "opacity-0"
         }`}
       >
@@ -182,7 +186,7 @@ export function Hero() {
         )}
       </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-shell px-6 pb-40 pt-28 md:pb-16 md:pt-32">
+      <div className="relative z-10 mx-auto w-full max-w-shell px-6 pb-2 pt-20 md:pb-16 md:pt-32">
         <div className="md:max-w-[50%]">
           <p
             className={`${BASE} ${fade} inline-flex items-center gap-2.5 rounded-full border border-line bg-bg/70 py-1 pl-1 pr-4 font-sans text-[12px] tracking-wide text-muted`}
@@ -207,7 +211,7 @@ export function Hero() {
             <span className="hidden whitespace-nowrap sm:inline">Lahore, remote-first</span>
           </p>
 
-          <h1 className="mt-10 select-none font-sans font-semibold leading-[0.95] tracking-[-0.05em]">
+          <h1 className="mt-7 select-none md:mt-10 font-sans font-semibold leading-[0.95] tracking-[-0.05em]">
             <span
               className={`${BASE} ${lift} block text-[clamp(3.5rem,8.1vw,6.9rem)] text-glow`}
               style={at(150)}
@@ -222,7 +226,7 @@ export function Hero() {
               />
             </span>
             <span
-              className={`${BASE} ${rise} mt-10 block text-[clamp(1.55rem,3.2vw,2.55rem)] font-medium leading-[1.15] tracking-[-0.03em] text-fg/85`}
+              className={`${BASE} ${rise} mt-6 block text-[clamp(1.55rem,3.2vw,2.55rem)] md:mt-10 font-medium leading-[1.15] tracking-[-0.03em] text-fg/85`}
               style={at(320)}
             >
               Full-stack developer shipping{" "}
@@ -234,7 +238,7 @@ export function Hero() {
           </h1>
 
           <div
-            className={`${BASE} ${rise} mt-14 flex flex-wrap items-center gap-3`}
+            className={`${BASE} ${rise} mt-9 flex flex-wrap items-center gap-3 md:mt-14`}
             style={at(640)}
           >
             <Magnetic>
