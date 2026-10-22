@@ -29,7 +29,8 @@ export function MatrixRain() {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    // capped: a full-screen canvas redrawn every frame gains nothing past 1.5
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const w = window.innerWidth;
     const h = window.innerHeight;
     canvas.width = w * dpr;

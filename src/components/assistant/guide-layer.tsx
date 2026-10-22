@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion, useSpring, useTransform } from "framer-motion";
 import { X } from "lucide-react";
 import { Nova } from "./nova";
 
@@ -49,13 +49,46 @@ function measure(sel: string, vw: number, vh: number): Box | null {
   return { x: left, y: top, w: right - left, h: bottom - top };
 }
 
+/** Where the card docks: in the frame's lower-right corner, or just below the
+ *  frame when the section ends early enough to leave room; along the bottom
+ *  of the screen on a phone. */
+function place(b: Box, vw: number, vh: number, cardH: number) {
+  if (vw < 640) return { x: 12, y: vh - cardH - 16 };
+  const x = Math.min(Math.max(b.x + b.w - CARD_W - GAP, GAP), vw - CARD_W - GAP);
+  const below = b.y + b.h + GAP;
+  const y = below + cardH < vh - GAP ? below : Math.max(b.y + b.h - cardH - GAP, NAV + GAP);
+  return { x, y };
+}
+
+// brisk: a step lands in well under a second
+const SPRING = { stiffness: 260, damping: 30 };
+const FLIGHT = { stiffness: 170, damping: 22 };
+
 export function GuideLayer({ stop, onClose }: { stop: GuideStop | null; onClose: () => void }) {
   const reduced = useReducedMotion();
-  const [box, setBox] = useState<Box | null>(null);
+  // React state only for what changes rarely: whether there is a frame at
+  // all, and the viewport size
+  const [framed, setFramed] = useState(false);
   const [view, setView] = useState({ w: 0, h: 0 });
   const last = useRef<Box | null>(null);
   const card = useRef<HTMLDivElement>(null);
-  const [cardH, setCardH] = useState(CARD_H);
+  const cardH = useRef(CARD_H);
+
+  /* The frame and the card follow their section every frame of a scroll, so
+     they are driven by motion values written straight to the DOM — never a
+     React render per frame. The frame moves by transform; the sky is dimmed
+     around it by four plain panels rather than one 200vmax box-shadow
+     repainted over the whole screen each time the frame changed size. */
+  const fx = useSpring(0, SPRING);
+  const fy = useSpring(0, SPRING);
+  const fw = useSpring(0, SPRING);
+  const fh = useSpring(0, SPRING);
+  const cx = useSpring(0, FLIGHT);
+  const cy = useSpring(0, FLIGHT);
+  const aboveY = useTransform(fy, (y) => `calc(${y}px - 100%)`);
+  const belowY = useTransform([fy, fh], ([y, h]: number[]) => y + h);
+  const leftX = useTransform(fx, (x) => `calc(${x}px - 100%)`);
+  const rightX = useTransform([fx, fw], ([x, w]: number[]) => x + w);
 
   // follow the target as the page moves; measured on scroll and resize, and
   // polled gently in case it isn't on the page yet (a route still loading)
@@ -65,22 +98,42 @@ export function GuideLayer({ stop, onClose }: { stop: GuideStop | null; onClose:
     let raf = 0;
     // the previous stop's frame isn't shown for a target that isn't here yet
     let stale = true;
+    const to = (v: typeof fx, n: number) => (reduced ? v.jump(n) : v.set(n));
     const read = () => {
       raf = 0;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
+      setView((v) => (v.w === vw && v.h === vh ? v : { w: vw, h: vh }));
       const b = measure(target, vw, vh);
       const p = last.current;
-      if (!b && stale && p) {
-        last.current = null;
-        setBox(null);
+      if (!b) {
+        if (stale && p) {
+          last.current = null;
+          setFramed(false);
+        }
+        return;
       }
-      if (b) stale = false;
-      if (b && (!p || Math.abs(p.x - b.x) + Math.abs(p.y - b.y) + Math.abs(p.w - b.w) + Math.abs(p.h - b.h) > 0.5)) {
-        last.current = b;
-        setBox(b);
+      stale = false;
+      if (p && Math.abs(p.x - b.x) + Math.abs(p.y - b.y) + Math.abs(p.w - b.w) + Math.abs(p.h - b.h) <= 0.5) return;
+      last.current = b;
+      if (!p) {
+        // arriving: the frame closes in on the section, the card flies out
+        // of the corner where Nova lives
+        fx.jump(b.x - 16);
+        fy.jump(b.y - 16);
+        fw.jump(b.w + 32);
+        fh.jump(b.h + 32);
+        cx.jump(vw - 96);
+        cy.jump(vh - 96);
       }
-      setView((v) => (v.w === vw && v.h === vh ? v : { w: vw, h: vh }));
+      to(fx, b.x);
+      to(fy, b.y);
+      to(fw, b.w);
+      to(fh, b.h);
+      const c = place(b, vw, vh, cardH.current);
+      to(cx, c.x);
+      to(cy, c.y);
+      setFramed(true);
     };
     const schedule = () => {
       if (!raf) raf = requestAnimationFrame(read);
@@ -95,63 +148,53 @@ export function GuideLayer({ stop, onClose }: { stop: GuideStop | null; onClose:
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };
-  }, [target]);
+  }, [target, reduced, fx, fy, fw, fh, cx, cy]);
 
-  const show = !!stop && !!box && view.w > 0;
+  const show = !!stop && framed && view.w > 0;
   const mobile = view.w < 640;
 
   // the card's real height, so it's never placed partly off-screen
   useEffect(() => {
     const el = card.current;
     if (!show || !el) return;
-    const ro = new ResizeObserver(() => setCardH(el.offsetHeight));
+    const ro = new ResizeObserver(() => {
+      cardH.current = el.offsetHeight;
+      const b = last.current;
+      if (!b) return;
+      const c = place(b, window.innerWidth, window.innerHeight, cardH.current);
+      cx.set(c.x);
+      cy.set(c.y);
+    });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [show]);
+  }, [show, cx, cy]);
 
   // keyboard users land on the card when the guide appears, so Enter moves on
   useEffect(() => {
     if (show) card.current?.querySelector<HTMLElement>("button.as-btn-solid")?.focus({ preventScroll: true });
   }, [show]);
 
-  // the card docks in the frame's lower-right corner, or just below the
-  // frame when the section ends early enough to leave room
-  let cx = 0;
-  let cy = 0;
-  if (box) {
-    if (mobile) {
-      cx = 12;
-      cy = view.h - cardH - 16;
-    } else {
-      cx = Math.min(Math.max(box.x + box.w - CARD_W - GAP, GAP), view.w - CARD_W - GAP);
-      const below = box.y + box.h + GAP;
-      cy = below + cardH < view.h - GAP ? below : Math.max(box.y + box.h - cardH - GAP, NAV + GAP);
-    }
-  }
-
-  // brisk: a step lands in well under a second
-  const spring = reduced ? { duration: 0 } : { type: "spring" as const, stiffness: 260, damping: 30 };
-  const flight = reduced ? { duration: 0 } : { type: "spring" as const, stiffness: 170, damping: 22 };
-
   return (
     <AnimatePresence>
-      {show && box && stop && (
+      {show && stop && (
         <motion.div
           key="guide"
-          className="pointer-events-none fixed inset-0 z-[95]"
+          className="pointer-events-none fixed inset-0 z-[95] overflow-hidden [contain:strict]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.25 } }}
           transition={{ duration: 0.2 }}
         >
-          {/* the lock-on frame; its shadow is what dims the sky around it —
-              one composited layer, rather than a full-screen mask repainted
-              while the frame moves */}
+          {/* the sky dimmed around the frame: above, below, and either side */}
+          <motion.div className="as-dim left-0 top-0 h-full w-full" style={{ y: aboveY }} />
+          <motion.div className="as-dim left-0 top-0 h-full w-full" style={{ y: belowY }} />
+          <motion.div className="as-dim left-0 top-0 w-full" style={{ x: leftX, y: fy, height: fh }} />
+          <motion.div className="as-dim left-0 top-0 w-full" style={{ x: rightX, y: fy, height: fh }} />
+
+          {/* the lock-on frame */}
           <motion.div
-            className="absolute rounded-[16px] shadow-[0_0_0_200vmax_rgba(2,4,10,0.6)]"
-            initial={reduced ? false : { left: box.x - 16, top: box.y - 16, width: box.w + 32, height: box.h + 32, opacity: 0 }}
-            animate={{ left: box.x, top: box.y, width: box.w, height: box.h, opacity: 1 }}
-            transition={spring}
+            className="absolute left-0 top-0 rounded-[16px]"
+            style={{ x: fx, y: fy, width: fw, height: fh }}
           >
             <span className="as-beam" />
             {(["tl", "tr", "bl", "br"] as const).map((c) => (
@@ -161,12 +204,12 @@ export function GuideLayer({ stop, onClose }: { stop: GuideStop | null; onClose:
 
           {/* Nova and its card, flying from stop to stop */}
           <motion.div
-            className="pointer-events-auto absolute"
-            style={{ width: mobile ? view.w - 24 : CARD_W }}
-            initial={reduced ? false : { left: view.w - 96, top: view.h - 96, scale: 0.6, opacity: 0 }}
-            animate={{ left: cx, top: cy, scale: 1, opacity: 1 }}
-            exit={reduced ? undefined : { left: view.w - 96, top: view.h - 96, scale: 0.5, opacity: 0 }}
-            transition={flight}
+            className="pointer-events-auto absolute left-0 top-0"
+            style={{ x: cx, y: cy, width: mobile ? view.w - 24 : CARD_W }}
+            initial={reduced ? false : { scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={reduced ? undefined : { x: view.w - 96, y: view.h - 96, scale: 0.5, opacity: 0 }}
+            transition={{ type: "spring", ...FLIGHT }}
             role="dialog"
             aria-label={`Asad's Assistant: ${stop.title}`}
           >

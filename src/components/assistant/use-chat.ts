@@ -33,6 +33,8 @@ const KB: Kb = { projects, experience, pillars, contact };
 const STORE = "assistant-thread";
 const MAX_STORED = 40;
 const WAIT_MS = 20_000;
+/** how often streamed text is handed to React, at most */
+const FLUSH_MS = 50;
 
 let seq = 0;
 const uid = () => `${Date.now().toString(36)}-${(seq++).toString(36)}`;
@@ -119,9 +121,25 @@ export function useChat({ page, section }: { page: string; section: () => string
       // how much of this reply has arrived, kept here rather than read back
       // from state, which may not have caught up yet when an error lands
       let received = 0;
+      /* Text is gathered and handed to React at most every FLUSH_MS, not on
+         every chunk: a live stream can deliver dozens a second and the
+         offline answer arrives a word every 14ms, and each hand-over
+         re-renders the assistant and re-parses the reply's markdown. A few
+         words at a time still reads as typing. */
+      let pending = "";
+      let flushTimer: ReturnType<typeof setTimeout> | undefined;
+      const flush = () => {
+        clearTimeout(flushTimer);
+        flushTimer = undefined;
+        if (!pending) return;
+        const text = pending;
+        pending = "";
+        patchLast((m) => ({ ...m, content: m.content + text }));
+      };
       const append = (chunk: string) => {
         received += chunk.length;
-        patchLast((m) => ({ ...m, content: m.content + chunk }));
+        pending += chunk;
+        flushTimer ??= setTimeout(flush, FLUSH_MS);
       };
       const focus = focusOf(thread);
       // no reply at all within WAIT_MS: give up on the live model and answer
@@ -168,9 +186,11 @@ export function useChat({ page, section }: { page: string; section: () => string
             append(decoder.decode(value, { stream: true }));
           }
         }
+        flush();
         patchLast((m) => ({ ...m, status: stopped() ? "stopped" : "done" }));
       } catch {
         clearTimeout(watchdog);
+        flush();
         if (stopped()) {
           patchLast((m) => ({ ...m, status: "stopped" }));
         } else {
@@ -178,10 +198,12 @@ export function useChat({ page, section }: { page: string; section: () => string
           if (received) patchLast((m) => ({ ...m, status: "error" }));
           else {
             await offline("offline");
+            flush();
             patchLast((m) => ({ ...m, status: stopped() ? "stopped" : "done" }));
           }
         }
       } finally {
+        flush();
         if (abortRef.current === ctrl) {
           abortRef.current = null;
           haltRef.current = null;

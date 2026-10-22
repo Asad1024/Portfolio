@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from "framer-motion";
 import { Compass, Download, Mail, MessageSquareText, Sparkles, X } from "lucide-react";
@@ -8,11 +8,17 @@ import { contact } from "@/lib/data";
 import { plainText, type ButtonKind } from "@/lib/assistant/protocol";
 import { useScrollLock } from "@/lib/use-scroll-lock";
 import { Nova, type Mood } from "./nova";
-import { Panel, NAME } from "./panel";
 import { GuideLayer, type GuideStop } from "./guide-layer";
 import type { Mission } from "./welcome";
 import { useChat } from "./use-chat";
-import { OPEN_EVENT, type OpenDetail } from "./events";
+import { NAME, OPEN_EVENT, type OpenDetail } from "./events";
+
+/* The console — messages, markdown, cards, composer — is most of the
+   assistant's code and none of it is needed until someone opens it, so it
+   is its own chunk: fetched once the page is idle, well before a first
+   click, rather than parsed with everything else on load. */
+const loadPanel = () => import("./panel");
+const Panel = lazy(() => loadPanel().then((m) => ({ default: m.Panel })));
 import type { ComposerHandle } from "./composer";
 import type { Act } from "./message";
 
@@ -123,6 +129,9 @@ export function Assistant() {
     mq.addEventListener("change", onMq);
     const on = () => setBooted(true);
     if (sessionStorage.getItem("booted") === "1") setBooted(true);
+    // the console's chunk, in the first quiet moment after load
+    if ("requestIdleCallback" in window) requestIdleCallback(() => void loadPanel(), { timeout: 6000 });
+    else setTimeout(() => void loadPanel(), 2000);
     window.addEventListener("boot-complete", on);
     return () => {
       mq.removeEventListener("change", onMq);
@@ -170,6 +179,7 @@ export function Assistant() {
   // the guide layer's stops glide to their section once the home page is up
   // (starting one from another page takes the visitor home first, below)
   const target = tour !== null ? TOUR[tour].id : showing;
+  const touring = target !== null;
   useEffect(() => {
     if (!target || pathname !== "/") return;
     const t = setTimeout(() => glide(`#${target}`), document.getElementById(target) ? 0 : 900);
@@ -291,9 +301,14 @@ export function Assistant() {
     else chat.send("Is Asad available, and how do I reach him?");
   };
 
-  /* ── first visit: a greeting; then hints where something isn't obvious ── */
+  /* ── first visit: one greeting, once the visitor has had time with the page ──
+     It used to arrive 2.6s in and stay until dismissed, over the corner of
+     the work list, before anyone had read a word. Now the work speaks first:
+     the offer comes after a while on the site, clears itself if ignored, and
+     never comes on a phone, where a card that size covers the page. */
+  const GREET_AFTER_MS = 20_000;
   useEffect(() => {
-    if (!booted || hidden) return;
+    if (!booted || hidden || mobile || open || touring) return;
     let greeted = false;
     try {
       greeted = sessionStorage.getItem("kepler-greeted") === "1";
@@ -303,17 +318,19 @@ export function Assistant() {
       try {
         sessionStorage.setItem("kepler-greeted", "1");
       } catch {}
-      speak({
-        text: "Hi, I'm Asad's assistant. Want a one-minute tour of his work, or ask me anything?",
-        sticky: true,
-        actions: [
-          { label: "Take the tour", Icon: Compass, run: startTour },
-          { label: "Ask me", Icon: Sparkles, run: () => openChat() },
-        ],
-      });
-    }, 2600);
+      speak(
+        {
+          text: "Hi, I'm Asad's assistant. Want a one-minute tour of his work, or ask me anything?",
+          actions: [
+            { label: "Take the tour", Icon: Compass, run: startTour },
+            { label: "Ask me", Icon: Sparkles, run: () => openChat() },
+          ],
+        },
+        14_000,
+      );
+    }, GREET_AFTER_MS);
     return () => clearTimeout(t);
-  }, [booted, hidden, speak, startTour, openChat]);
+  }, [booted, hidden, mobile, open, touring, speak, startTour, openChat]);
 
   /* Nothing else pops up on its own. Hints while scrolling and a remark on
      every case study were noise on top of the content; the case studies
@@ -364,12 +381,20 @@ export function Assistant() {
     };
   }, [hidden, open, tour, showing, openChat, finishTour]);
 
-  // pointer tracking for Nova's eyes
+  /* Pointer tracking for Nova's eyes. The launcher sits still in its corner,
+     so it is measured once and again only after it moves (a resize, or the
+     end of one of its own animations), not on every pointer move across the
+     site — a layout read there forced a reflow whenever a hover had touched
+     styles. While the panel is open the launcher is hidden: nothing to aim. */
+  const launcherRect = useRef<DOMRect | null>(null);
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || open) return;
+    launcherRect.current = null;
+    const onResize = () => (launcherRect.current = null);
     const onMove = (e: PointerEvent) => {
-      const r = launcherRef.current?.getBoundingClientRect();
-      if (!r) return;
+      const el = launcherRef.current;
+      if (!el) return;
+      const r = (launcherRect.current ??= el.getBoundingClientRect());
       const dx = e.clientX - (r.left + r.width / 2);
       const dy = e.clientY - (r.top + r.height / 2);
       const d = Math.hypot(dx, dy) || 1;
@@ -378,8 +403,12 @@ export function Assistant() {
       py.set((dy / d) * reach);
     };
     window.addEventListener("pointermove", onMove, { passive: true });
-    return () => window.removeEventListener("pointermove", onMove);
-  }, [reduced, px, py]);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [reduced, open, px, py]);
 
   /* ── reading replies aloud ── */
   const spoken = useRef<string | null>(null);
@@ -493,38 +522,40 @@ export function Assistant() {
       <div className="pointer-events-none fixed bottom-4 right-4 z-[90] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
         <AnimatePresence>
           {open && (
-            <Panel
-              ref={composer}
-              messages={chat.messages}
-              busy={chat.busy}
-              mode={chat.mode}
-              mood={mood}
-              page={pathname}
-              section={homeSection}
-              expanded={expanded}
-              voice={voice}
-              focusOnOpen={!mobile}
-              modal={mobile}
-              act={act}
-              onSend={chat.send}
-              onStop={chat.stop}
-              onRegenerate={chat.regenerate}
-              onReset={chat.reset}
-              onMission={onMission}
-              onToggleExpand={() =>
-                setExpanded((v) => {
-                  writeFlag("assistant-drawer", !v);
-                  return !v;
-                })
-              }
-              onToggleVoice={toggleVoice}
-              onTour={startTour}
-              onHide={hide}
-              onClose={() => {
-                setOpen(false);
-                returnFocus();
-              }}
-            />
+            <Suspense key="panel" fallback={null}>
+              <Panel
+                ref={composer}
+                messages={chat.messages}
+                busy={chat.busy}
+                mode={chat.mode}
+                mood={mood}
+                page={pathname}
+                section={homeSection}
+                expanded={expanded}
+                voice={voice}
+                focusOnOpen={!mobile}
+                modal={mobile}
+                act={act}
+                onSend={chat.send}
+                onStop={chat.stop}
+                onRegenerate={chat.regenerate}
+                onReset={chat.reset}
+                onMission={onMission}
+                onToggleExpand={() =>
+                  setExpanded((v) => {
+                    writeFlag("assistant-drawer", !v);
+                    return !v;
+                  })
+                }
+                onToggleVoice={toggleVoice}
+                onTour={startTour}
+                onHide={hide}
+                onClose={() => {
+                  setOpen(false);
+                  returnFocus();
+                }}
+              />
+            </Suspense>
           )}
 
           {!open && !guiding && toast && (
@@ -598,19 +629,21 @@ export function Assistant() {
                     opacity: { duration: 0.4 },
                   }
             }
-            onHoverStart={() => setHover(true)}
+            onHoverStart={() => {
+              setHover(true);
+              void loadPanel();
+            }}
             onHoverEnd={() => setHover(false)}
+            onAnimationComplete={() => (launcherRect.current = null)}
             whileTap={{ scale: 0.94 }}
             style={{ pointerEvents: guiding ? "none" : undefined }}
           >
-            {/* a slow bob, as if hovering on its thruster */}
-            <motion.span
-              className="block size-full"
-              animate={reduced ? undefined : { y: [0, -5, 0] }}
-              transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
-            >
+            {/* a slow bob, as if hovering on its thruster: a CSS transform the
+                compositor runs, rather than a JS animation ticking every frame
+                on every page for as long as the site is open */}
+            <span className="nova-bob block size-full">
               <Nova mood={mood} px={px} py={py} />
-            </motion.span>
+            </span>
             {/* a replying beacon while the panel is closed mid-answer */}
             {!open && chat.busy && <span className="absolute right-1 top-1 size-3 animate-ping rounded-full bg-accent motion-reduce:animate-none" />}
           </motion.button>

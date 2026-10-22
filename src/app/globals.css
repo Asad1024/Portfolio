@@ -670,11 +670,20 @@ textarea:focus-visible {
   .as-bracket[data-c="tr"] { right: -2px; top: -2px; border-right: 2px solid; border-top: 2px solid; border-top-right-radius: 10px; }
   .as-bracket[data-c="bl"] { left: -2px; bottom: -2px; border-left: 2px solid; border-bottom: 2px solid; border-bottom-left-radius: 10px; }
   .as-bracket[data-c="br"] { right: -2px; bottom: -2px; border-right: 2px solid; border-bottom: 2px solid; border-bottom-right-radius: 10px; }
+  /* The frame resizes on every frame of a scroll while its section slides in
+     or out, so its edge is a plain ring: an inset glow blurred across the
+     whole frame had to be repainted at each new size. */
   .as-beam {
     position: absolute;
     inset: 0;
     border-radius: 14px;
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent), inset 0 0 60px -20px color-mix(in oklab, var(--accent) 50%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent);
+  }
+  /* one of the four panels that dim the sky around the guide's frame */
+  .as-dim {
+    position: absolute;
+    background: rgba(2, 4, 10, 0.6);
+    will-change: transform;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -881,25 +890,37 @@ textarea:focus-visible {
   .cap-ring-run { animation: none; stroke-dashoffset: 0; }
 }
 
-/* ── Nova, the guide: a flickering thruster and a beacon that pulses, faster
-   while it thinks ── */
+/* ── Nova, the guide: a slow bob, a thruster that flickers while it talks or
+   thinks, and a beacon that blinks, faster while it thinks.
+
+   Animations on SVG shapes are not composited: every frame of one repaints
+   the drawing. So at rest Nova paints nothing per frame — the bob moves the
+   whole HTML wrapper on the compositor, the flame holds still, and the
+   beacon steps between two states (two paints a cycle, not sixty a second).
+   The flicker runs only while Nova is actually doing something. ── */
+.nova-bob { animation: nova-bob 3.6s ease-in-out 1.2s infinite; }
+@keyframes nova-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
 .nova-flame {
   transform-box: fill-box;
   transform-origin: 50% 0%;
-  animation: nova-flame 0.32s ease-in-out infinite;
+  opacity: 0.8;
 }
+.nova:not([data-mood="idle"]) .nova-flame { animation: nova-flame 0.32s ease-in-out infinite; }
 @keyframes nova-flame {
   0%, 100% { opacity: 0.85; transform: scaleY(1); }
   50% { opacity: 0.55; transform: scaleY(0.78); }
 }
-.nova-beacon { animation: nova-beacon 1.6s ease-in-out infinite; }
+.nova-beacon { animation: nova-beacon 1.6s steps(1, end) infinite; }
 .nova[data-mood="thinking"] .nova-beacon { animation-duration: 0.45s; }
 @keyframes nova-beacon {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.25; }
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .nova-flame, .nova-beacon { animation: none; }
+  .nova-bob, .nova-flame, .nova-beacon, .nova:not([data-mood="idle"]) .nova-flame { animation: none; }
 }
 
 /* ── about: a still, faint edge of light round the portrait, and the cards ── */

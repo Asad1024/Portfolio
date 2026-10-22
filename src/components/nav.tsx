@@ -201,7 +201,7 @@ export function Nav() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="fixed inset-0 top-16 z-[45] bg-bg/[0.97] md:hidden"
+            className="fixed inset-0 top-16 z-[45] bg-bg md:hidden"
           >
             <div className="flex h-full flex-col justify-between px-6 py-10">
               <div className="flex flex-col gap-2">

@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { Nova, type Mood } from "./nova";
+import { NAME } from "./events";
 import { Composer, type ComposerHandle } from "./composer";
 import { AssistantMessage, UserMessage, type Act } from "./message";
 import { Welcome, type Mission } from "./welcome";
@@ -27,8 +28,6 @@ import type { ChatMessage, Mode } from "./use-chat";
    conversation (or the welcome screen before there is one), and the
    composer. Nothing else: everything rarer lives in the ⋯ menu. Compact by default, wider
    on demand, and the whole screen on a phone. */
-
-export const NAME = "Asad's Assistant";
 
 /** A line to show while waiting, chosen by what was asked. */
 function thinkingLine(q: string) {
