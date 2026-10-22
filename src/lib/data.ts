@@ -1453,6 +1453,11 @@ export const contact = {
   email: "asadshah1024@gmail.com",
   phone: "+92 304 0630451",
   phoneHref: "tel:+923040630451",
+  /** the same number for WhatsApp: digits only, country code first (wa.me) */
+  whatsapp: "923040630451",
+  /** A booking page for calls (Calendly, Cal.com, a Zoom scheduler…). Until
+   *  one is set, "Book a call" opens WhatsApp with a request for one. */
+  bookingUrl: null as string | null,
   linkedin: "https://www.linkedin.com/in/asadshah2",
   github: "https://github.com/Asad1024",
   location: "Lahore, Pakistan · remote-first",

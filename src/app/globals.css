@@ -171,22 +171,73 @@ body::after {
 }
 .lock-on {
   transform: translate(-50%, -50%);
-  animation: lock-on 1200ms cubic-bezier(0.22, 0.8, 0.28, 1) forwards;
+  /* timed to the route veil's hold (HOLD_MS in app/template.tsx) */
+  animation: lock-on 520ms cubic-bezier(0.22, 0.8, 0.28, 1) forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .lock-on { animation: none; opacity: 1; }
 }
 
-/* the destination's name resolving out of the light on approach */
+/* the destination's name resolving out of the light on approach: opacity and
+   scale only, so it runs on the compositor with the rest of the veil */
 @keyframes arrive {
-  0%, 45% { opacity: 0; transform: scale(0.94); filter: blur(6px); }
-  100% { opacity: 1; transform: scale(1); filter: blur(0); }
+  0%, 6% { opacity: 0; transform: scale(0.94); }
+  100% { opacity: 1; transform: scale(1); }
 }
-.arrive { animation: arrive 1350ms cubic-bezier(0.3, 0, 0.2, 1) forwards; }
+/* up within about 0.3s, so it holds at full brightness until the lift */
+.arrive { animation: arrive 320ms cubic-bezier(0.3, 0, 0.2, 1) forwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .arrive { animation: none; opacity: 1; transform: none; filter: none; }
+  .arrive { animation: none; opacity: 1; transform: none; }
+}
+
+/* the route veil's flight (app/template.tsx): the painted field zooms toward
+   you, faster as it goes, while the destination star swells ahead. Transform
+   and opacity only, so neither waits on the page being built behind them. */
+/* The curtain fades in over the page being left rather than cutting to it.
+   Backwards fill only: once it has run, the element's own opacity takes over
+   again, so the lift's transition to 0 is not held at 1 by this. */
+@keyframes veil-in { from { opacity: 0; } }
+.veil-in { animation: veil-in 140ms ease-out backwards; }
+@media (prefers-reduced-motion: reduce) {
+  .veil-in { animation: none; }
+}
+
+/* The flight has to happen while the curtain is fully up: a steep ease-in
+   left most of the zoom for the fade, where it was lost. This one is already
+   moving from the start and is past 2x by the time the curtain lifts. */
+@keyframes veil-zoom {
+  from { opacity: 0.55; transform: scale(1); }
+  to { opacity: 1; transform: scale(3.2); }
+}
+.veil-field {
+  transform-origin: 50% 50%;
+  animation: veil-zoom var(--veil-total, 880ms) cubic-bezier(0.35, 0, 0.65, 0.5) forwards;
+}
+@keyframes veil-core {
+  from { opacity: 0.55; transform: translate(-50%, -50%) scale(0.03); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.veil-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1240px;
+  height: 1240px;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 255, 255, 0.85),
+    color-mix(in oklab, var(--accent) 85%, transparent) 18%,
+    color-mix(in oklab, var(--violet) 26%, transparent) 50%,
+    transparent
+  );
+  animation: veil-core var(--veil-hold, 620ms) cubic-bezier(0.6, 0, 0.85, 0.5) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .veil-field { animation: none; }
+  .veil-core { animation: none; transform: translate(-50%, -50%) scale(0.25); }
 }
 
 /* viewport swap: the console's preview fades rather than cutting */
@@ -381,87 +432,248 @@ textarea:focus-visible {
   background: radial-gradient(circle, rgba(255, 255, 255, 0.95), color-mix(in oklab, var(--accent) 60%, transparent) 30%, transparent 68%);
   animation: ignite 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
 }
+/* The wave is drawn as a gradient on a 120vmax disc, scaled to 1.92 so it
+   ends the same 230vmax across. It used to be a 230vmax element with a
+   border and two blurred box-shadows: a layer some 4,400px square whose
+   shadows had to be blurred at full size, starting on the very frame the
+   name began to decode. On integrated graphics that alone dropped the
+   hand-over from the film to about 30fps. A gradient has no blur to work
+   out, and the disc is a quarter of the pixels. The line sits just inside
+   the edge so its outer glow still fits within the disc. */
 @keyframes shockwave {
-  0% { opacity: 0.95; transform: translate(-50%, -50%) scale(0.02); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+  0% { opacity: 0.95; transform: translate(-50%, -50%) scale(0.04); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.92); }
 }
 .shockwave {
+  --sw-line: color-mix(in oklab, var(--accent) 75%, transparent);
+  --sw-glow: var(--ring);
+  --sw-inner: color-mix(in oklab, var(--accent) 18%, transparent);
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 230vmax;
-  height: 230vmax;
+  width: 120vmax;
+  height: 120vmax;
   border-radius: 50%;
-  border: 2px solid color-mix(in oklab, var(--accent) 75%, transparent);
-  box-shadow: 0 0 60px 6px var(--ring), inset 0 0 90px color-mix(in oklab, var(--accent) 18%, transparent);
+  background: radial-gradient(
+    closest-side,
+    transparent 93%,
+    var(--sw-inner) 96.85%,
+    var(--sw-line) 96.95%,
+    var(--sw-line) 97.1%,
+    var(--sw-glow) 97.25%,
+    transparent 100%
+  );
   opacity: 0;
   animation: shockwave 2.1s cubic-bezier(0.12, 0.6, 0.2, 1) 0.08s forwards;
 }
 .shockwave-late {
-  border-color: color-mix(in oklab, var(--violet) 70%, transparent);
-  box-shadow: 0 0 50px 4px color-mix(in oklab, var(--violet) 45%, transparent);
+  --sw-line: color-mix(in oklab, var(--violet) 70%, transparent);
+  --sw-glow: color-mix(in oklab, var(--violet) 45%, transparent);
+  --sw-inner: transparent;
   animation-delay: 0.38s;
   animation-duration: 2.5s;
 }
 
-/* the panel: dark glass inside a slowly turning border of light */
-.k-frame {
-  position: relative;
-  overflow: hidden;
-  border-radius: 1.5rem;
-  padding: 1px;
-  box-shadow: 0 30px 80px -24px rgba(34, 211, 238, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.03);
-}
-.k-frame::before {
-  content: "";
-  position: absolute;
-  inset: -60%;
-  background: conic-gradient(from 0deg, rgba(34, 211, 238, 0.9), rgba(139, 92, 246, 0.6), transparent 35%, transparent 60%, rgba(34, 211, 238, 0.9));
-  animation: k-spin 6s linear infinite;
-}
-.k-panel {
-  position: relative;
-  overflow: hidden;
-  border-radius: calc(1.5rem - 1px);
-  background:
-    radial-gradient(120% 60% at 100% 0%, rgba(34, 211, 238, 0.1), transparent 60%),
-    radial-gradient(90% 50% at 0% 100%, rgba(139, 92, 246, 0.1), transparent 60%),
-    rgba(6, 9, 18, 0.94);
-  backdrop-filter: blur(20px);
-}
-.k-panel::after {
-  /* faint scanlines, for the instrument feel */
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 3px);
-}
-.k-caret {
-  display: inline-block;
-  width: 7px;
-  height: 1em;
-  margin-left: 2px;
-  vertical-align: -2px;
-  background: var(--accent);
-  animation: blink 0.9s step-end infinite;
-}
-.k-dots { display: inline-flex; gap: 3px; }
-.k-dots span {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-  animation: k-dot 1s ease-in-out infinite;
-}
-.k-dots span:nth-child(2) { animation-delay: 0.15s; }
-.k-dots span:nth-child(3) { animation-delay: 0.3s; }
-@keyframes k-dot {
-  0%, 100% { opacity: 0.3; transform: translateY(0); }
-  50% { opacity: 1; transform: translateY(-3px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .k-frame::before, .k-dots span { animation: none; }
+/* ── Asad's Assistant ────────────────────────────────────────────────────────
+   A mission console rather than a chat box: dark glass edged in light, with holographic cards for the things a reply can
+   show. On the page itself, the guide layer dims the sky around whatever
+   Nova is pointing at and frames it in lock-on brackets. */
+/* in the components layer, so a utility class on the element always wins */
+@layer components {
+  .as-shell {
+    /* position comes from the utility classes: fixed on a phone, relative above */
+    overflow: hidden;
+    border-radius: 1.4rem;
+    border: 1px solid color-mix(in oklab, var(--accent) 22%, transparent);
+    background:
+      radial-gradient(120% 50% at 100% 0%, color-mix(in oklab, var(--accent) 11%, transparent), transparent 62%),
+      radial-gradient(90% 45% at 0% 100%, color-mix(in oklab, var(--violet) 12%, transparent), transparent 60%),
+      linear-gradient(180deg, #090d19, #04060d);
+    box-shadow:
+      0 40px 100px -30px rgba(0, 0, 0, 0.9),
+      0 30px 90px -40px color-mix(in oklab, var(--accent) 45%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+  .as-shell::after {
+    /* a line of light along the top edge */
+    content: "";
+    position: absolute;
+    inset: 0 12% auto;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--accent) 80%, transparent), transparent);
+  }
+  @media (max-width: 639px) {
+    .as-shell { border-radius: 0; border-width: 0; }
+  }
+
+  /* prose inside a reply */
+  .as-prose { font-size: 13.5px; line-height: 1.62; color: color-mix(in oklab, var(--fg) 90%, transparent); overflow-wrap: anywhere; }
+  .as-prose > * + * { margin-top: 0.6em; }
+  .as-prose strong { color: var(--fg); font-weight: 600; }
+  .as-prose em { color: var(--fg); }
+  .as-prose code {
+    border-radius: 0.35rem;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 0.08em 0.38em;
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    color: #a5f3fc;
+  }
+  .as-prose a { color: var(--accent); text-decoration: underline; text-decoration-color: color-mix(in oklab, var(--accent) 40%, transparent); text-underline-offset: 3px; }
+  .as-prose ul, .as-prose ol { display: grid; gap: 0.3em; padding-left: 0.2em; }
+  .as-prose li { position: relative; padding-left: 1.15em; }
+  .as-prose ul > li::before {
+    content: "";
+    position: absolute;
+    left: 0.2em;
+    top: 0.68em;
+    width: 5px;
+    height: 5px;
+    border-radius: 1px;
+    transform: rotate(45deg);
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+  .as-prose ol { counter-reset: as-n; }
+  .as-prose ol > li { counter-increment: as-n; }
+  .as-prose ol > li::before {
+    content: counter(as-n);
+    position: absolute;
+    left: 0;
+    top: 0.1em;
+    font-family: var(--font-mono);
+    font-size: 0.78em;
+    color: var(--accent);
+  }
+  .as-caret {
+    display: inline-block;
+    width: 7px;
+    height: 1.05em;
+    margin-left: 3px;
+    vertical-align: -2px;
+    border-radius: 1px;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: blink 0.9s step-end infinite;
+  }
+
+  /* a holographic card: a project, the contact card, the fit gauge */
+  .as-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.95rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background:
+      linear-gradient(150deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01) 45%),
+      rgba(7, 11, 22, 0.8);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+  }
+  button.as-card:hover, a.as-card:hover {
+    border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+    box-shadow: 0 18px 40px -24px color-mix(in oklab, var(--accent) 70%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+  }
+  .as-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 0.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.025);
+    padding: 0.55rem 0.25rem;
+    font-size: 10.5px;
+    color: color-mix(in oklab, var(--fg) 80%, transparent);
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+  }
+  .as-tile:hover { border-color: color-mix(in oklab, var(--accent) 45%, transparent); color: var(--fg); background: color-mix(in oklab, var(--accent) 8%, transparent); }
+  .as-tile-primary { border-color: color-mix(in oklab, var(--accent) 40%, transparent); background: color-mix(in oklab, var(--accent) 14%, transparent); color: #cffafe; }
+
+  /* tappable suggestions */
+  .as-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.38rem 0.75rem;
+    font-size: 12px;
+    color: color-mix(in oklab, var(--fg) 82%, transparent);
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+    text-align: left;
+  }
+  .as-chip:hover { border-color: color-mix(in oklab, var(--accent) 55%, transparent); color: var(--fg); background: color-mix(in oklab, var(--accent) 8%, transparent); }
+  .as-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+    background: color-mix(in oklab, var(--accent) 11%, transparent);
+    padding: 0.4rem 0.8rem;
+    font-size: 12px;
+    font-weight: 500;
+    color: #a5f3fc;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .as-btn:hover { background: color-mix(in oklab, var(--accent) 20%, transparent); border-color: color-mix(in oklab, var(--accent) 60%, transparent); }
+  .as-btn-solid {
+    border-color: transparent;
+    background: linear-gradient(135deg, #67e8f9, #22d3ee 45%, #38bdf8);
+    color: #04121a;
+    box-shadow: 0 8px 24px -10px var(--accent);
+  }
+  .as-btn-solid:hover { background: linear-gradient(135deg, #a5f3fc, #22d3ee 45%, #38bdf8); }
+  .as-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.65rem;
+    color: var(--muted);
+    transition: color 0.2s, background 0.2s;
+  }
+  .as-icon-btn:hover { color: var(--fg); background: rgba(255, 255, 255, 0.06); }
+  .as-icon-btn[aria-pressed="true"] { color: var(--accent); background: color-mix(in oklab, var(--accent) 12%, transparent); }
+
+  /* "thinking" text: a light passing through the words */
+  .as-shimmer {
+    background: linear-gradient(90deg, var(--muted) 20%, #e0fbff 45%, var(--muted) 70%);
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: as-shimmer 1.6s linear infinite;
+  }
+  @keyframes as-shimmer { to { background-position: -220% 0; } }
+
+  /* the guide layer: lock-on brackets round what Nova is showing */
+  .as-bracket {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-color: var(--accent);
+    filter: drop-shadow(0 0 6px var(--accent));
+  }
+  .as-bracket[data-c="tl"] { left: -2px; top: -2px; border-left: 2px solid; border-top: 2px solid; border-top-left-radius: 10px; }
+  .as-bracket[data-c="tr"] { right: -2px; top: -2px; border-right: 2px solid; border-top: 2px solid; border-top-right-radius: 10px; }
+  .as-bracket[data-c="bl"] { left: -2px; bottom: -2px; border-left: 2px solid; border-bottom: 2px solid; border-bottom-left-radius: 10px; }
+  .as-bracket[data-c="br"] { right: -2px; bottom: -2px; border-right: 2px solid; border-bottom: 2px solid; border-bottom-right-radius: 10px; }
+  .as-beam {
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent), inset 0 0 60px -20px color-mix(in oklab, var(--accent) 50%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .as-caret, .as-shimmer { animation: none; }
+    .as-shimmer { color: var(--muted); background: none; }
+  }
 }
 
 /* ── experience cards ────────────────────────────────────────────────────────
@@ -486,19 +698,23 @@ textarea:focus-visible {
   opacity: 0.6;
 }
 
-/* intro film title cards: each letter rises out of a blur a beat after the last */
+/* intro film title cards: each letter rises into place a beat after the last.
+   Opacity and movement only: a blur per letter repainted every letter on
+   every frame, over a canvas that is itself repainting every frame. Timed to
+   the shorter cut, so a full line is up within about a second. */
 @keyframes film-letter {
-  from { opacity: 0; filter: blur(10px); transform: translateY(0.35em); }
-  to { opacity: 1; filter: blur(0); transform: none; }
+  from { opacity: 0; transform: translateY(0.35em); }
+  to { opacity: 1; transform: none; }
 }
 .film-letter {
   display: inline-block;
-  animation: film-letter 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  animation-delay: calc(var(--i) * 20ms);
+  animation: film-letter 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i) * 13ms);
 }
+/* the skip hint, arriving once the film has started rather than with it */
+@keyframes film-hint { from { opacity: 0; } }
+.film-hint { animation: film-hint 0.8s ease 1s both; }
 
-
-@keyframes k-spin { to { transform: rotate(360deg); } }
 
 
 /* ── selected work: a stage lit in the project's colour (--tint) ──────────── */
@@ -527,24 +743,21 @@ textarea:focus-visible {
   color: transparent;
 }
 .sw-more { box-shadow: 0 0 16px -12px color-mix(in oklab, var(--tint) 50%, transparent); }
-.sw-progress { animation: sw-progress linear forwards; box-shadow: 0 0 8px var(--c); }
-@keyframes sw-progress {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .sw-progress { display: none; }
-}
 
 /* ── capabilities: bento cards, each with a live diagram in its colour (--c) ── */
+/* No outer drop shadow. Measured: an 80px blurred shadow under each of these
+   large cards was the whole cost of the section's entrance (the cards fade in
+   as layers, and the blur has to be painted into each), and a tighter one cost
+   nearly as much. On this near-black page it only dimmed a few stars along
+   the edges. The hover is the border lighting up, not a glow being
+   re-blurred on every frame of the transition. */
 .cap-card {
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.01) 45%), #070a14;
-  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  transition: border-color 0.4s, box-shadow 0.4s;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: border-color 0.4s;
 }
 .cap-card:hover {
-  border-color: color-mix(in oklab, var(--c) 25%, transparent);
-  box-shadow: 0 30px 80px -45px color-mix(in oklab, var(--c) 18%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: color-mix(in oklab, var(--c) 35%, transparent);
 }
 .cap-card-glow {
   background:
@@ -616,15 +829,22 @@ textarea:focus-visible {
   .dm *, .dm *::after { animation: none !important; }
 }
 .cap-demo { background: radial-gradient(90% 70% at 30% 0%, color-mix(in oklab, var(--c) 4%, transparent), transparent 70%), rgba(0, 0, 0, 0.35); }
+/* a new demo fades in (opacity only: it changes every few seconds on four
+   cards, and a blur on it was a full repaint of the demo every frame) */
 .dm-scene { animation: dm-scene 0.35s ease both; }
-@keyframes dm-scene { from { opacity: 0; filter: blur(4px); } }
+@keyframes dm-scene { from { opacity: 0; } }
+/* a skill box out of view pauses its demo too */
+.cap-box[data-idle] .dm *,
+.cap-box[data-idle] .dm *::after { animation-play-state: paused; }
 .cap-spot {
   background: radial-gradient(80% 60% at 50% 30%, color-mix(in oklab, var(--c) 6%, transparent), transparent 75%), rgba(0, 0, 0, 0.3);
 }
+/* No drop-shadow on the running ring: its line moves every frame for the
+   whole of each turn, so a glow on it was a blur redone every frame on every
+   card in view. */
 .cap-ring-run {
   stroke-dasharray: 100;
   stroke-dashoffset: 100;
-  filter: drop-shadow(0 0 4px var(--c));
   animation: cap-ring-run linear forwards;
 }
 @keyframes cap-ring-run { to { stroke-dashoffset: 0; } }
@@ -632,102 +852,25 @@ textarea:focus-visible {
   .cap-ring-run { animation: none; stroke-dashoffset: 0; }
 }
 
-/* ── the guide's orb: a plasma core inside three gyroscope rings, each tilted
-   on its own axis and turning at its own speed. Mood speeds the rings and
-   pulses the core. */
-.k-orb {
-  --k-speed: 1;
-  position: relative;
-  display: block;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
+/* ── Nova, the guide: a flickering thruster and a beacon that pulses, faster
+   while it thinks ── */
+.nova-flame {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  animation: nova-flame 0.32s ease-in-out infinite;
 }
-.k-orb[data-mood="thinking"] { --k-speed: 0.28; }
-.k-orb[data-mood="speaking"] { --k-speed: 0.6; }
-.k-halo {
-  position: absolute;
-  inset: -22%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(34, 211, 238, 0.32), rgba(139, 92, 246, 0.12) 45%, transparent 70%);
-  filter: blur(6px);
-  animation: k-breathe calc(3.4s * var(--k-speed)) ease-in-out infinite;
+@keyframes nova-flame {
+  0%, 100% { opacity: 0.85; transform: scaleY(1); }
+  50% { opacity: 0.55; transform: scaleY(0.78); }
 }
-.k-core {
-  position: absolute;
-  inset: 22%;
-  overflow: hidden;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 120%, rgba(139, 92, 246, 0.9), transparent 55%),
-    radial-gradient(circle at 40% 35%, #e0fbff 0%, #67e8f9 18%, #0891b2 45%, #1e1b4b 80%, #05060f 100%);
-  box-shadow:
-    0 0 18px 4px rgba(34, 211, 238, 0.55),
-    inset -5px -7px 12px rgba(0, 0, 0, 0.55),
-    inset 3px 4px 10px rgba(255, 255, 255, 0.25);
-  animation: k-pulse calc(2.6s * var(--k-speed)) ease-in-out infinite;
-}
-.k-core::before {
-  content: "";
-  position: absolute;
-  inset: -40%;
-  background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 255, 255, 0.35) 40deg, transparent 90deg, rgba(167, 139, 250, 0.35) 200deg, transparent 260deg);
-  mix-blend-mode: screen;
-  animation: k-spin calc(4s * var(--k-speed)) linear infinite;
-}
-.k-shine {
-  position: absolute;
-  width: 34%;
-  height: 34%;
-  border-radius: 50%;
-  translate: -50% -50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%);
-}
-.k-ring {
-  position: absolute;
-  inset: 6%;
-  border-radius: 50%;
-  border: 1.5px solid rgba(165, 243, 252, 0.6);
-  box-shadow: 0 0 10px rgba(34, 211, 238, 0.45), inset 0 0 6px rgba(34, 211, 238, 0.3);
-}
-.k-ring::after {
-  content: "";
-  position: absolute;
-  top: -3px;
-  left: 50%;
-  width: 5px;
-  height: 5px;
-  margin-left: -2.5px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 8px 2px #22d3ee;
-}
-.k-ring-1 { animation: k-gyro-1 calc(7s * var(--k-speed)) linear infinite; }
-.k-ring-2 {
-  inset: 0%;
-  border-color: rgba(196, 181, 253, 0.55);
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.45);
-  animation: k-gyro-2 calc(9s * var(--k-speed)) linear infinite;
-}
-.k-ring-3 {
-  inset: 12%;
-  border-color: rgba(103, 232, 249, 0.4);
-  animation: k-gyro-3 calc(5.5s * var(--k-speed)) linear infinite;
-}
-.k-orb[data-small] .k-ring::after { display: none; }
-@keyframes k-gyro-1 { from { transform: rotateX(72deg) rotateZ(0deg); } to { transform: rotateX(72deg) rotateZ(360deg); } }
-@keyframes k-gyro-2 { from { transform: rotateY(68deg) rotateZ(0deg); } to { transform: rotateY(68deg) rotateZ(-360deg); } }
-@keyframes k-gyro-3 { from { transform: rotateX(50deg) rotateY(40deg) rotateZ(0deg); } to { transform: rotateX(50deg) rotateY(40deg) rotateZ(360deg); } }
-@keyframes k-pulse {
-  0%, 100% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.06); filter: brightness(1.18); }
-}
-@keyframes k-breathe {
-  0%, 100% { opacity: 0.7; transform: scale(0.95); }
-  50% { opacity: 1; transform: scale(1.05); }
+.nova-beacon { animation: nova-beacon 1.6s ease-in-out infinite; }
+.nova[data-mood="thinking"] .nova-beacon { animation-duration: 0.45s; }
+@keyframes nova-beacon {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .k-halo, .k-core, .k-core::before, .k-ring { animation: none; }
+  .nova-flame, .nova-beacon { animation: none; }
 }
 
 /* ── about: a still, faint edge of light round the portrait, and the cards ── */
@@ -760,58 +903,4 @@ textarea:focus-visible {
 }
 .ab-card:hover .ab-card-glow { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
-}
-
-/* ── the city map (Contact): dotted land, three cities, the lines between ── */
-.cm-land { fill: color-mix(in oklab, var(--accent) 55%, white); opacity: 0.28; }
-.cm-twinkle { animation: cm-twinkle 4s ease-in-out infinite; }
-@keyframes cm-twinkle { 50% { opacity: 0.7; } }
-.cm-link {
-  fill: none;
-  stroke: var(--accent);
-  stroke-opacity: 0.55;
-  stroke-width: 0.8;
-  stroke-linecap: round;
-  stroke-dasharray: 100;
-  stroke-dashoffset: 100;
-}
-.cm[data-on] .cm-link { animation: cm-draw 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-@keyframes cm-draw { to { stroke-dashoffset: 0; } }
-.cm-signal {
-  fill: none;
-  stroke: #e0fbff;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-dasharray: 9 91;
-  stroke-dashoffset: 100;
-  opacity: 0;
-  filter: drop-shadow(0 0 3px var(--accent));
-}
-.cm[data-on] .cm-signal { opacity: 1; animation: cm-run 2.8s linear infinite; }
-@keyframes cm-run { to { stroke-dashoffset: 0; } }
-.cm-ring {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-  transform-box: fill-box;
-  transform-origin: center;
-  opacity: 0;
-  animation: cm-ring 2.4s ease-out infinite;
-}
-@keyframes cm-ring {
-  0% { transform: scale(1); opacity: 0.8; }
-  100% { transform: scale(3.4); opacity: 0; }
-}
-.cm-halo { fill: var(--accent); opacity: 0.16; }
-.cm-dot { fill: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
-.cm-home { fill: #fff; }
-.cm-label { opacity: 0; }
-.cm[data-on] .cm-label { animation: cm-label 0.6s ease forwards; }
-@keyframes cm-label { to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) {
-  .cm-twinkle, .cm-ring { animation: none; }
-  .cm-link, .cm[data-on] .cm-link { animation: none; stroke-dashoffset: 0; }
-  .cm-signal { display: none; }
-  .cm-label, .cm[data-on] .cm-label { animation: none; opacity: 1; }
 }

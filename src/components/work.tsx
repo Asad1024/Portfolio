@@ -16,10 +16,8 @@ import { TechIcon } from "./tech-icon";
    pointer across it, lit in the project's own colour, with its story and
    numbers beneath. Each project wipes in over the last behind a line of
    light. The programme beside it lists every project, nine rows to the
-   stage's height and the rest a scroll (or the button under it) away; the
-   one on stage runs a line of light, and when the line fills the next
-   project turns onto the stage. Pointing at the stage pauses it, and
-   choosing a project puts it on stage at once.
+   stage's height and the rest a scroll (or the button under it) away.
+   Nothing turns on its own: a project goes on stage only when it is chosen.
 
    It is one screen tall and never takes over the page's scroll. */
 
@@ -41,9 +39,6 @@ const TINT: Record<string, string> = {
   mailforge: "#f59e0b",
 };
 
-/** how long each project holds the stage, in seconds */
-const HOLD = 10;
-
 /** the showcase first, then the rest, those with real screenshots ahead */
 const all = [
   ...showcase.flatMap((slug) => projects.filter((p) => p.slug === slug)),
@@ -55,21 +50,9 @@ const ease = [0.2, 0.7, 0.2, 1] as const;
 
 export function Work() {
   const reduced = useReducedMotion();
-  const section = useRef<HTMLElement>(null);
   const [active, setActive] = useState(0);
-  const [hover, setHover] = useState(false);
-  const [inView, setInView] = useState(false);
   const p = all[active];
   const tint = TINT[p.slug] ?? "#22d3ee";
-  const running = !reduced && inView && !hover;
-
-  useEffect(() => {
-    const el = section.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.35 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
 
   // a soft light follows the pointer across the screen
   const glare = useRef<HTMLSpanElement>(null);
@@ -80,10 +63,6 @@ export function Work() {
     glare.current.style.setProperty("--gy", `${((e.clientY - r.top) / r.height) * 100}%`);
   };
   const ratio = p.image ? `${p.image.width} / ${p.image.height}` : "16 / 10";
-
-  // auto-play walks the nine in view and loops back to the first; the rest
-  // are only ever put on stage by choice
-  const next = () => setActive((a) => (a + 1 >= VISIBLE ? 0 : a + 1));
 
   // the list: where it is scrolled, and keeping the project on stage in view
   // (scrolling the list itself, never the page)
@@ -108,7 +87,6 @@ export function Work() {
 
   return (
     <section
-      ref={section}
       id="work"
       className="scroll-mt-24 pt-4 sm:pt-12"
       style={{ ["--tint" as string]: tint }}
@@ -119,11 +97,7 @@ export function Work() {
         <Reveal>
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,19rem)] lg:gap-8">
             {/* the stage */}
-            <div
-              className="sw-panel relative overflow-hidden rounded-[1.25rem] border border-white/10"
-              onPointerEnter={(e) => e.pointerType === "mouse" && setHover(true)}
-              onPointerLeave={() => setHover(false)}
-            >
+            <div className="sw-panel relative overflow-hidden rounded-[1.25rem] border border-white/10">
               {/* the screen, edge to edge at the screenshot's own proportions;
                   each project wipes in over the last behind a line of light */}
               <div onPointerMove={onMove} className="sw-stage relative overflow-hidden bg-[#05070d]" style={{ aspectRatio: ratio }}>
@@ -255,16 +229,6 @@ export function Work() {
                               on ? "opacity-100 shadow-[0_0_10px_var(--c)]" : "opacity-0"
                             }`}
                           />
-                          {/* the time left on stage */}
-                          {on && (
-                            <span
-                              key={active}
-                              aria-hidden
-                              onAnimationEnd={next}
-                              className="sw-progress absolute inset-x-0 bottom-0 h-px origin-left bg-[var(--c)]"
-                              style={{ animationDuration: `${HOLD}s`, animationPlayState: running ? "running" : "paused" }}
-                            />
-                          )}
                         </button>
                       </li>
                     );

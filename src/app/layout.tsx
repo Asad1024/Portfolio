@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { siteUrl } from "@/lib/site";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
@@ -12,7 +12,8 @@ import { CommandPalette } from "@/components/command-palette";
 import { MatrixRain } from "@/components/matrix-rain";
 import { ConsoleEgg } from "@/components/console-egg";
 import { SkyDimmer } from "@/components/sky-dimmer";
-import { Companion } from "@/components/companion";
+import { Assistant } from "@/components/assistant/assistant";
+import { RouteVeil } from "@/components/route-veil";
 
 /* One face: Geist carries everything, headlines, labels and text alike, with
    accent words picked out in colour rather than a second typeface. Geist Mono,
@@ -54,6 +55,15 @@ export const metadata: Metadata = {
   },
 };
 
+/* On Android the on-screen keyboard otherwise slides over fixed panels; with
+   this the page shrinks above it instead, so the assistant's input, the
+   palette and the terminal stay visible while typing. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -90,12 +100,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Starfield />
         </div>
         <main id="main" tabIndex={-1} className="relative flex-1 outline-none">{children}</main>
+        {/* The curtain between pages: here rather than in the page template so
+            it can start on the press of a link, before the next page exists. */}
+        <RouteVeil />
         <Terminal />
         <CommandPalette />
         <MatrixRain />
         <ConsoleEgg />
         <SkyDimmer />
-        <Companion />
+        <Assistant />
       </body>
     </html>
   );

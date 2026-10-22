@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { Search } from "lucide-react";
 import { BrandMark } from "./brand-mark";
 import Link from "next/link";
 import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
 import { Magnetic } from "./magnetic";
+import { TalkMenu } from "./talk-menu";
 import { useScrollLock } from "@/lib/use-scroll-lock";
 
 const links = [
@@ -17,15 +17,10 @@ const links = [
   { href: "/#contact", label: "Contact" },
 ];
 
-/* Which modifier to print on the shortcut hint. Read through a store so the
-   server and the first client paint agree on "Ctrl" and a Mac swaps in ⌘
-   without a hydration mismatch. The platform never changes, so there is
-   nothing to subscribe to. */
+// nothing to subscribe to: `mounted` below only tells server from client
 const noSubscribe = () => () => {};
-const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
 export function Nav() {
-  const mac = useSyncExternalStore(noSubscribe, isMac, () => false);
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30 });
   const [menuOpen, setMenuOpen] = useState(false);
@@ -164,25 +159,12 @@ export function Nav() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Search: the command palette, which reaches every project,
-              section, link and action on the site. The key hint teaches the
-              shortcut; the whole chip is the button. */}
-          <Magnetic>
-            <button
-              aria-label="Search and commands"
-              aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}
-              title={`Search — ${mac ? "⌘K" : "Ctrl K"}`}
-              onClick={() => window.dispatchEvent(new CustomEvent("open-palette"))}
-              className="group flex h-9 items-center justify-center gap-2.5 rounded-full border border-line bg-bg/40 px-2.5 font-sans text-xs text-muted backdrop-blur-sm transition-colors hover:border-accent/60 hover:text-fg sm:pl-3 sm:pr-1.5"
-            >
-              <Search aria-hidden className="size-3.5 transition-colors group-hover:text-accent" />
-              <span className="hidden sm:inline">search</span>
-              <kbd className="hidden h-6 items-center gap-0.5 rounded-full border border-line bg-card px-2 font-sans text-[11px] text-fg/85 sm:flex">
-                {mac ? "⌘" : "Ctrl"}
-                <span className="text-accent">K</span>
-              </kbd>
-            </button>
-          </Magnetic>
+          {/* No search chip here any more: the assistant answers anything a
+              search could, and has its own button on every page. The command
+              palette is still a keystroke away (Ctrl K / ⌘K, see
+              command-palette) for anyone who wants to jump straight to a page.
+              The header's one action is getting in touch. */}
+          <TalkMenu />
 
           {/* hamburger — mobile only */}
           <button

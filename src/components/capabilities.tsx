@@ -90,6 +90,7 @@ function SkillBox({ techs, id }: { techs: string[]; id: number }) {
       // reading a demo pauses the turn; only a click changes the skill
       onPointerEnter={(e) => e.pointerType === "mouse" && setHeld(true)}
       onPointerLeave={() => setHeld(false)}
+      data-idle={inView ? undefined : ""}
       className="cap-box relative overflow-hidden rounded-2xl border border-white/[0.08] p-3"
     >
       <ul className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
@@ -178,9 +179,9 @@ function SkillBox({ techs, id }: { techs: string[]; id: number }) {
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={tech}
-              initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -6, filter: "blur(4px)" }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.3 }}
               className="min-w-0"
             >
@@ -257,8 +258,10 @@ export function Capabilities() {
         <SectionHeading index="02" label="Capabilities" title="What I" accent="build with." />
 
         <div className="grid gap-5 lg:grid-cols-2">
+          {/* the second card of a row follows the first rather than arriving
+              on the same frame: each brings thirty tiles and a demo with it */}
           {pillars.map((p, i) => (
-            <Reveal key={p.title} delay={(i % 2) * 0.08} className="h-full">
+            <Reveal key={p.title} delay={(i % 2) * 0.18} className="h-full">
               <PillarCard pillar={p} i={i} />
             </Reveal>
           ))}

@@ -514,7 +514,22 @@ export function Starfield() {
 
     readColors();
     size();
-    raf = requestAnimationFrame(draw);
+    /* The sky is hidden under the intro film on a first visit, so it starts
+       drawing after the film hands over (and fades in then, see shownAt)
+       rather than spending every frame of the film on a picture nobody can
+       see. It waits out the hero's arrival too: the name, the ignition and
+       the planets' launch all land in the first moments, and the sky is the
+       one thing that can come in behind them without anyone missing it. */
+    const SKY_AFTER_MS = 900;
+    let skyTimer: ReturnType<typeof setTimeout> | undefined;
+    const begin = () => {
+      if (!cancelled && !raf) raf = requestAnimationFrame(draw);
+    };
+    const beginAfterArrival = () => {
+      skyTimer = setTimeout(begin, SKY_AFTER_MS);
+    };
+    if (sessionStorage.getItem("booted") === "1") begin();
+    else window.addEventListener("boot-complete", beginAfterArrival, { once: true });
 
     import("@/lib/sky-catalog").then((mod) => {
       if (cancelled) return;
@@ -533,6 +548,8 @@ export function Starfield() {
     return () => {
       cancelled = true;
       cancelAnimationFrame(raf);
+      window.removeEventListener("boot-complete", beginAfterArrival);
+      clearTimeout(skyTimer);
       clearInterval(reaim);
       mo.disconnect();
       window.removeEventListener("resize", size);

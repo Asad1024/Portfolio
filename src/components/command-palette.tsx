@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { contact, projects } from "@/lib/data";
 import { ConsolePanel } from "./console-panel";
-import { Hash, FolderOpen, Zap, Search, ArrowUpDown, CornerDownLeft } from "lucide-react";
+import { Hash, FolderOpen, Zap, Search, ArrowUpDown, CornerDownLeft, MessageSquareText } from "lucide-react";
+import { openAssistant } from "./assistant/events";
 
 type Item = {
   label: string;
@@ -20,6 +21,7 @@ const GROUPS: Record<string, { name: string; Icon: typeof Hash }> = {
   destinations: { name: "Sections", Icon: Hash },
   bodies: { name: "Projects", Icon: FolderOpen },
   systems: { name: "Actions", Icon: Zap },
+  assistant: { name: "Ask", Icon: MessageSquareText },
 };
 
 const SECTIONS = [
@@ -66,6 +68,16 @@ export function CommandPalette() {
         keywords: [p.company, p.platform, ...p.tags, ...p.stack].filter(Boolean).join(" "),
         run: go(`/work/${p.slug}`),
       })),
+      {
+        label: "Ask Asad's Assistant",
+        group: "systems",
+        hint: "Ctrl I",
+        keywords: "chat help question guide tour",
+        run: () => {
+          close();
+          openAssistant();
+        },
+      },
       {
         label: "Open terminal",
         group: "systems",
@@ -117,17 +129,31 @@ export function CommandPalette() {
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return items;
-    return items.filter((i) =>
+    const found = items.filter((i) =>
       `${i.label} ${GROUPS[i.group]?.name ?? ""} ${i.hint ?? ""} ${i.keywords ?? ""}`.toLowerCase().includes(q),
     );
-  }, [items, query]);
+    // any query can also go to the assistant, which answers what search can't
+    const ask: Item = {
+      label: `Ask: “${query.trim()}”`,
+      group: "assistant",
+      hint: "Asad's Assistant",
+      run: () => {
+        close();
+        openAssistant(query.trim());
+      },
+    };
+    return [...found, ask];
+  }, [items, query, close]);
 
   // ⌘K / Ctrl+K anywhere
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((o) => !o);
+        // closing goes through close(), like every other way out, so the
+        // next open starts from an empty search rather than the last one
+        if (open) close();
+        else setOpen(true);
       }
     };
     // the header button opens it the same way the terminal is opened, so the
@@ -139,7 +165,7 @@ export function CommandPalette() {
       window.removeEventListener("open-palette", onOpen);
       window.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [open, close]);
 
   useEffect(() => {
     listRef.current

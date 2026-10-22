@@ -9,6 +9,7 @@ import { ArchDiagram } from "@/components/arch-diagram";
 import { ProjectVisual } from "@/components/work-preview";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Monitor, Plus } from "lucide-react";
 import { Tilt } from "@/components/tilt";
+import { AskButton } from "@/components/assistant/ask-button";
 
 export function generateStaticParams() {
   return projects.map((p) => ({ slug: p.slug }));
@@ -77,6 +78,8 @@ export default async function CaseStudy({
               {project.title}
             </h1>
             <p className="mt-5 max-w-3xl text-lg leading-relaxed text-muted sm:text-xl">{project.tagline}</p>
+            {/* the assistant, already briefed on this project */}
+            <AskButton className="mt-6" prompt={`Explain ${project.title} in 30 seconds`} label="Ask about this project" />
           </div>
           <Cta project={project} />
         </div>

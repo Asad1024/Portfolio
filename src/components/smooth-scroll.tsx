@@ -8,7 +8,10 @@ export function SmoothScroll() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const lenis = new Lenis({
-      duration: 1.1,
+      /* Short enough that the page keeps up with the wheel (a step settles in
+         about 0.3s); at 1.1 it trailed nearly a second behind every notch and
+         the whole site read as slow. Same curve, just quicker. */
+      duration: 0.45,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       anchors: { offset: -64 },
     });
@@ -23,10 +26,11 @@ export function SmoothScroll() {
     // panels, the mobile menu and the intro freeze the page (see use-scroll-lock)
     const onLock = (e: Event) => ((e as CustomEvent<boolean>).detail ? lenis.stop() : lenis.start());
     window.addEventListener("scroll-lock", onLock);
-    // anything on the page can ask for a glide to an element (the guide does)
+    // anything on the page can ask for a glide to an element (the guide's
+    // tour does); quick, so a tour step lands before the visitor wonders
     const onScrollTo = (e: Event) => {
       const target = document.querySelector((e as CustomEvent<string>).detail);
-      if (target instanceof HTMLElement) lenis.scrollTo(target, { offset: -72, duration: 1.6 });
+      if (target instanceof HTMLElement) lenis.scrollTo(target, { offset: -72, duration: 0.8 });
     };
     window.addEventListener("scroll-to", onScrollTo);
 

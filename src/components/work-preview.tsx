@@ -140,6 +140,12 @@ export function ProjectVisual({
         alt={`${project.title} interface`}
         fill
         sizes={sizes}
+        /* The hero screen is the first thing on a case study and the stage of
+           the work showcase: fetched straight away rather than lazily, with
+           its blurred preview standing in, so it never pops in after the
+           page (or the route veil) has already shown. */
+        loading={variant === "hero" ? "eager" : "lazy"}
+        placeholder={variant === "hero" ? "blur" : "empty"}
         /* contain, not cover: these are full desktop captures and cover was
            slicing the sides off every one of them. The screen it sits in has
            a black ground, so the little letterboxing this leaves reads as a

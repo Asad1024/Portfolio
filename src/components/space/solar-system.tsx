@@ -326,7 +326,7 @@ const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
    strength and the far half falls away behind the star, so the three bands
    read as hoops in space rather than as flat outlines drawn on the page.
    "Front" is measured against the camera's heading on the ground plane, so it
-   stays correct as autoRotate walks the camera round. */
+   stays correct when the camera is dragged round. */
 const ORBIT_VERT = /* glsl */ `
   uniform float uRadius;
   varying float vFront;
@@ -912,9 +912,36 @@ function Scene({
   );
 }
 
+/* Reports the scene's first drawn frame. useFrame runs just before a frame
+   renders, and the first render is where the shaders compile, so the report
+   waits one more browser frame for that render to land. A single tick is
+   enough: a held scene (frameloop "demand") only ever draws that one. */
+function FirstFrame({ onReady }: { onReady?: () => void }) {
+  const told = useRef(false);
+  useFrame(() => {
+    if (told.current) return;
+    told.current = true;
+    requestAnimationFrame(() => onReady?.());
+  });
+  return null;
+}
+
 /* ── canvas wrapper ─────────────────────────────────────────────────────── */
 
-export default function SolarSystem({ paused = false, launched = true }: { paused?: boolean; launched?: boolean }) {
+export default function SolarSystem({
+  paused = false,
+  held = false,
+  launched = true,
+  onReady,
+}: {
+  paused?: boolean;
+  /** drawn once and then still: the scene is ready (shaders compiled), but
+   *  nothing draws while the intro film covers it */
+  held?: boolean;
+  launched?: boolean;
+  /** called once the scene has drawn its first frame */
+  onReady?: () => void;
+}) {
   // a fresh mount waits for its own launch
   useEffect(() => {
     launch.at = -1;
@@ -943,10 +970,6 @@ export default function SolarSystem({ paused = false, launched = true }: { pause
     return () => mo.disconnect();
   }, []);
 
-  const reduced =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
   return (
     <Canvas
       /* Framed for the hero's right-hand column, which is near square rather
@@ -973,7 +996,11 @@ export default function SolarSystem({ paused = false, launched = true }: { pause
          "always" the scene keeps drawing twelve orbits behind every other
          section — burning battery and competing with the rest of the page for
          the compositor the whole way down. */
-      frameloop={paused ? "never" : "always"}
+      /* "demand" rather than "never" when paused: it still draws the one
+         frame a fresh mount needs (so the scene reports ready, and the route
+         veil coming back to a page scrolled past the hero is not left
+         waiting), then draws nothing more until it is back in view. */
+      frameloop={paused || held ? "demand" : "always"}
       dpr={[1, 1.75]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       // a machine without WebGL still gets a hero, just a flat one
@@ -983,6 +1010,7 @@ export default function SolarSystem({ paused = false, launched = true }: { pause
         </div>
       }
     >
+      <FirstFrame onReady={onReady} />
       <Scene
         bodies={bodies}
         accent={accent}
@@ -990,13 +1018,18 @@ export default function SolarSystem({ paused = false, launched = true }: { pause
         onHover={setHovered}
       />
       {/* Centred on the star. It used to sit high to push the system clear of
-          the hero headline; in its own section there's nothing to dodge. */}
+          the hero headline; in its own section there's nothing to dodge.
+
+          No autoRotate. Each band is tilted about the same world axis by a
+          different amount, so the nested layout only holds from the framing
+          camera's heading; as autoRotate walked the camera round, those tilts
+          turned into sideways rolls and the rings drifted across each other
+          within a few minutes. The bodies already orbit, so the scene still
+          moves. */}
       <OrbitControls
         target={[0, 0, 0]}
         enablePan={false}
         enableZoom={false}
-        autoRotate={!reduced}
-        autoRotateSpeed={0.24}
         minPolarAngle={Math.PI * 0.16}
         maxPolarAngle={Math.PI * 0.52}
         dampingFactor={0.06}

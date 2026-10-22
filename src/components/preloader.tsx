@@ -25,13 +25,19 @@ import { grainTile, paintGalaxy, paintNebula, paintPlanet, paintRing, paintRock 
    through x/z and rolled for the bank. Title cards write themselves in letter
    by letter; the cards are driven from the frame loop.
 
-   Once per browser session, with no controls on screen; any key, wheel or tap
-   still skips it. The end is on a timer, so a throttled tab still gets the
+   Once per browser session, with a quiet hint that any key, click, wheel or
+   tap skips it. The end is on a timer, so a throttled tab still gets the
    site. */
 
-const FILM_MS = 11600;
-const FADE_MS = 700;
+/* Every scene is placed on story time (T, below): the original 11.6s cut. The
+   film plays that story in about 7s of real time, through WARP: the dark
+   opening is squeezed hardest, the voyage moves at nearly twice the pace, and
+   the bang keeps close to its own speed, because that is the moment people
+   watch. Nothing is cut; it is told faster. */
+const FILM_MS = 7150;
+const FADE_MS = 600;
 
+/** story time, in ms of the original cut */
 const T = {
   ignite: 2700,
   bang: 2850,
@@ -39,20 +45,45 @@ const T = {
   approach: 9900,
   arrive: 11000,
 };
+const STORY_MS = 11600;
 
+/** real ms → story ms, one knot per scene boundary */
+const WARP: [number, number][] = [
+  [0, 0],
+  [1700, T.bang],
+  [2950, T.voyage],
+  [5700, T.approach],
+  [6650, T.arrive],
+  [FILM_MS, STORY_MS],
+];
+function toStory(t: number) {
+  for (let i = 1; i < WARP.length; i++) {
+    const [r1, s1] = WARP[i];
+    if (t <= r1 || i === WARP.length - 1) {
+      const [r0, s0] = WARP[i - 1];
+      return s0 + ((t - r0) * (s1 - s0)) / (r1 - r0);
+    }
+  }
+  return t;
+}
+
+/* Title cards run on real time, not story time: they have to stay up long
+   enough to read whatever pace the pictures move at. */
 const CARDS = [
-  { text: "In the beginning, there was nothing.", from: 350, to: 2600 },
-  { text: "Then, everything.", from: 3200, to: 5100 },
-  { text: "Across a hundred billion stars,", from: 5400, to: 7500 },
-  { text: "to one small corner of space.", from: 7800, to: 9800 },
+  { text: "In the beginning, there was nothing.", from: 150, to: 1550 },
+  { text: "Then, everything.", from: 1950, to: 2900 },
+  { text: "Across a hundred billion stars,", from: 3150, to: 4350 },
+  { text: "to one small corner of space.", from: 4500, to: 5650 },
 ];
 
 const DEPTH = 2600;
 const FOV = 380;
+/** brightness of each spark, making up for there being fewer of them */
+const SPARK_GAIN = 1.3;
 
 type RGB = [number, number, number];
-type Star = { x: number; y: number; z: number; c: RGB };
-type Spark = { dx: number; dy: number; dz: number; s: number; c: RGB; px: number; py: number };
+type Star = { x: number; y: number; z: number; ci: number };
+type Spark = { dx: number; dy: number; dz: number; s: number; ci: number; px: number; py: number };
 type Rock = { x: number; y: number; z: number; r: number; spin: number; rot: number; sprite: number };
 type Cloud = { x: number; y: number; z: number; r: number; tex: number; alpha: number };
 type World = { key: "desert" | "giant" | "ice"; x: number; y: number; z: number; r: number; glow: RGB };
@@ -109,7 +140,7 @@ export function Preloader() {
     const toEnd = setTimeout(finish, reduced ? 1200 : FILM_MS);
 
     // anything that says "I'm here for the site" ends the film early
-    const SKIP = ["keydown", "wheel", "touchstart"] as const;
+    const SKIP = ["keydown", "wheel", "touchstart", "pointerdown"] as const;
     const detach = () => SKIP.forEach((type) => window.removeEventListener(type, finish));
     SKIP.forEach((type) => window.addEventListener(type, finish, { passive: true }));
 
@@ -155,8 +186,61 @@ export function Preloader() {
     const AMBER: RGB = [255, 176, 92];
     const ROSE: RGB = [244, 114, 182];
     const palette = [CYAN, ICE, VIOLET, AMBER, ROSE, WHITE];
+    const STAR_COLORS = [WHITE, CYAN, ICE, VIOLET];
 
-    // ── textures, painted between frames while the opening plays ──
+    /* Thousands of stars and sparks, each building its own colour string
+       and setting its own style, were the heaviest thing in the film, and
+       they peaked at the bang. They are sorted instead into buckets by
+       colour, alpha and width, in steps too fine to see, so each style is
+       built and set once per bucket rather than once per line. */
+    const A_STEPS = 12;
+    const W_STEP = 0.4;
+    const lines = new Map<number, number[]>();
+    const dots = new Map<number, number[]>();
+    const bucketKey = (ci: number, alpha: number, width: number) => {
+      const ai = Math.round(clamp01(alpha) * A_STEPS);
+      if (ai === 0) return -1;
+      const wi = Math.max(1, Math.min(15, Math.round(width / W_STEP)));
+      return ((ci * (A_STEPS + 1) + ai) << 4) | wi;
+    };
+    const decode = (key: number) => {
+      const rest = key >> 4;
+      const ai = rest % (A_STEPS + 1);
+      return { ci: (rest - ai) / (A_STEPS + 1), alpha: ai / A_STEPS, width: (key & 15) * W_STEP };
+    };
+    const addTo = (m: Map<number, number[]>, key: number) => {
+      let a = m.get(key);
+      if (!a) m.set(key, (a = []));
+      return a;
+    };
+    /* Each line is still its own small stroke. Merging a bucket into one
+       path was tried and measured: the graphics chip then rasterises one
+       screen-sized shape full of crossings per bucket, which halved the frame
+       rate at the bang. */
+    const flushLines = (colors: RGB[]) => {
+      for (const [key, xy] of lines) {
+        const { ci, alpha, width } = decode(key);
+        ctx.strokeStyle = rgba(colors[ci], alpha);
+        ctx.lineWidth = width;
+        for (let i = 0; i < xy.length; i += 4) {
+          ctx.beginPath();
+          ctx.moveTo(xy[i], xy[i + 1]);
+          ctx.lineTo(xy[i + 2], xy[i + 3]);
+          ctx.stroke();
+        }
+      }
+      lines.clear();
+    };
+    const flushDots = (colors: RGB[]) => {
+      for (const [key, xy] of dots) {
+        const { ci, alpha, width: size } = decode(key);
+        ctx.fillStyle = rgba(colors[ci], alpha);
+        for (let i = 0; i < xy.length; i += 2) ctx.fillRect(xy[i] - size / 2, xy[i + 1] - size / 2, size, size);
+      }
+      dots.clear();
+    };
+
+    // ── textures, painted while the opening plays ──
     const tex: {
       desert?: HTMLCanvasElement;
       giant?: HTMLCanvasElement;
@@ -168,16 +252,18 @@ export function Preloader() {
     } = { rocks: [], nebula: [] };
     const grain = ctx.createPattern(grainTile(), "repeat");
     const P = small ? 220 : 320;
+    // in the order the voyage first needs them, so anything still unpainted
+    // after the bang is the thing furthest down the road
     const jobs: { gen: Generator<void, HTMLCanvasElement>; done: (c: HTMLCanvasElement) => void }[] = [
       { gen: paintNebula(small ? 200 : 280, VIOLET, ROSE, 3), done: (c) => tex.nebula.push(c) },
-      { gen: paintPlanet("desert", P), done: (c) => (tex.desert = c) },
+      { gen: paintGalaxy(small ? 200 : 280), done: (c) => (tex.galaxy = c) },
       { gen: paintNebula(small ? 200 : 280, CYAN, VIOLET, 7), done: (c) => tex.nebula.push(c) },
+      { gen: paintPlanet("desert", P), done: (c) => (tex.desert = c) },
+      { gen: paintNebula(small ? 200 : 280, ROSE, CYAN, 11), done: (c) => tex.nebula.push(c) },
       ...[1, 2, 3, 4, 5, 6, 7].map((s) => ({ gen: paintRock(small ? 72 : 96, s), done: (c: HTMLCanvasElement) => tex.rocks.push(c) })),
       { gen: paintPlanet("giant", small ? 260 : 380), done: (c) => (tex.giant = c) },
       { gen: paintRing(small ? 300 : 440), done: (c) => (tex.ring = c) },
       { gen: paintPlanet("ice", small ? 180 : 260), done: (c) => (tex.ice = c) },
-      { gen: paintNebula(small ? 200 : 280, ROSE, CYAN, 11), done: (c) => tex.nebula.push(c) },
-      { gen: paintGalaxy(small ? 200 : 280), done: (c) => (tex.galaxy = c) },
     ];
     const pump = (budget: number) => {
       const until = performance.now() + budget;
@@ -195,15 +281,20 @@ export function Preloader() {
       x: rnd(-spread, spread),
       y: rnd(-spread, spread),
       z: rnd(1, DEPTH),
-      c: Math.random() < 0.72 ? WHITE : palette[(Math.random() * 3) | 0],
+      ci: Math.random() < 0.72 ? 0 : 1 + ((Math.random() * 3) | 0),
     }));
 
     // the bang itself: directions on a sphere, each spark its own speed and colour
-    const sparks: Spark[] = Array.from({ length: Math.round(2600 * scale) }, () => {
+    /* 1,600 rather than the 2,600 it began with. Measured on integrated
+       graphics, the sparks were the one thing that pulled the bang under
+       60fps (every other layer could go and nothing changed); each is its
+       own small draw, so their number is the cost. The ones that remain are
+       drawn a little brighter (SPARK_GAIN) so the burst reads as dense. */
+    const sparks: Spark[] = Array.from({ length: Math.round(1600 * scale) }, () => {
       const u = rnd(-1, 1);
       const th = rnd(0, Math.PI * 2);
       const r = Math.sqrt(1 - u * u);
-      return { dx: r * Math.cos(th), dy: u, dz: r * Math.sin(th), s: Math.pow(Math.random(), 0.55), c: palette[(Math.random() * palette.length) | 0], px: cx, py: cy };
+      return { dx: r * Math.cos(th), dy: u, dz: r * Math.sin(th), s: Math.pow(Math.random(), 0.55), ci: (Math.random() * palette.length) | 0, px: cx, py: cy };
     });
 
     // route scenery, placed by distance along the voyage
@@ -245,6 +336,7 @@ export function Preloader() {
 
     const start = performance.now();
     let last = start;
+    let lastS = 0;
     let travelled = 0;
 
     /** camera: where it is (it drifts), depth projection, the bank, the shake */
@@ -269,8 +361,12 @@ export function Preloader() {
       glow.addColorStop(0, rgba(WHITE, 0.95 * power));
       glow.addColorStop(0.15, rgba(tint, 0.55 * power));
       glow.addColorStop(1, rgba(tint, 0));
+      // filled to the gradient's own edge, not a square around it: the corners
+      // were transparent anyway, and fill area is what costs here
       ctx.fillStyle = glow;
-      ctx.fillRect(x - 240 * power, y - 240 * power, 480 * power, 480 * power);
+      ctx.beginPath();
+      ctx.arc(x, y, 220 * power, 0, Math.PI * 2);
+      ctx.fill();
       // the anamorphic streak, the thing that makes it read as a lens
       const len = w * 0.75 * power;
       const streak = ctx.createLinearGradient(x - len, y, x + len, y);
@@ -367,57 +463,70 @@ export function Preloader() {
         }
       }
       if (i < 0) return;
-      // the whole line dissolves on its way out
-      const out = clamp01((CARDS[i].to - t) / 450);
+      // the whole line dissolves on its way out (no blur: a blur on text over
+      // a canvas that repaints every frame is repainted every frame too)
+      const out = clamp01((CARDS[i].to - t) / 320);
       el.style.opacity = String(out);
-      el.style.filter = `blur(${(1 - out) * 8}px)`;
       el.style.letterSpacing = `${(1 - out) * 0.12}em`;
     };
 
     const draw = (now: number) => {
       if (cancelled) return;
       // floor on both: the first rAF can precede `start`
-      const t = reduced ? T.arrive : Math.max(0, now - start);
+      // t is real time on screen; s is where that puts us in the story
+      const t = reduced ? WARP[4][0] : Math.max(0, now - start);
+      const s = toStory(t);
       const dt = Math.min(48, Math.max(0, now - last));
+      const ds = Math.min(96, Math.max(0, s - lastS));
       last = now;
+      lastS = s;
       // book the next frame first: a drawing error then costs one frame, not the film
       if (t < FILM_MS + FADE_MS) raf = requestAnimationFrame(draw);
-      pump(t < T.bang ? 11 : 6);
-      const speed = cruise(t) * dt;
+      /* The dark opening draws almost nothing, so that is where the worlds are
+         painted, with most of each frame to spare. Anything a slow machine has
+         not finished by the bang gets a thin slice per frame after it, never
+         enough to push a frame of the bang or the voyage over budget. */
+      pump(s < T.bang ? 12 : 3);
+      const speed = cruise(s) * ds;
       travelled += speed;
 
       // ── cards, credits ──
       setCard(t);
       if (creditRef.current) {
-        const c = clamp01((t - T.approach - 250) / 600) * (1 - clamp01((t - FILM_MS + 380) / 320));
+        const c = clamp01((s - T.approach - 250) / 600) * (1 - clamp01((s - STORY_MS + 380) / 320));
         creditRef.current.style.opacity = String(c);
         creditRef.current.style.transform = `scale(${0.96 + c * 0.04})`;
         creditRef.current.style.letterSpacing = `${0.6 - c * 0.6}em`;
       }
 
       // ── camera ──
-      roll = t > T.voyage ? Math.sin((t - T.voyage) * 0.0006) * 0.12 : 0;
+      roll = s > T.voyage ? Math.sin((s - T.voyage) * 0.0006) * 0.12 : 0;
       // the path drifts in a slow curve rather than running on rails, so the
       // near rocks and planets slide across the far ones (parallax), and it
       // eases back to centre as the destination comes in
       {
-        const tv = Math.max(0, t - T.bang);
-        const settle = 1 - clamp01((t - T.approach + 600) / 1500);
+        const tv = Math.max(0, s - T.bang);
+        const settle = 1 - clamp01((s - T.approach + 600) / 1500);
         camX = (Math.sin(tv * 0.00042) * 0.12 + Math.sin(tv * 0.0011) * 0.02) * spread * settle;
         camY = Math.sin(tv * 0.0003 + 1.2) * 0.045 * spread * settle;
       }
-      const shake = t > T.bang ? 22 * Math.exp(-(t - T.bang) / 320) : t > T.ignite ? ((t - T.ignite) / (T.bang - T.ignite)) * 4 : 0;
-      shakeX = (Math.random() - 0.5) * shake;
-      shakeY = (Math.random() - 0.5) * shake;
+      /* A shake that sways rather than buzzes: two sines out of step on each
+         axis, the way a camera rocks on its mount. A fresh random offset
+         every frame jumped to an unrelated position sixty times a second,
+         which read as jitter, not impact. */
+      const shake = s > T.bang ? 22 * Math.exp(-(s - T.bang) / 320) : s > T.ignite ? ((s - T.ignite) / (T.bang - T.ignite)) * 4 : 0;
+      shakeX = shake * 0.5 * (Math.sin(t * 0.083 + 1.3) * 0.65 + Math.sin(t * 0.131) * 0.35);
+      shakeY = shake * 0.5 * (Math.sin(t * 0.071) * 0.6 + Math.sin(t * 0.157 + 2.1) * 0.4);
 
       ctx.globalCompositeOperation = "source-over";
       ctx.fillStyle = "#020309";
       ctx.fillRect(0, 0, w, h);
 
       // ── scene one: the point in the dark ──
-      if (t < T.bang + 200) {
+      if (s < T.bang + 200) {
+        // the breath stays on real time, so a shorter opening doesn't hurry it
         const breathe = 0.6 + Math.sin(t * 0.006) * 0.4;
-        const charge = clamp01((t - T.ignite) / (T.bang - T.ignite));
+        const charge = clamp01((s - T.ignite) / (T.bang - T.ignite));
         const rr = 2 + breathe * 2.5 + charge * 60;
         const g = ctx.createRadialGradient(cx + shakeX, cy + shakeY, 0, cx + shakeX, cy + shakeY, rr * 6);
         g.addColorStop(0, rgba(WHITE, 0.9));
@@ -425,13 +534,15 @@ export function Preloader() {
         g.addColorStop(1, rgba(CYAN, 0));
         ctx.globalCompositeOperation = "lighter";
         ctx.fillStyle = g;
-        ctx.fillRect(0, 0, w, h);
+        ctx.beginPath();
+        ctx.arc(cx + shakeX, cy + shakeY, rr * 6, 0, Math.PI * 2);
+        ctx.fill();
         ctx.globalCompositeOperation = "source-over";
       }
 
       // ── the voyage ──
-      if (t > T.bang) {
-        const born = clamp01((t - T.bang) / 1400);
+      if (s > T.bang) {
+        const born = clamp01((s - T.bang) / 1400);
 
         // nebula, far behind everything
         ctx.globalCompositeOperation = "screen";
@@ -449,14 +560,14 @@ export function Preloader() {
         // toward the edge of frame as the camera travels past, and grows a
         // little as it nears, the way very distant things do
         if (tex.galaxy) {
-          const v = clamp01((t - T.bang) / (FILM_MS - T.bang));
+          const v = clamp01((s - T.bang) / (STORY_MS - T.bang));
           const gs = Math.min(w, h) * (0.3 + v * 0.14);
           ctx.save();
           ctx.translate(cx - w * (0.2 + v * 0.16) + shakeX, cy - h * (0.14 + v * 0.12) + shakeY);
           ctx.rotate(roll - 0.35);
           ctx.scale(1, 0.42);
-          ctx.rotate((t - T.bang) * 0.00018);
-          ctx.globalAlpha = 0.75 * born * (1 - clamp01((t - T.approach) / 900));
+          ctx.rotate((s - T.bang) * 0.00018);
+          ctx.globalAlpha = 0.75 * born * (1 - clamp01((s - T.approach) / 900));
           ctx.drawImage(tex.galaxy, -gs / 2, -gs / 2, gs, gs);
           ctx.restore();
         }
@@ -464,38 +575,35 @@ export function Preloader() {
 
         ctx.globalCompositeOperation = "lighter";
         ctx.lineCap = "round";
-        for (const s of stars) {
-          const pz = s.z;
-          s.z -= speed;
-          if (s.z < 1) {
-            s.x = rnd(-spread, spread);
-            s.y = rnd(-spread, spread);
-            s.z = DEPTH;
+        for (const st of stars) {
+          const pz = st.z;
+          st.z -= speed;
+          if (st.z < 1) {
+            st.x = rnd(-spread, spread);
+            st.y = rnd(-spread, spread);
+            st.z = DEPTH;
             continue;
           }
-          const p = project(s.x, s.y, s.z);
+          const p = project(st.x, st.y, st.z);
           if (p.x < -60 || p.x > w + 60 || p.y < -60 || p.y > h + 60) continue;
-          const q = project(s.x, s.y, pz);
-          const fade = Math.min(1, (DEPTH - s.z) / (DEPTH * 0.45)) * born;
+          const q = project(st.x, st.y, pz);
+          const fade = Math.min(1, (DEPTH - st.z) / (DEPTH * 0.45)) * born;
           const len = Math.hypot(p.x - q.x, p.y - q.y);
           if (len < 1.3) {
-            const size = Math.min(2.2, p.k * 1.2);
-            ctx.fillStyle = rgba(s.c, fade * 0.85);
-            ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+            const key = bucketKey(st.ci, fade * 0.85, Math.min(2.2, p.k * 1.2));
+            if (key >= 0) addTo(dots, key).push(p.x, p.y);
           } else {
-            ctx.strokeStyle = rgba(s.c, fade * 0.8);
-            ctx.lineWidth = Math.min(2.4, p.k * 1.3);
-            ctx.beginPath();
-            ctx.moveTo(q.x, q.y);
-            ctx.lineTo(p.x, p.y);
-            ctx.stroke();
+            const key = bucketKey(st.ci, fade * 0.8, Math.min(2.4, p.k * 1.3));
+            if (key >= 0) addTo(lines, key).push(q.x, q.y, p.x, p.y);
           }
         }
+        flushDots(STAR_COLORS);
+        flushLines(STAR_COLORS);
         ctx.globalCompositeOperation = "source-over";
 
         // a comet crossing high on the frame, its tail streaming away from the light
-        if (t > 6400 && t < 8800) {
-          const k = (t - 6400) / 2400;
+        if (s > 6400 && s < 8800) {
+          const k = (s - 6400) / 2400;
           const hx = w * (1.08 - k * 1.25);
           const hy = h * (0.1 + k * 0.28);
           const tx = hx + w * 0.32;
@@ -573,7 +681,7 @@ export function Preloader() {
         {
           const z = Math.max(60, destination.z - travelled);
           const p = project(destination.x, destination.y, z);
-          const power = clamp01((t - T.approach + 400) / 1200);
+          const power = clamp01((s - T.approach + 400) / 1200);
           if (power > 0) {
             const core = Math.min(h * 0.9, 18 + 900 * p.k);
             ctx.globalCompositeOperation = "lighter";
@@ -582,7 +690,9 @@ export function Preloader() {
             g.addColorStop(0.25, rgba(CYAN, 0.6 * power));
             g.addColorStop(1, rgba(CYAN, 0));
             ctx.fillStyle = g;
-            ctx.fillRect(p.x - core, p.y - core, core * 2, core * 2);
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, core, 0, Math.PI * 2);
+            ctx.fill();
             ctx.globalCompositeOperation = "source-over";
             flare(p.x, p.y, power, CYAN);
           }
@@ -590,30 +700,30 @@ export function Preloader() {
       }
 
       // ── the bang: sparks, rings, the white-out ──
-      if (t > T.bang && t < T.voyage + 1600) {
-        const age = t - T.bang;
+      if (s > T.bang && s < T.voyage + 1600) {
+        const age = s - T.bang;
         const life = 1 - clamp01((age - 900) / 1700);
         const reach = Math.max(w, h) * 1.4;
         const grow = 1 - Math.exp(-age / 420);
+        // every spark cools at the same rate, so each colour is mixed once a frame
+        const heat = clamp01(age / 700);
+        const sparkColors = palette.map((c) => mix(WHITE, c, heat));
         ctx.globalCompositeOperation = "lighter";
-        ctx.lineCap = "round";
-        for (const s of sparks) {
-          const r = grow * reach * s.s;
-          const z = Math.max(80, 700 + s.dz * r * 0.9);
+        // square ends: a round cap on a 1–3px streak can't be seen, and it is
+        // extra geometry on every one of them
+        ctx.lineCap = "butt";
+        for (const sp of sparks) {
+          const r = grow * reach * sp.s;
+          const z = Math.max(80, 700 + sp.dz * r * 0.9);
           const k = 700 / z;
-          const x = cx + s.dx * r * k + shakeX;
-          const y = cy + s.dy * r * k * 0.82 + shakeY;
-          const heat = clamp01(age / 700);
-          const c = mix(WHITE, s.c, heat);
-          ctx.strokeStyle = rgba(c, life * (0.35 + (1 - s.s) * 0.5));
-          ctx.lineWidth = Math.min(2.8, 0.6 + k * 0.9);
-          ctx.beginPath();
-          ctx.moveTo(s.px, s.py);
-          ctx.lineTo(x, y);
-          ctx.stroke();
-          s.px = x;
-          s.py = y;
+          const x = cx + sp.dx * r * k + shakeX;
+          const y = cy + sp.dy * r * k * 0.82 + shakeY;
+          const key = bucketKey(sp.ci, SPARK_GAIN * life * (0.35 + (1 - sp.s) * 0.5), Math.min(2.8, 0.6 + k * 0.9));
+          if (key >= 0) addTo(lines, key).push(sp.px, sp.py, x, y);
+          sp.px = x;
+          sp.py = y;
         }
+        flushLines(sparkColors);
         // shockwaves: soft glowing fronts, each split into colour like light
         // through a lens (cyan inside, rose outside), squashed a touch so
         // the blast reads as a disc seen at an angle
@@ -642,6 +752,7 @@ export function Preloader() {
             g.addColorStop(0, rgba(col, 0));
             g.addColorStop(clamp01((mid - inner) / (mid + wide - inner)), rgba(col, strength * fade));
             g.addColorStop(1, rgba(col, 0));
+            // a plain rect: a cut-out ring shape was measured slower to draw
             ctx.fillStyle = g;
             ctx.fillRect(-(mid + wide), -(mid + wide), (mid + wide) * 2, (mid + wide) * 2);
           }
@@ -675,7 +786,7 @@ export function Preloader() {
       }
 
       // ── the hand-over: light fills the frame as the film ends ──
-      const out = clamp01((t - FILM_MS + 450) / 450);
+      const out = clamp01((t - FILM_MS + 400) / 400);
       if (out > 0) {
         const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.8);
         g.addColorStop(0, `rgba(255,255,255,${out})`);
@@ -730,6 +841,15 @@ export function Preloader() {
         </p>
         <p className="mt-3 font-sans text-[11px] uppercase tracking-[0.5em] text-white/80">Full-stack developer</p>
       </div>
+
+      {/* the film is skippable; without saying so, most people just wait */}
+      <p
+        aria-hidden
+        className="film-hint pointer-events-none absolute inset-x-0 bottom-6 text-center font-sans text-[10px] uppercase tracking-[0.3em] text-white/35"
+      >
+        <span className="pointer-coarse:hidden">Press any key to skip</span>
+        <span className="hidden pointer-coarse:inline">Tap to skip</span>
+      </p>
     </div>
   );
 }

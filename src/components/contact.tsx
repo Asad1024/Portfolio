@@ -3,7 +3,6 @@ import { Reveal } from "./reveal";
 import { Magnetic } from "./magnetic";
 import { LocalTime } from "./local-time";
 import { GithubGraph } from "./github-graph";
-import { CityMap } from "./city-map";
 import { ArrowUpRight, Download } from "lucide-react";
 
 export function Contact() {
@@ -26,8 +25,6 @@ export function Contact() {
       </div>
 
       <div className="relative mx-auto max-w-shell px-6 pb-44 pt-12 sm:pb-52 sm:pt-14">
-        <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-10">
-        <div>
         <Reveal>
           <p className="flex items-center gap-3 font-sans text-[11px] uppercase tracking-[0.22em]">
             <span className="text-accent">05</span>
@@ -96,13 +93,6 @@ export function Contact() {
             </Magnetic>
           </div>
         </Reveal>
-        </div>
-
-        {/* where the work happens: home and the teams, joined on a map */}
-        <Reveal delay={0.1}>
-          <CityMap className="mx-auto aspect-[380/230] w-full max-w-[38rem] [mask-image:radial-gradient(80%_80%_at_50%_50%,#000_62%,transparent)]" />
-        </Reveal>
-        </div>
 
         {/* live proof: the actual contribution graph */}
         <Reveal delay={0.2}>

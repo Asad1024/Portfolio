@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { ScrambleText } from "./scramble-text";
 import { Magnetic } from "./magnetic";
 import Image from "next/image";
 import { profile, projects } from "@/lib/data";
+import { routeVeil } from "@/lib/route-veil";
 import { ArrowRight } from "lucide-react";
 
 /* The WebGL scene is client-only and lazily chunked: three and drei must never
@@ -41,15 +42,63 @@ function subscribeToBoot(onChange: () => void) {
 }
 
 const hasBooted = () => sessionStorage.getItem("booted") === "1";
+const filmPlaying = () => !hasBooted();
+
+/* After the film the hero arrives in steps rather than all on one frame: the
+   name starts decoding and the text slides in first, the star ignites and
+   flings the planets out a beat later, and the page's sky fades in last
+   (see space/starfield). Firing all of it together is what made the
+   hand-over stutter. */
+const LAUNCH_AFTER_MS = 350;
 
 export function Hero() {
   // The name only starts decrypting once BOTH curtains are gone: the
   // first-visit preloader and the route-transition veil.
   const bootDone = useSyncExternalStore(subscribeToBoot, hasBooted, () => false);
+  // under the film the name holds symbols, so as the curtain lifts it
+  // decodes from them rather than being readable and then breaking up
+  // (false on the server, so the HTML always carries the real name)
+  const underFilm = useSyncExternalStore(subscribeToBoot, filmPlaying, () => false);
+  // the same when arriving from another page: the route veil is over the
+  // hero as it mounts, and the name decodes as the veil lifts. On a plain
+  // load nothing covers it, so it stays readable and a ripple passes over it.
+  const [underVeil] = useState(() => routeVeil.navigated);
   const [revealed, setRevealed] = useState(false);
   const [inView, setInView] = useState(true);
+  const [launched, setLaunched] = useState(false);
+  /* Whether the 3D scene has drawn a frame. Until it has, its column stays
+     clear, so the system fades in whole instead of the canvas appearing
+     blank and then popping full. Arriving from another page, the route veil
+     waits for it as well (routeVeil.pending), so the curtain never opens on
+     a scene still starting up. */
+  const [sceneDrawn, setSceneDrawn] = useState(false);
+  const sceneWait = useRef<() => void>(() => {});
   const sectionRef = useRef<HTMLElement>(null);
   const ready = bootDone && revealed;
+
+  useEffect(() => {
+    if (!underVeil) return;
+    routeVeil.pending.push(
+      new Promise<void>((resolve) => {
+        sceneWait.current = resolve;
+      }),
+    );
+  }, [underVeil]);
+  // without WebGL no frame is ever drawn: show the flat fallback after a while
+  useEffect(() => {
+    const id = setTimeout(() => setSceneDrawn(true), 2500);
+    return () => clearTimeout(id);
+  }, []);
+  const onSceneReady = useCallback(() => {
+    setSceneDrawn(true);
+    sceneWait.current();
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    const id = setTimeout(() => setLaunched(true), LAUNCH_AFTER_MS);
+    return () => clearTimeout(id);
+  }, [ready]);
 
   // Let the WebGL scene idle once it's off screen — see frameloop in
   // space/solar-system.tsx for why this matters.
@@ -115,12 +164,16 @@ export function Hero() {
           transparent and the page's own starfield and nebula read straight
           through it. */}
       <div
-        className={`absolute inset-x-0 bottom-0 h-[44%] transition-opacity duration-1000 md:inset-y-0 md:bottom-auto md:left-auto md:right-[2.5%] md:h-full md:w-[52%] md:max-w-[907px] ${fade}`}
+        className={`absolute inset-x-0 bottom-0 h-[44%] transition-opacity duration-1000 md:inset-y-0 md:bottom-auto md:left-auto md:right-[2.5%] md:h-full md:w-[52%] md:max-w-[907px] ${
+          ready && sceneDrawn ? "opacity-100" : "opacity-0"
+        }`}
       >
-        <SolarSystem paused={!inView} launched={ready} />
+        {/* held under the intro film: rendered once so its shaders compile in
+            the film's dark opening, then still until the film hands over */}
+        <SolarSystem paused={!inView} held={!bootDone} launched={launched} onReady={onSceneReady} />
         {/* Arrival: the star ignites and two shockwaves sweep out across the
             screen as the system is flung into its orbits (see solar-system). */}
-        {ready && (
+        {launched && (
           <span aria-hidden className="pointer-events-none absolute inset-0 motion-reduce:hidden">
             <span className="ignite" />
             <span className="shockwave" />
@@ -159,7 +212,14 @@ export function Hero() {
               className={`${BASE} ${lift} block text-[clamp(3.5rem,8.1vw,6.9rem)] text-glow`}
               style={at(150)}
             >
-              <ScrambleText text="Asad Shah" trigger="manual" active={ready} duration={1100} />
+              <ScrambleText
+                text="Asad Shah"
+                trigger="manual"
+                active={ready}
+                masked={underFilm || underVeil}
+                ripple
+                duration={1100}
+              />
             </span>
             <span
               className={`${BASE} ${rise} mt-10 block text-[clamp(1.55rem,3.2vw,2.55rem)] font-medium leading-[1.15] tracking-[-0.03em] text-fg/85`}
