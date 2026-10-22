@@ -127,8 +127,8 @@ export function Nav() {
       />
       <nav className="relative mx-auto flex h-16 max-w-shell items-center justify-between px-6">
         <Magnetic>
-          <Link href="/" className="group flex items-center gap-2.5" onClick={() => setMenuOpen(false)}>
-            <BrandMark className="size-8 shrink-0 transition-transform duration-500" />
+          <Link href="/" className="group flex items-center gap-2" onClick={() => setMenuOpen(false)}>
+            <BrandMark bare className="h-[18px] w-auto shrink-0" />
             <span className="text-[15px] font-semibold tracking-tight text-fg">Asad Shah</span>
           </Link>
         </Magnetic>

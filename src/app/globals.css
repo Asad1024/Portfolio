@@ -504,7 +504,7 @@ textarea:focus-visible {
 /* ── selected work: a stage lit in the project's colour (--tint) ──────────── */
 .sw-panel {
   background: #060810;
-  box-shadow: 0 40px 100px -50px color-mix(in oklab, var(--tint) 60%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: 0 30px 80px -50px color-mix(in oklab, var(--tint) 18%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition: box-shadow 0.9s;
 }
 /* the line of light leading each new project onto the stage */
@@ -526,7 +526,7 @@ textarea:focus-visible {
   background-clip: text;
   color: transparent;
 }
-.sw-more { box-shadow: 0 0 24px -10px var(--tint); }
+.sw-more { box-shadow: 0 0 16px -12px color-mix(in oklab, var(--tint) 50%, transparent); }
 .sw-progress { animation: sw-progress linear forwards; box-shadow: 0 0 8px var(--c); }
 @keyframes sw-progress {
   from { transform: scaleX(0); }
@@ -565,23 +565,19 @@ textarea:focus-visible {
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--c) 35%, transparent), 0 8px 22px -12px color-mix(in oklab, var(--c) 30%, transparent);
 }
 .cap-light::before {
+  /* a bright edge on the tile in turn: drawn once, not re-painted every
+     frame (a running edge on four cards at once cost a noticeable frame rate) */
   content: "";
   position: absolute;
   inset: -1px;
   border-radius: inherit;
   padding: 1px;
-  background: conic-gradient(from var(--cap-a), transparent 0deg, var(--c) 60deg, #fff 90deg, var(--c) 120deg, transparent 180deg, transparent 360deg);
+  background: linear-gradient(135deg, #fff, var(--c) 35%, transparent 65%, var(--c));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-  animation: cap-orbit 2.4s linear infinite;
+  opacity: 0.7;
 }
-@property --cap-a {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
-}
-@keyframes cap-orbit { to { --cap-a: 360deg; } }
 /* ── the skill demos: every piece animates from hidden into its normal
    state, so with animations off each scene shows its last frame ── */
 .dm-in { animation: dm-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: var(--d, 0s); }
@@ -633,7 +629,6 @@ textarea:focus-visible {
 }
 @keyframes cap-ring-run { to { stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .cap-light::before { animation: none; }
   .cap-ring-run { animation: none; stroke-dashoffset: 0; }
 }
 
@@ -735,7 +730,7 @@ textarea:focus-visible {
   .k-halo, .k-core, .k-core::before, .k-ring { animation: none; }
 }
 
-/* ── about: a light running round the portrait, and the principle cards ──── */
+/* ── about: a still, faint edge of light round the portrait, and the cards ── */
 .ab-frame::before {
   content: "";
   position: absolute;
@@ -743,20 +738,13 @@ textarea:focus-visible {
   z-index: 1;
   pointer-events: none;
   border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(from var(--ab-a), transparent 0deg, var(--accent) 50deg, #fff 75deg, var(--violet) 110deg, transparent 170deg, transparent 360deg);
+  padding: 1px;
+  background: linear-gradient(160deg, color-mix(in oklab, var(--accent) 55%, transparent), transparent 40%, transparent 65%, color-mix(in oklab, var(--violet) 45%, transparent));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-  animation: ab-orbit 7s linear infinite;
 }
-.ab-frame { box-shadow: 0 30px 80px -40px color-mix(in oklab, var(--accent) 45%, transparent); }
-@property --ab-a {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
-}
-@keyframes ab-orbit { to { --ab-a: 360deg; } }
+.ab-frame { box-shadow: 0 30px 80px -50px color-mix(in oklab, var(--accent) 30%, transparent); }
 .ab-card {
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.01) 50%), #070a14;
   transition: border-color 0.4s, box-shadow 0.4s;
@@ -772,5 +760,58 @@ textarea:focus-visible {
 }
 .ab-card:hover .ab-card-glow { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
-  .ab-frame::before { animation: none; }
+}
+
+/* ── the city map (Contact): dotted land, three cities, the lines between ── */
+.cm-land { fill: color-mix(in oklab, var(--accent) 55%, white); opacity: 0.28; }
+.cm-twinkle { animation: cm-twinkle 4s ease-in-out infinite; }
+@keyframes cm-twinkle { 50% { opacity: 0.7; } }
+.cm-link {
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.55;
+  stroke-width: 0.8;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+}
+.cm[data-on] .cm-link { animation: cm-draw 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+@keyframes cm-draw { to { stroke-dashoffset: 0; } }
+.cm-signal {
+  fill: none;
+  stroke: #e0fbff;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 9 91;
+  stroke-dashoffset: 100;
+  opacity: 0;
+  filter: drop-shadow(0 0 3px var(--accent));
+}
+.cm[data-on] .cm-signal { opacity: 1; animation: cm-run 2.8s linear infinite; }
+@keyframes cm-run { to { stroke-dashoffset: 0; } }
+.cm-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: cm-ring 2.4s ease-out infinite;
+}
+@keyframes cm-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(3.4); opacity: 0; }
+}
+.cm-halo { fill: var(--accent); opacity: 0.16; }
+.cm-dot { fill: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
+.cm-home { fill: #fff; }
+.cm-label { opacity: 0; }
+.cm[data-on] .cm-label { animation: cm-label 0.6s ease forwards; }
+@keyframes cm-label { to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .cm-twinkle, .cm-ring { animation: none; }
+  .cm-link, .cm[data-on] .cm-link { animation: none; stroke-dashoffset: 0; }
+  .cm-signal { display: none; }
+  .cm-label, .cm[data-on] .cm-label { animation: none; opacity: 1; }
 }

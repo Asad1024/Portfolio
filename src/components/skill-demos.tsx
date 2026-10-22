@@ -376,7 +376,7 @@ const DEMOS: Record<string, () => ReactNode> = {
         <span className="font-mono">•••• 4242</span>
         <span className="text-muted">12 / 28</span>
       </In>
-      <In d={0.5} className="rounded-md bg-[var(--c)] px-2.5 py-1.5 text-center text-[11px] font-semibold text-black">
+      <In d={0.5} className="rounded-md bg-white/90 px-2.5 py-1.5 text-center text-[11px] font-semibold text-[#0b0e16]">
         Subscribe · $49 / month
       </In>
       <Fill d={0.9} t={0.8} />

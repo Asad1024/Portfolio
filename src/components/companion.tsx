@@ -33,7 +33,7 @@ const NAME = "Asad AI";
    commentary on every section was noise sitting on top of the content. */
 const SECTION_TIPS: Record<string, string> = {
   work: "Pick any project from the list to put it on stage, or click the screen for its case study.",
-  contact: "Drag the globe. The arcs run from Lahore, my home, to the teams I've worked with.",
+  contact: "The lines run from Lahore, my home, to the teams I've worked with in Islamabad and Dubai.",
 };
 
 const TOUR: { id: string; text: string }[] = [

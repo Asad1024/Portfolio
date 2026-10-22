@@ -3,7 +3,7 @@ import { Reveal } from "./reveal";
 import { Magnetic } from "./magnetic";
 import { LocalTime } from "./local-time";
 import { GithubGraph } from "./github-graph";
-import { GlobeView } from "./globe-view";
+import { CityMap } from "./city-map";
 import { ArrowUpRight, Download } from "lucide-react";
 
 export function Contact() {
@@ -98,9 +98,9 @@ export function Contact() {
         </Reveal>
         </div>
 
-        {/* where the work happens: home and the teams, on a globe you can turn */}
+        {/* where the work happens: home and the teams, joined on a map */}
         <Reveal delay={0.1}>
-          <GlobeView className="relative -mx-6 h-[320px] cursor-grab active:cursor-grabbing sm:mx-0 sm:h-[400px] lg:h-[460px]" />
+          <CityMap className="mx-auto aspect-[380/230] w-full max-w-[38rem] [mask-image:radial-gradient(80%_80%_at_50%_50%,#000_62%,transparent)]" />
         </Reveal>
         </div>
 

@@ -293,7 +293,7 @@ export function* paintGalaxy(size: number): Generator<void, HTMLCanvasElement> {
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const u = (x - r) / r;
-      const v = ((y - r) / r) / 0.42; // tilted, seen at an angle
+      const v = (y - r) / r; // face-on; the film tilts it as it draws, so it can turn
       const dist = Math.hypot(u, v);
       const i = (y * size + x) * 4;
       if (dist > 1) continue;

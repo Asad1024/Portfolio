@@ -15,8 +15,10 @@ import { TechIcon } from "./tech-icon";
    tools as two even rows of named tiles, a light that glides from tile to
    tile, and under them a small live demo of the tool in the light at work
    (see skill-demos), beside its name, a ring counting down its turn, and a
-   plain line on what that tool does in this kind of work. So the animation is the explanation: you watch the skills
-   one by one and learn what each is for. Pointing at a tile jumps to it. */
+   plain line on what that tool does in this kind of work. So the animation
+   is the explanation: you watch the skills one by one and learn what each is
+   for. Clicking a tile jumps to it; the turn pauses while the pointer rests
+   on the box. */
 
 const COLOR = ["#22d3ee", "#818cf8", "#f59e0b", "#34d399"];
 /** one short line under each card's title */
@@ -81,14 +83,12 @@ function SkillBox({ techs, id }: { techs: string[]; id: number }) {
   const tech = techs[active];
   // always two even rows of tiles, whatever the count
   const cols = Math.ceil(techs.length / 2);
-  const hold = (i: number) => {
-    setActive(i);
-    setHeld(true);
-  };
 
   return (
     <div
       ref={box}
+      // reading a demo pauses the turn; only a click changes the skill
+      onPointerEnter={(e) => e.pointerType === "mouse" && setHeld(true)}
       onPointerLeave={() => setHeld(false)}
       className="cap-box relative overflow-hidden rounded-2xl border border-white/[0.08] p-3"
     >
@@ -105,9 +105,7 @@ function SkillBox({ techs, id }: { techs: string[]; id: number }) {
             >
               <button
                 type="button"
-                onPointerEnter={() => hold(i)}
-                onFocus={() => hold(i)}
-                onBlur={() => setHeld(false)}
+                onClick={() => setActive(i)}
                 aria-pressed={on}
                 className="cap-tile relative flex h-full min-h-[4.5rem] w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] px-1.5 py-2.5 text-center"
               >

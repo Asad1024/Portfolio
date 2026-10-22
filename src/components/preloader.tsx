@@ -5,7 +5,7 @@ import { useScrollLock } from "@/lib/use-scroll-lock";
 import { grainTile, paintGalaxy, paintNebula, paintPlanet, paintRing, paintRock } from "./space/film-textures";
 
 /* ── first visit: a short film ──────────────────────────────────────────────
-   Four scenes on one canvas, cut like a trailer and framed in letterbox bars.
+   Four scenes on one canvas, full frame, cut like a trailer.
 
      before     black, and a single point of light breathing in the dark
      the bang   it ignites: a white-out, the frame shakes, shockwaves split
@@ -15,7 +15,7 @@ import { grainTile, paintGalaxy, paintNebula, paintPlanet, paintRing, paintRock 
                 world, an asteroid field close enough to flinch at, a ringed
                 gas giant, a comet, an ice moon, a binary star flaring the
                 lens — banking gently as it goes
-     arrival    a cyan star swells ahead, the bars open, the name lands like an
+     arrival    a cyan star swells ahead, the name lands like an
                 end card, and the light hands over to the hero, whose star
                 ignites and flings its planets out (see solar-system)
 
@@ -23,10 +23,11 @@ import { grainTile, paintGalaxy, paintNebula, paintPlanet, paintRing, paintRock 
    real sphere, lit with a soft terminator — a few rows per frame while the
    opening plays, so nothing hitches. Everything holds an x, y, z, is projected
    through x/z and rolled for the bank. Title cards write themselves in letter
-   by letter; cards, bars and the readout are driven from the frame loop.
+   by letter; the cards are driven from the frame loop.
 
-   Once per browser session, skippable by any key, wheel or tap, or the Skip
-   button. The end is on a timer, so a throttled tab still gets the site. */
+   Once per browser session, with no controls on screen; any key, wheel or tap
+   still skips it. The end is on a timer, so a throttled tab still gets the
+   site. */
 
 const FILM_MS = 11600;
 const FADE_MS = 700;
@@ -72,13 +73,8 @@ function cruise(t: number) {
 export function Preloader() {
   const [phase, setPhase] = useState<"idle" | "film" | "exit" | "gone">("idle");
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pctRef = useRef<HTMLSpanElement>(null);
-  const barRef = useRef<HTMLDivElement>(null);
-  const topBar = useRef<HTMLDivElement>(null);
-  const bottomBar = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLParagraphElement>(null);
   const creditRef = useRef<HTMLDivElement>(null);
-  const finishRef = useRef<() => void>(() => {});
 
   useScrollLock(phase === "film");
 
@@ -109,7 +105,6 @@ export function Preloader() {
       bootTimer = setTimeout(() => window.dispatchEvent(new CustomEvent("boot-complete")), FADE_MS * 0.45);
       goneTimer = setTimeout(() => setPhase("gone"), FADE_MS + 80);
     };
-    finishRef.current = finish;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const toEnd = setTimeout(finish, reduced ? 1200 : FILM_MS);
 
@@ -252,14 +247,16 @@ export function Preloader() {
     let last = start;
     let travelled = 0;
 
-    /** camera: depth projection, then the bank, then the shake */
+    /** camera: where it is (it drifts), depth projection, the bank, the shake */
     let roll = 0;
     let shakeX = 0;
     let shakeY = 0;
+    let camX = 0;
+    let camY = 0;
     const project = (x: number, y: number, z: number) => {
       const k = FOV / z;
-      const sx = x * k;
-      const sy = y * k;
+      const sx = (x - camX) * k;
+      const sy = (y - camY) * k;
       const c = Math.cos(roll);
       const s = Math.sin(roll);
       return { x: cx + sx * c - sy * s + shakeX, y: cy + sx * s + sy * c + shakeY, k };
@@ -389,14 +386,7 @@ export function Preloader() {
       const speed = cruise(t) * dt;
       travelled += speed;
 
-      // ── readout, bars, cards, credits ──
-      const shown = clamp01(t / FILM_MS);
-      if (pctRef.current) pctRef.current.textContent = String(Math.round(smooth(shown) * 100));
-      if (barRef.current) barRef.current.style.transform = `scaleX(${smooth(shown)})`;
-      const bars = 1 - clamp01((t - T.approach - 300) / 700);
-      const barH = `${Math.min(1, t / 600) * bars * 11}vh`;
-      if (topBar.current) topBar.current.style.height = barH;
-      if (bottomBar.current) bottomBar.current.style.height = barH;
+      // ── cards, credits ──
       setCard(t);
       if (creditRef.current) {
         const c = clamp01((t - T.approach - 250) / 600) * (1 - clamp01((t - FILM_MS + 380) / 320));
@@ -407,6 +397,15 @@ export function Preloader() {
 
       // ── camera ──
       roll = t > T.voyage ? Math.sin((t - T.voyage) * 0.0006) * 0.12 : 0;
+      // the path drifts in a slow curve rather than running on rails, so the
+      // near rocks and planets slide across the far ones (parallax), and it
+      // eases back to centre as the destination comes in
+      {
+        const tv = Math.max(0, t - T.bang);
+        const settle = 1 - clamp01((t - T.approach + 600) / 1500);
+        camX = (Math.sin(tv * 0.00042) * 0.12 + Math.sin(tv * 0.0011) * 0.02) * spread * settle;
+        camY = Math.sin(tv * 0.0003 + 1.2) * 0.045 * spread * settle;
+      }
       const shake = t > T.bang ? 22 * Math.exp(-(t - T.bang) / 320) : t > T.ignite ? ((t - T.ignite) / (T.bang - T.ignite)) * 4 : 0;
       shakeX = (Math.random() - 0.5) * shake;
       shakeY = (Math.random() - 0.5) * shake;
@@ -446,13 +445,18 @@ export function Preloader() {
           ctx.globalAlpha = c.alpha * born * clamp01((c.z + 500 - z) / 900) * Math.min(1, z / 260);
           ctx.drawImage(img, p.x - rr, p.y - rr, rr * 2, rr * 2);
         }
-        // a spiral galaxy at infinity: it barely moves, only turns, and banks with the camera
+        // a spiral galaxy far off: it turns on its own axis, drifts slowly out
+        // toward the edge of frame as the camera travels past, and grows a
+        // little as it nears, the way very distant things do
         if (tex.galaxy) {
-          const gs = Math.min(w, h) * 0.36;
+          const v = clamp01((t - T.bang) / (FILM_MS - T.bang));
+          const gs = Math.min(w, h) * (0.3 + v * 0.14);
           ctx.save();
-          ctx.translate(cx - w * 0.26 + shakeX, cy - h * 0.2 + shakeY);
+          ctx.translate(cx - w * (0.2 + v * 0.16) + shakeX, cy - h * (0.14 + v * 0.12) + shakeY);
           ctx.rotate(roll - 0.35);
-          ctx.globalAlpha = 0.75 * born;
+          ctx.scale(1, 0.42);
+          ctx.rotate((t - T.bang) * 0.00018);
+          ctx.globalAlpha = 0.75 * born * (1 - clamp01((t - T.approach) / 900));
           ctx.drawImage(tex.galaxy, -gs / 2, -gs / 2, gs, gs);
           ctx.restore();
         }
@@ -610,31 +614,39 @@ export function Preloader() {
           s.px = x;
           s.py = y;
         }
-        // shockwaves, each split into colour like light through a lens
-        for (const [delay, speedPx, width] of [
-          [0, 1.9, 6],
-          [140, 1.35, 4],
-          [320, 0.95, 3],
+        // shockwaves: soft glowing fronts, each split into colour like light
+        // through a lens (cyan inside, rose outside), squashed a touch so
+        // the blast reads as a disc seen at an angle
+        ctx.save();
+        ctx.translate(cx + shakeX, cy + shakeY);
+        ctx.scale(1, 0.86);
+        for (const [delay, speedPx, band] of [
+          [0, 1.9, 34],
+          [140, 1.35, 26],
+          [320, 0.95, 20],
         ] as const) {
           const a2 = age - delay;
           if (a2 < 0) continue;
           const rr = a2 * speedPx;
-          const fade = Math.max(0, 1 - a2 / 1300);
+          const fade = Math.max(0, 1 - a2 / 1300) ** 1.4;
           if (fade <= 0) continue;
-          for (const [off, col] of [
-            [-4, CYAN],
-            [0, WHITE],
-            [4, ROSE],
+          const wide = band * (0.6 + a2 / 900);
+          for (const [off, col, strength] of [
+            [-wide * 0.35, CYAN, 0.22],
+            [0, WHITE, 0.27],
+            [wide * 0.35, ROSE, 0.2],
           ] as const) {
-            ctx.strokeStyle = rgba(col, fade * 0.55);
-            ctx.lineWidth = width * fade + 0.5;
-            ctx.beginPath();
-            // the inner (cyan) edge starts inside the centre; a negative radius throws
-            const ring = Math.max(0.5, rr + off);
-            ctx.ellipse(cx + shakeX, cy + shakeY, ring, ring * 0.86, 0, 0, Math.PI * 2);
-            ctx.stroke();
+            const mid = rr + off;
+            const inner = Math.max(0, mid - wide);
+            const g = ctx.createRadialGradient(0, 0, inner, 0, 0, mid + wide);
+            g.addColorStop(0, rgba(col, 0));
+            g.addColorStop(clamp01((mid - inner) / (mid + wide - inner)), rgba(col, strength * fade));
+            g.addColorStop(1, rgba(col, 0));
+            ctx.fillStyle = g;
+            ctx.fillRect(-(mid + wide), -(mid + wide), (mid + wide) * 2, (mid + wide) * 2);
           }
         }
+        ctx.restore();
         ctx.globalCompositeOperation = "source-over";
         // the white-out
         const flash = Math.max(0, 1 - age / 520);
@@ -700,10 +712,6 @@ export function Preloader() {
     >
       <canvas ref={canvasRef} aria-hidden className="absolute inset-0 size-full" />
 
-      {/* letterbox: the film is framed, then the frame opens on arrival */}
-      <div ref={topBar} aria-hidden className="absolute inset-x-0 top-0 h-0 bg-black" />
-      <div ref={bottomBar} aria-hidden className="absolute inset-x-0 bottom-0 h-0 bg-black" />
-
       {/* title cards, written in letter by letter */}
       <p
         ref={cardRef}
@@ -721,23 +729,6 @@ export function Preloader() {
           Asad Shah
         </p>
         <p className="mt-3 font-sans text-[11px] uppercase tracking-[0.5em] text-white/80">Full-stack developer</p>
-      </div>
-
-      {/* the only controls: skip, and how far through the film you are */}
-      <div className="absolute bottom-[calc(11vh+1rem)] right-5 flex items-center gap-3 sm:right-8">
-        <span className="font-sans text-[11px] tabular-nums text-white/60">
-          <span ref={pctRef}>0</span>%
-        </span>
-        <button
-          type="button"
-          onClick={() => finishRef.current()}
-          className="whitespace-nowrap rounded-full border border-white/20 bg-black/40 px-4 py-2 font-sans text-[11px] text-white/75 backdrop-blur-sm transition-colors hover:border-accent hover:text-accent"
-        >
-          Skip intro
-        </button>
-      </div>
-      <div className="absolute inset-x-0 bottom-0 h-px bg-white/10">
-        <div ref={barRef} className="h-full origin-left scale-x-0 bg-accent shadow-[0_0_10px_var(--ring)]" />
       </div>
     </div>
   );
