@@ -4,8 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { contact, projects, skillGroups, stackList } from "@/lib/data";
 import { ConsolePanel } from "./console-panel";
+import { ChevronRight, ArrowUpDown } from "lucide-react";
 
-type Line = { type: "input" | "output" | "accent"; text: string };
+/** label: a key column (a slug, a skill domain) whose value wraps under itself */
+type Line = { type: "input" | "output" | "accent"; text: string; label?: string };
 
 const WELCOME: Line[] = [
   { type: "accent", text: "asad-os v3.0.0 — orbital shell" },
@@ -106,13 +108,13 @@ export function Terminal() {
           out.push(
             { type: "accent", text: "asad shah — full-stack developer · lahore, pk" },
             { type: "output", text: "web · mobile (flutter/rn) · desktop (electron) · cloud · ai" },
-            { type: "output", text: "3+ years shipping production AI SaaS, blank repo → live users." },
+            { type: "output", text: "3+ years shipping production AI SaaS, blank repo to live users." },
           );
           break;
         case "projects":
         case "ls":
           projects.forEach((p) =>
-            out.push({ type: "output", text: `${p.slug.padEnd(14)} ${p.tagline}` }),
+            out.push({ type: "output", label: p.slug, text: p.tagline }),
           );
           out.push({ type: "accent", text: `hint: open ${projects[0].slug}` });
           break;
@@ -134,10 +136,7 @@ export function Terminal() {
           break;
         case "skills":
           skillGroups.forEach((g) =>
-            out.push({
-              type: "output",
-              text: `${g.dir.padEnd(18)}${g.skills.join(", ")}`,
-            }),
+            out.push({ type: "output", label: g.dir, text: g.skills.join(", ") }),
           );
           out.push({ type: "accent", text: "full matrix at /#capabilities" });
           break;
@@ -271,7 +270,7 @@ export function Terminal() {
                 onClick={() => run(cmd)}
                 className="flex items-center gap-1.5 rounded-sm border border-accent/25 bg-accent/[0.07] px-2.5 py-1 font-mono text-xs text-accent/80 transition-colors hover:border-accent/70 hover:bg-accent/15 hover:text-accent"
               >
-                <span className="text-accent/45">▸</span>
+                <ChevronRight aria-hidden className="size-3 text-accent/45" />
                 {cmd}
               </button>
             ))}
@@ -287,7 +286,7 @@ export function Terminal() {
             <span className="hidden tabular-nums sm:inline">
               {String(lines.length).padStart(3, "0")} lines
             </span>
-            <span className="ml-auto normal-case tracking-normal">↑↓ history · type help</span>
+            <span className="ml-auto flex items-center gap-1.5 normal-case tracking-normal"><ArrowUpDown aria-hidden className="size-3" /> history · type help</span>
           </div>
         </>
       }
@@ -306,13 +305,20 @@ export function Terminal() {
               l.type === "accent" ? "text-accent" : l.type === "input" ? "text-fg" : "text-muted"
             }
           >
-            {l.type === "input" && <span className="mr-2 text-accent">❯</span>}
-            <span className="whitespace-pre-wrap">{l.text}</span>
+            {l.type === "input" && <ChevronRight aria-hidden className="mr-1.5 inline size-3.5 align-[-2px] text-accent" />}
+            {l.label ? (
+              <span className="grid grid-cols-[18ch_minmax(0,1fr)] gap-x-2">
+                <span className="text-fg/80">{l.label}</span>
+                <span>{l.text}</span>
+              </span>
+            ) : (
+              <span className="whitespace-pre-wrap">{l.text}</span>
+            )}
           </div>
         ))}
 
         <div className="flex items-center pt-1">
-          <span className="mr-2 text-accent">❯</span>
+          <ChevronRight aria-hidden className="mr-1.5 size-3.5 shrink-0 text-accent" />
           <input
             ref={inputRef}
             value={value}

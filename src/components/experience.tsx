@@ -1,67 +1,163 @@
-import { experience } from "@/lib/data";
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { experience, projects, type Experience as Role } from "@/lib/data";
 import { Reveal } from "./reveal";
 import { SectionHeading } from "./section-heading";
+import { TechIcon } from "./tech-icon";
 
-/* Mission log: one continuous spine with a node per posting, read top-down as
-   a transmission history rather than a CV table. */
+/* ── Experience ─────────────────────────────────────────────────────────────
+   One card per role, newest first, in a single column that scrolls like the
+   rest of the page; each card rises in as it arrives.
+
+   Every card has the same parts in the same places, in its company's colour:
+   who and when, a one-line summary and the stack on the left; three lines on
+   what I did (their numbers lit) and what was built there on the right, each
+   on one line, with the year the role began standing large in the corner. */
+
 export function Experience() {
   return (
-    <section id="experience" className="mx-auto max-w-shell scroll-mt-24 px-6 py-24 sm:py-32">
-      <SectionHeading index="03" title="Mission Log" hint="$ git log --career" />
+    <section id="experience" className="mx-auto max-w-shell scroll-mt-24 px-6 pt-16 sm:pt-24">
+      <SectionHeading index="03" label="Experience" title="Where I've" accent="shipped." />
 
-      <div className="mb-12 flex items-center gap-3 font-mono text-[11px] uppercase tracking-widest text-muted/90">
-        <span className="term-green">◆ transmission archive</span>
-        <span className="h-px flex-1 bg-line" />
-        <span>{experience.length} postings</span>
-      </div>
-
-      <div className="relative">
-        {/* the spine — fades out at the bottom so the log reads as ongoing */}
-        <div
-          aria-hidden
-          className="absolute bottom-0 left-[7px] top-2 w-px bg-[linear-gradient(180deg,var(--accent),color-mix(in_oklab,var(--accent)_35%,transparent)_65%,transparent)] sm:left-[calc(14rem+7px)]"
-        />
-
-        <div className="flex flex-col">
-          {experience.map((e, i) => (
-            <Reveal key={e.company} delay={i * 0.06}>
-              <div className="grid gap-4 py-10 pl-9 sm:grid-cols-[14rem_1fr] sm:gap-10 sm:pl-0">
-                <div className="relative font-mono text-xs leading-relaxed text-muted sm:pr-9 sm:text-right">
-                  {/* node */}
-                  <span
-                    aria-hidden
-                    className="absolute -left-9 top-1 flex size-[15px] items-center justify-center sm:left-auto sm:right-0 sm:translate-x-1/2"
-                  >
-                    <span className="absolute size-[15px] rounded-full border border-accent/45" />
-                    <span className="size-[7px] rounded-full bg-accent shadow-[0_0_12px_2px_var(--ring)]" />
-                  </span>
-                  <p className="text-accent">{e.period}</p>
-                  <p className="mt-1">{e.location}</p>
-                </div>
-
-                <div className="rounded-xl border border-line bg-bg/40 p-6 backdrop-blur-sm transition-colors duration-300 hover:border-accent/45">
-                  <h3 className="font-sans text-2xl font-bold tracking-tight">
-                    {e.company}
-                    <span className="ml-3 font-mono text-sm font-normal text-muted">
-                      {e.role}
-                    </span>
-                  </h3>
-                  {e.bullets.length > 0 && (
-                    <ul className="mt-4 space-y-2.5">
-                      {e.bullets.map((b, j) => (
-                        <li key={j} className="flex gap-3 text-sm leading-relaxed text-muted">
-                          <span className="mt-0.5 font-mono text-xs text-accent">▸</span>
-                          {b}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
+      <div className="space-y-5">
+        {experience.map((e) => (
+          <Reveal key={e.company} delay={0.05}>
+            <Card role={e} />
+          </Reveal>
+        ))}
       </div>
     </section>
+  );
+}
+
+/** Set a line's numbers in the company's colour, so each one reads at a glance. */
+function Figures({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(~?\d+(?:\.\d+)?%?)/).map((part, k) =>
+        k % 2 ? (
+          <span key={k} className="font-semibold text-[color-mix(in_oklab,var(--co)_55%,white)]">
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
+function Card({ role: e }: { role: Role }) {
+  const current = e.period.includes("present");
+  const year = e.period.match(/\d{4}/)?.[0] ?? "";
+  const built = e.projects.map((slug) => projects.find((p) => p.slug === slug)).filter((p) => p !== undefined);
+  const initials = e.company.replace(/[^A-Z]/g, "").slice(0, 2) || e.company[0];
+  // everything built here, linked where there is a case study
+  const names = [
+    ...built.map((p) => ({ title: p.title, href: `/work/${p.slug}` })),
+    ...(e.internal ?? []).map((t) => ({ title: t, href: "" })),
+  ];
+
+  return (
+    <article
+      style={{ ["--co" as string]: e.accent }}
+      className="xp-card relative overflow-hidden rounded-[1.75rem] border border-white/10 p-6 sm:p-9"
+    >
+      {/* the company's light, and the year behind everything */}
+      <span aria-hidden className="xp-glow pointer-events-none absolute inset-0" />
+      <span
+        aria-hidden
+        className="xp-year pointer-events-none absolute -bottom-5 right-2 select-none font-sans text-[clamp(4.5rem,9vw,8rem)] font-bold leading-none tracking-[-0.06em]"
+      >
+        {year}
+      </span>
+
+      <div className="relative grid gap-8 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] xl:gap-12">
+        {/* who, when, and with what */}
+        <div className="flex min-w-0 flex-col">
+          <div className="flex items-center gap-4">
+            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-black/30 shadow-[0_0_18px_-8px_var(--co)] backdrop-blur-sm">
+              {e.logo ? (
+                <Image src={e.logo} alt="" width={36} height={36} unoptimized className="size-9 object-contain" />
+              ) : (
+                <span className="text-2xl font-semibold tracking-tight">{initials}</span>
+              )}
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-sans text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">{e.company}</h3>
+              <p className="mt-0.5 text-[14px] text-fg/75">
+                {e.role} <span className="text-muted">· {e.location}</span>
+              </p>
+            </div>
+          </div>
+
+          <span className="mt-5 flex w-fit items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-1 font-sans text-[11.5px] text-fg/85 backdrop-blur-sm">
+            <span className="relative flex size-1.5">
+              {current && <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--co)] opacity-70" />}
+              <span className={`relative inline-flex size-1.5 rounded-full ${current ? "bg-[var(--co)]" : "bg-muted"}`} />
+            </span>
+            {e.period}
+          </span>
+
+          <p className="mt-5 max-w-md text-[16px] leading-relaxed text-fg/80">{e.summary}</p>
+
+          <div className="mt-auto pt-6">
+            <p className="font-sans text-[10.5px] uppercase tracking-[0.2em] text-muted">Stack</p>
+            {/* one row on any screen wide enough for it */}
+            <ul className="mt-2.5 flex flex-wrap gap-1 sm:flex-nowrap">
+              {e.stack.map((t) => (
+                <li
+                  key={t}
+                  className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-white/10 bg-black/30 px-2 py-1 text-[11.5px] text-fg/80"
+                >
+                  <TechIcon name={t} size={12} />
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* what I did, and what came of it */}
+        <div className="flex min-w-0 flex-col">
+          <ul className="space-y-4">
+            {e.bullets.map((b, j) => (
+              <li key={j} className="flex gap-3 text-[15px] leading-relaxed text-fg/75">
+                <span aria-hidden className="mt-2.5 h-px w-4 shrink-0 bg-[var(--co)]" />
+                <span>
+                  <Figures text={b} />
+                </span>
+              </li>
+            ))}
+            {/* what was built here, as a fourth line: the first two by name */}
+            <li className="flex gap-3 text-[15px] leading-relaxed text-fg/75">
+              <span aria-hidden className="w-4 shrink-0" />
+              <span className="min-w-0 truncate">
+                <span className="mr-2.5 font-sans text-[10.5px] uppercase tracking-[0.18em] text-muted">Built here</span>
+                {names.slice(0, 2).map((x, k) => (
+                  <span key={x.title}>
+                    {k > 0 && <span className="mx-1.5 text-muted/50">·</span>}
+                    {x.href ? (
+                      <Link href={x.href} className="text-fg/80 transition-colors duration-300 hover:text-[var(--co)]">
+                        {x.title}
+                      </Link>
+                    ) : (
+                      <span className="text-fg/80">{x.title}</span>
+                    )}
+                  </span>
+                ))}
+                {names.length > 2 && (
+                  <span className="ml-2 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 font-sans text-[10.5px] text-muted">
+                    +{names.length - 2}
+                  </span>
+                )}
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </article>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { siteUrl } from "@/lib/site";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { Terminal } from "@/components/terminal";
@@ -10,15 +11,19 @@ import { Starfield } from "@/components/space/starfield";
 import { CommandPalette } from "@/components/command-palette";
 import { MatrixRain } from "@/components/matrix-rain";
 import { ConsoleEgg } from "@/components/console-egg";
-import { StatusBar } from "@/components/status-bar";
+import { SkyDimmer } from "@/components/sky-dimmer";
+import { Companion } from "@/components/companion";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space",
+/* One face: Geist carries everything, headlines, labels and text alike, with
+   accent words picked out in colour rather than a second typeface. Geist Mono,
+   from the same family, is kept for code. */
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
 });
 
-const jetBrainsMono = JetBrains_Mono({
-  variable: "--font-jet",
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -53,9 +58,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${jetBrainsMono.variable} h-full antialiased`}
+      // the boot-flag script below may add data-booted before React hydrates
+      suppressHydrationWarning
+      className={`${geist.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        {/* Runs before first paint: a visitor who has already seen the intro
+            this session must not get even a frame of its cover. */}
+        <Script id="boot-flag" strategy="beforeInteractive">
+          {"try{if(sessionStorage.getItem('booted')==='1')document.documentElement.setAttribute('data-booted','')}catch(e){}"}
+        </Script>
         {/* First stop for a keyboard or screen reader: the page opens with a
             fixed header and a WebGL hero, so without this the way to the
             content is through all of it. Parked off-screen with a translate
@@ -64,7 +76,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             measured, with no reset to lose. */}
         <a
           href="#main"
-          className="fixed left-4 top-4 z-[200] -translate-y-24 rounded-sm border border-accent bg-bg px-4 py-2 font-mono text-xs text-accent transition-transform duration-200 focus:translate-y-0"
+          className="fixed left-4 top-4 z-[200] -translate-y-24 rounded-sm border border-accent bg-bg px-4 py-2 font-sans text-xs text-accent transition-transform duration-200 focus:translate-y-0"
         >
           skip to content
         </a>
@@ -77,12 +89,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div aria-hidden className="nebula pointer-events-none fixed inset-0 z-0">
           <Starfield />
         </div>
-        <main id="main" tabIndex={-1} className="relative z-10 flex-1 outline-none">{children}</main>
+        <main id="main" tabIndex={-1} className="relative flex-1 outline-none">{children}</main>
         <Terminal />
         <CommandPalette />
         <MatrixRain />
         <ConsoleEgg />
-        <StatusBar />
+        <SkyDimmer />
+        <Companion />
       </body>
     </html>
   );

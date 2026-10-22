@@ -1,5 +1,6 @@
 import { contact } from "@/lib/data";
 import { getYearContributions, type ContributionDay } from "@/lib/github";
+import { ArrowUpRight } from "lucide-react";
 
 /* A single calendar year, 1 January to 31 December, drawn here rather than
    pulled in as a third-party image — which fixed the chart to a rolling
@@ -14,10 +15,10 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 const LEVEL_CLASS = [
   "bg-[color-mix(in_oklab,var(--fg)_9%,transparent)]",
-  "bg-[color-mix(in_oklab,var(--green)_28%,transparent)]",
-  "bg-[color-mix(in_oklab,var(--green)_50%,transparent)]",
-  "bg-[color-mix(in_oklab,var(--green)_74%,transparent)]",
-  "bg-[var(--green)]",
+  "bg-[color-mix(in_oklab,var(--accent)_28%,transparent)]",
+  "bg-[color-mix(in_oklab,var(--accent)_50%,transparent)]",
+  "bg-[color-mix(in_oklab,var(--accent)_74%,transparent)]",
+  "bg-[var(--accent)]",
 ] as const;
 
 function iso(d: Date) {
@@ -59,77 +60,93 @@ export async function GithubGraph() {
     monthAt.push(label);
   }
 
+  /* The figures worth a glance before the grid itself: the busiest day and
+     the longest unbroken run, both read straight off the same data. */
+  const best = data.days.reduce((m, d) => (d.count > m.count ? d : m), data.days[0] ?? { count: 0, date: "" });
+  let streak = 0;
+  let run = 0;
+  for (const d of [...data.days].sort((a, b) => a.date.localeCompare(b.date))) {
+    run = d.count > 0 ? run + 1 : 0;
+    streak = Math.max(streak, run);
+  }
+  const login = contact.github.split("/").pop();
+
   return (
-    <div className="mt-20 overflow-hidden rounded-2xl border border-line">
-      <div className="flex items-center justify-between gap-4 border-b border-line bg-card px-4 py-2.5 font-mono text-xs text-muted">
-        <span className="truncate">
-          <span className="term-green">$</span> git log --author=
-          {contact.github.split("/").pop()} --since=&quot;{year}-01-01&quot;
-        </span>
-        <a
-          href={contact.github}
-          target="_blank"
-          rel="noreferrer"
-          className="shrink-0 transition-colors hover:text-accent"
-        >
-          {contact.github.replace("https://", "")} ↗
-        </a>
+    <div className="mt-20 overflow-hidden rounded-3xl border border-line bg-card backdrop-blur-sm">
+      <div className="flex flex-wrap items-end justify-between gap-6 border-b border-line p-6 sm:p-8">
+        <div>
+          <p className="font-sans text-[11px] uppercase tracking-[0.22em] text-muted">GitHub activity · {year}</p>
+          <p className="mt-2 font-sans text-4xl font-semibold tracking-tight text-fg">
+            {data.total.toLocaleString()}{" "}
+            <span className="text-accent">contributions</span>
+          </p>
+        </div>
+        <dl className="flex flex-wrap gap-x-10 gap-y-3">
+          {[
+            [`${streak} days`, "longest streak"],
+            [`${best.count}`, "busiest day"],
+          ].map(([v, k]) => (
+            <div key={k}>
+              <dt className="sr-only">{k}</dt>
+              <dd className="text-xl font-semibold tracking-tight text-fg">{v}</dd>
+              <dd className="font-sans text-[11px] text-muted">{k}</dd>
+            </div>
+          ))}
+          <a
+            href={contact.github}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 self-center rounded-full border border-line px-4 py-2 font-sans text-xs text-muted transition-colors hover:border-accent hover:text-accent"
+          >
+            @{login} <ArrowUpRight aria-hidden className="size-3.5" />
+          </a>
+        </dl>
       </div>
 
-      <div className="overflow-x-auto p-5">
-        <div className="mx-auto w-max">
-          <div className="flex items-baseline justify-between gap-6 pb-3 font-mono text-xs">
-            <span className="text-fg">
-              {data.total.toLocaleString()}{" "}
-              <span className="text-muted">contributions in {year}</span>
-            </span>
-            <span className="text-muted/80">Jan 1 — Dec 31</span>
-          </div>
-
-          <div className="flex gap-1.5">
-            {/* weekday gutter — every other row, as GitHub labels it */}
+      {/* Columns share the width, so the year fills the card at any size; on
+          a phone it keeps a floor and scrolls sideways instead of shrinking
+          the squares to specks. */}
+      <div className="overflow-x-auto p-6 sm:p-8">
+        <div className="min-w-[46rem]">
+          <div className="flex gap-2">
             <div
               aria-hidden
-              className="grid shrink-0 grid-rows-7 gap-[3px] pr-1 font-mono text-[10px] leading-[11px] text-muted/80"
+              className="grid shrink-0 grid-rows-[1rem_repeat(7,minmax(0,1fr))] gap-[3px] font-sans text-[10px] text-muted/80"
             >
-              {["", "Mon", "", "Wed", "", "Fri", ""].map((d, i) => (
-                <span key={i} className="h-[11px]">
+              {["", "", "Mon", "", "Wed", "", "Fri", ""].map((d, i) => (
+                <span key={i} className="flex items-center">
                   {d}
                 </span>
               ))}
             </div>
 
-            <div>
-              <div aria-hidden className="mb-1 flex gap-[3px] font-mono text-[10px] text-muted/80">
-                {monthAt.map((m, i) => (
-                  <span key={i} className="w-[11px] shrink-0 whitespace-nowrap">
-                    {m}
+            <div
+              className="grid flex-1 gap-[3px]"
+              style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}
+            >
+              {weeks.map((week, wi) => (
+                <div key={wi} className="grid grid-rows-[1rem_repeat(7,minmax(0,1fr))] gap-[3px]">
+                  <span aria-hidden className="h-4 overflow-visible whitespace-nowrap font-sans text-[10px] text-muted/80">
+                    {monthAt[wi]}
                   </span>
-                ))}
-              </div>
-
-              <div className="flex gap-[3px]">
-                {weeks.map((week, wi) => (
-                  <div key={wi} className="grid grid-rows-7 gap-[3px]">
-                    {week.map((day, di) =>
-                      day ? (
-                        <span
-                          key={di}
-                          title={`${day.count} on ${day.date}`}
-                          className={`size-[11px] rounded-[2px] ${LEVEL_CLASS[day.level]}`}
-                        />
-                      ) : (
-                        // outside the year: holds the grid square, paints nothing
-                        <span key={di} className="size-[11px]" />
-                      ),
-                    )}
-                  </div>
-                ))}
-              </div>
+                  {week.map((day, di) =>
+                    day ? (
+                      <span
+                        key={di}
+                        title={`${day.count} on ${day.date}`}
+                        className={`aspect-square w-full rounded-[3px] ${LEVEL_CLASS[day.level]}`}
+                      />
+                    ) : (
+                      // outside the year: holds the grid square, paints nothing
+                      <span key={di} className="aspect-square w-full" />
+                    ),
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-end gap-1.5 font-mono text-[10px] text-muted/80">
+          <div className="mt-4 flex items-center justify-end gap-1.5 font-sans text-[10px] text-muted/80">
             <span>Less</span>
             {LEVEL_CLASS.map((c, i) => (
               <span key={i} className={`size-[11px] rounded-[2px] ${c}`} />

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { projects } from "@/lib/data";
+import { Crosshair } from "lucide-react";
 
 /* ── route change: approach ─────────────────────────────────────────────────
    You fall through a field of dust toward a star that grows as you close on
@@ -25,8 +26,8 @@ import { projects } from "@/lib/data";
    field is decoration: if that loop never runs, the curtain still lifts on
    its timer. */
 
-const HOLD_MS = 1350;
-const FADE_MS = 500;
+const HOLD_MS = 760;
+const FADE_MS = 380;
 const TOTAL_MS = HOLD_MS + FADE_MS;
 
 const MOTES = 620;
@@ -54,7 +55,7 @@ function destination(pathname: string) {
       body: true,
     };
   }
-  return { name: "asad", sub: "home", body: false };
+  return { name: "Asad Shah", sub: "home", body: false };
 }
 
 export default function Template({ children }: { children: React.ReactNode }) {
@@ -72,6 +73,11 @@ export default function Template({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* The first page of a visit is covered by the intro loader (or, for a
+   returning visitor, by nothing at all); the veil is for travelling between
+   pages. Module state, so it survives the per-path remount below. */
+let navigated = false;
+
 function RouteVeil({
   pathname,
   children,
@@ -79,12 +85,19 @@ function RouteVeil({
   pathname: string;
   children: React.ReactNode;
 }) {
-  const [lifting, setLifting] = useState(false);
-  const [gone, setGone] = useState(false);
+  // the initial load renders no veil at all, on the server and on hydration
+  const [initial] = useState(() => !navigated);
+  const [lifting, setLifting] = useState(initial);
+  const [gone, setGone] = useState(initial);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { name, sub, body } = destination(pathname);
 
   useEffect(() => {
+    if (initial) {
+      navigated = true;
+      window.dispatchEvent(new CustomEvent("route-revealed"));
+      return;
+    }
     const lift = setTimeout(() => {
       setLifting(true);
       // the hero holds its entrance until the veil is actually out of the way,
@@ -196,7 +209,7 @@ function RouteVeil({
       clearTimeout(lift);
       clearTimeout(clear);
     };
-  }, [pathname]);
+  }, [pathname, initial]);
 
   return (
     <>
@@ -246,12 +259,12 @@ function RouteVeil({
             <p className="font-sans text-2xl font-bold tracking-tight text-fg drop-shadow-[0_0_18px_var(--ring)] sm:text-3xl">
               {name}
             </p>
-            <p className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.3em] text-fg/60">
+            <p className="mt-1.5 font-sans text-[11px] uppercase tracking-[0.3em] text-fg/60">
               {sub}
             </p>
             {body && (
-              <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.3em] text-accent/80">
-                ◆ lock acquired
+              <p className="mt-4 font-sans text-[11px] uppercase tracking-[0.3em] text-accent/80">
+                <Crosshair aria-hidden className="mr-1.5 inline size-3 align-[-1px]" />lock acquired
               </p>
             )}
           </div>

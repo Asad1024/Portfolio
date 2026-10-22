@@ -1,395 +1,302 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { projects, showcase } from "@/lib/data";
 import { Reveal } from "./reveal";
 import { SectionHeading } from "./section-heading";
 import { ProjectVisual } from "./work-preview";
 import { TechIcon } from "./tech-icon";
 
-/* ── Selected Work, as a console ────────────────────────────────────────────
-   A manifest of every project on the left, one large viewport on the right
-   that swaps as you move down the list.
+/* ── Selected Work, as a showcase ───────────────────────────────────────────
+   One stage and a programme. The stage holds the project in front: its
+   screen edge to edge at its own proportions, a soft light following the
+   pointer across it, lit in the project's own colour, with its story and
+   numbers beneath. Each project wipes in over the last behind a line of
+   light. The programme beside it lists every project, nine rows to the
+   stage's height and the rest a scroll (or the button under it) away; the
+   one on stage runs a line of light, and when the line fills the next
+   project turns onto the stage. Pointing at the stage pauses it, and
+   choosing a project puts it on stage at once.
 
-   This replaces a three-up grid of screenshot cards, which had two problems
-   no amount of styling fixed. The screenshots are 1917px desktop captures and
-   a grid renders them around 350px wide — a five-fold downscale that turns
-   every UI into unreadable mush, so the image argued nothing. And twelve
-   equal-weight cards is a wall: nothing leads, nothing is scannable, and you
-   read none of it.
+   It is one screen tall and never takes over the page's scroll. */
 
-   One viewport at roughly three times the width fixes the first. A dense
-   left-hand list fixes the second — all twelve legible at once, and the one
-   you are pointing at is the one shown large. */
+/** Each project's own light, taken from its interface. */
+const TINT: Record<string, string> = {
+  "video-funnels": "#e879f9",
+  leadgen: "#14b8a6",
+  "matching-app": "#fb7185",
+  "avatar-studio": "#c084fc",
+  ghertak: "#328fb8",
+  insyncx: "#a78bfa",
+  "outbound-copilot": "#fb923c",
+  sparkcue: "#38bdf8",
+  "voice-agents": "#a3e635",
+  "booking-platform": "#818cf8",
+  "sales-crm": "#f43f5e",
+  siteharvest: "#3b82f6",
+  codevault: "#22c55e",
+  mailforge: "#f59e0b",
+};
 
-const FILTERS = ["all", "web", "desktop", "ai", "cloud"] as const;
+/** how long each project holds the stage, in seconds */
+const HOLD = 10;
 
-/** How long the pointer has to rest on a row before the viewport follows it.
- *  Long enough that sweeping across the list toward the viewport doesn't
- *  cycle through everything on the way; short enough to still feel instant. */
-const HOVER_INTENT_MS = 120;
-/** Quiet period after the last scroll or wheel event before hover counts
- *  again. Long enough to cover Lenis easing out after the final wheel tick. */
-const SCROLL_SETTLE_MS = 300;
-/** How far the pointer must move after a scroll before hover counts again. */
-const MIN_TRAVEL_PX = 10;
-/** Matches the fade-in keyframe, so the outgoing shot is dropped only once
- *  the incoming one fully covers it. */
-const CROSSFADE_MS = 450;
-
-/** Catalogue code for a project, e.g. sparkcue 01 -> SPR-01. Consonants first
- *  so the letters stay distinctive: SPR reads better than SPA. */
-function designation(slug: string, index: string) {
-  const letters = slug.replace(/[^a-z]/gi, "").toUpperCase();
-  const consonants = letters.replace(/[AEIOU]/g, "");
-  return `${(consonants + letters).slice(0, 3)}-${index}`;
-}
-
-/* The showcase projects lead, in their chosen order; everything else follows
-   in catalogue order behind "explore more". */
-const ordered = [
+/** the showcase first, then the rest, those with real screenshots ahead */
+const all = [
   ...showcase.flatMap((slug) => projects.filter((p) => p.slug === slug)),
-  ...projects.filter((p) => !showcase.includes(p.slug)),
+  ...projects.filter((p) => !showcase.includes(p.slug)).sort((a, b) => Number(!!b.image) - Number(!!a.image)),
 ];
+/** how many rows the list shows at the stage's height */
+const VISIBLE = 9;
+const ease = [0.2, 0.7, 0.2, 1] as const;
 
 export function Work() {
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
-  const [expanded, setExpanded] = useState(false);
-  const [activeSlug, setActiveSlug] = useState(ordered[0].slug);
-
-  const shown = useMemo(
-    () => ordered.filter((p) => filter === "all" || p.tags.includes(filter)),
-    [filter],
-  );
-
-  /* Collapsed, the list is only the showcase projects that pass the filter —
-     unless the filter leaves none of them, in which case hiding everything
-     behind a button would show an empty list. */
-  const lead = shown.filter((p) => showcase.includes(p.slug));
-  const visible = expanded || lead.length === 0 ? shown : lead;
-  const hiddenCount = shown.length - lead.length;
-
-  // The active project has to come from the visible set: filtering or
-  // collapsing away the selected one would otherwise leave the viewport
-  // showing something no longer in the list.
-  const active = visible.find((p) => p.slug === activeSlug) ?? visible[0];
-
-  /* The shot being faded out, kept underneath the incoming one so a switch is
-     a crossfade rather than a flash of the black ground between two images. */
-  const [outgoing, setOutgoing] = useState<string | null>(null);
-  const outgoingTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  const select = (slug: string) => {
-    if (!active || slug === active.slug) return;
-    setOutgoing(active.slug);
-    setActiveSlug(slug);
-    clearTimeout(outgoingTimer.current);
-    outgoingTimer.current = setTimeout(() => setOutgoing(null), CROSSFADE_MS);
-  };
-
-  /* Scrolling moves the list under a pointer that hasn't moved, and the
-     browser reports every row that slides beneath it as hovered — which made
-     an ordinary scroll flick the viewport through half the projects.
-
-     Two gates, because either alone leaks. The page has to be still (Lenis
-     keeps it gliding well after the last wheel tick, hence the wheel listener
-     and the generous settle). And the pointer has to have genuinely travelled
-     since the scroll: a hand on a mouse drifts a pixel or two while it works
-     the wheel, and Chrome fires a synthetic move at the old coordinates once
-     scrolling ends to refresh hover state — neither is someone choosing a
-     project. */
-  const scrolling = useRef(false);
-  const travel = useRef(Infinity);
-  const pending = useRef<{ slug: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const reduced = useReducedMotion();
+  const section = useRef<HTMLElement>(null);
+  const [active, setActive] = useState(0);
+  const [hover, setHover] = useState(false);
+  const [inView, setInView] = useState(false);
+  const p = all[active];
+  const tint = TINT[p.slug] ?? "#22d3ee";
+  const running = !reduced && inView && !hover;
 
   useEffect(() => {
-    let settle: ReturnType<typeof setTimeout> | undefined;
-    let last: { x: number; y: number } | null = null;
-
-    const onScroll = () => {
-      scrolling.current = true;
-      travel.current = 0;
-      if (pending.current) {
-        clearTimeout(pending.current.timer);
-        pending.current = null;
-      }
-      clearTimeout(settle);
-      settle = setTimeout(() => {
-        scrolling.current = false;
-      }, SCROLL_SETTLE_MS);
-    };
-    const onMove = (e: PointerEvent) => {
-      if (last) travel.current += Math.hypot(e.clientX - last.x, e.clientY - last.y);
-      last = { x: e.clientX, y: e.clientY };
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("wheel", onScroll, { passive: true });
-    // capture, so the distance is counted before the row's own handler reads it
-    window.addEventListener("pointermove", onMove, { passive: true, capture: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("wheel", onScroll);
-      window.removeEventListener("pointermove", onMove, { capture: true });
-      clearTimeout(settle);
-      clearTimeout(outgoingTimer.current);
-      if (pending.current) clearTimeout(pending.current.timer);
-    };
+    const el = section.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.35 });
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
 
-  /* Driven by pointer movement rather than enter, so a row that scrolled
-     under a resting cursor waits for the cursor to actually move. Touch has
-     no hover — a tap there opens the case study. */
-  const intend = (e: React.PointerEvent, slug: string) => {
-    if (e.pointerType === "touch" || scrolling.current) return;
-    if (travel.current < MIN_TRAVEL_PX) return;
-    if (slug === active?.slug || pending.current?.slug === slug) return;
-    if (pending.current) clearTimeout(pending.current.timer);
-    pending.current = {
-      slug,
-      timer: setTimeout(() => {
-        pending.current = null;
-        select(slug);
-      }, HOVER_INTENT_MS),
-    };
+  // a soft light follows the pointer across the screen
+  const glare = useRef<HTMLSpanElement>(null);
+  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (reduced || !glare.current) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    glare.current.style.setProperty("--gx", `${((e.clientX - r.left) / r.width) * 100}%`);
+    glare.current.style.setProperty("--gy", `${((e.clientY - r.top) / r.height) * 100}%`);
   };
+  const ratio = p.image ? `${p.image.width} / ${p.image.height}` : "16 / 10";
 
-  const abandon = (slug: string) => {
-    if (pending.current?.slug !== slug) return;
-    clearTimeout(pending.current.timer);
-    pending.current = null;
+  // auto-play walks the nine in view and loops back to the first; the rest
+  // are only ever put on stage by choice
+  const next = () => setActive((a) => (a + 1 >= VISIBLE ? 0 : a + 1));
+
+  // the list: where it is scrolled, and keeping the project on stage in view
+  // (scrolling the list itself, never the page)
+  const list = useRef<HTMLOListElement>(null);
+  const [atEnd, setAtEnd] = useState(false);
+  const onListScroll = () => {
+    const l = list.current;
+    if (!l) return;
+    setAtEnd(l.scrollTop + l.clientHeight >= l.scrollHeight - 4);
   };
+  useEffect(() => {
+    const l = list.current;
+    const item = l?.children[active] as HTMLElement | undefined;
+    if (!l || !item) return;
+    if (l.scrollHeight > l.clientHeight + 4) {
+      if (item.offsetTop < l.scrollTop || item.offsetTop + item.offsetHeight > l.scrollTop + l.clientHeight)
+        l.scrollTo({ top: item.offsetTop - l.clientHeight / 2 + item.offsetHeight / 2, behavior: "smooth" });
+    } else if (l.scrollWidth > l.clientWidth + 4) {
+      l.scrollTo({ left: item.offsetLeft - 24, behavior: "smooth" });
+    }
+  }, [active]);
 
   return (
-    <section id="work" className="mx-auto max-w-shell scroll-mt-24 px-6 py-24 sm:py-32">
-      <SectionHeading index="01" title="Selected Work" hint="every project, one case study each" />
+    <section
+      ref={section}
+      id="work"
+      className="scroll-mt-24 pt-4 sm:pt-12"
+      style={{ ["--tint" as string]: tint }}
+    >
+      <div className="mx-auto max-w-shell px-6">
+        <SectionHeading index="01" label="Work" title="Selected" accent="work." />
 
-      <Reveal>
-        <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
-          <p className="font-mono text-sm text-muted">
-            <span className="term-green">$</span> ls ./projects{" "}
-            <span className="text-muted/80">({shown.length})</span>
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`rounded-full border px-4 py-1.5 font-mono text-xs transition-colors ${
-                  filter === f
-                    ? "border-accent bg-accent/10 text-accent"
-                    : "border-line text-muted hover:border-accent/50 hover:text-fg"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        </div>
-      </Reveal>
+        <Reveal>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,19rem)] lg:gap-8">
+            {/* the stage */}
+            <div
+              className="sw-panel relative overflow-hidden rounded-[1.25rem] border border-white/10"
+              onPointerEnter={(e) => e.pointerType === "mouse" && setHover(true)}
+              onPointerLeave={() => setHover(false)}
+            >
+              {/* the screen, edge to edge at the screenshot's own proportions;
+                  each project wipes in over the last behind a line of light */}
+              <div onPointerMove={onMove} className="sw-stage relative overflow-hidden bg-[#05070d]" style={{ aspectRatio: ratio }}>
+                <AnimatePresence initial={false}>
+                  <motion.div
+                    key={p.slug}
+                    className="absolute inset-0"
+                    initial={reduced ? { opacity: 0 } : { clipPath: "inset(0 0 0 100%)", scale: 1.08, filter: "brightness(1.6) blur(4px)" }}
+                    animate={{ opacity: 1, clipPath: "inset(0 0 0 0%)", scale: 1, filter: "brightness(1) blur(0px)" }}
+                    exit={{ opacity: 0, scale: 0.97, transition: { duration: 1 } }}
+                    transition={{ duration: 1.05, ease: [0.7, 0, 0.2, 1] }}
+                  >
+                    <Link href={`/work/${p.slug}`} aria-label={`${p.title}: read the case study`} className="group absolute inset-0 block">
+                      <ProjectVisual slug={p.slug} variant="hero" sizes="(max-width: 1024px) 92vw, 52rem" />
+                    </Link>
+                  </motion.div>
+                </AnimatePresence>
+                {!reduced && (
+                  <motion.span
+                    key={`edge-${p.slug}`}
+                    aria-hidden
+                    className="sw-edge pointer-events-none absolute inset-y-0 w-px"
+                    initial={{ left: "100%", opacity: 1 }}
+                    animate={{ left: "0%", opacity: 0 }}
+                    transition={{ duration: 1.05, ease: [0.7, 0, 0.2, 1], opacity: { duration: 1.05, ease: [0.9, 0, 1, 1] } }}
+                  />
+                )}
+                <span ref={glare} aria-hidden className="sw-glare pointer-events-none absolute inset-0" />
+                {p.link && (
+                  <span className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/60 px-2.5 py-1 font-sans text-[10px] text-white/90 backdrop-blur-md">
+                    <span className="size-1.5 animate-pulse rounded-full bg-[var(--tint)] shadow-[0_0_8px_var(--tint)]" />
+                    live
+                  </span>
+                )}
+              </div>
 
-      <Reveal delay={0.1}>
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14">
-          {/* ── manifest ─────────────────────────────────────────────────── */}
-          <div>
-            <ul className="divide-y divide-line border-y border-line">
-              {visible.map((p) => {
-                const on = active?.slug === p.slug;
-                return (
-                  <li key={p.slug}>
-                    <Link
-                      href={`/work/${p.slug}`}
-                      onPointerMove={(e) => intend(e, p.slug)}
-                      onPointerLeave={() => abandon(p.slug)}
-                      onFocus={() => select(p.slug)}
-                      className="group flex items-center gap-4 py-4 outline-none transition-colors sm:gap-5"
-                    >
-                      {/* selection marker — the row the viewport is showing */}
-                      <span
-                        aria-hidden
-                        className={`h-8 w-px shrink-0 transition-colors duration-300 ${
-                          on ? "bg-accent" : "bg-transparent"
-                        }`}
-                      />
-
-                      <span
-                        className={`shrink-0 font-mono text-xs tabular-nums transition-colors duration-300 ${
-                          on ? "text-accent" : "text-muted/80"
-                        }`}
+              {/* the story of the project on stage */}
+              <div className="relative border-t border-white/[0.07] bg-black/20 px-5 py-5 backdrop-blur-sm sm:px-8 sm:py-6">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={p.slug}
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.4, ease }}
+                    className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between md:gap-8"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-sans text-[10.5px] uppercase tracking-[0.2em] text-muted">
+                        <span className="text-[var(--tint)]">{String(active + 1).padStart(2, "0")}</span>
+                        <span className="text-muted/60"> / {String(all.length).padStart(2, "0")}</span>
+                        {"  ·  "}
+                        {[p.company, p.year].filter(Boolean).join(" · ")}
+                      </p>
+                      <h3 className="mt-1.5 font-sans text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">{p.title}</h3>
+                      <p className="mt-1.5 max-w-lg text-[14.5px] leading-relaxed text-fg/65">{p.tagline}</p>
+                      <ul className="mt-3.5 flex flex-wrap gap-1.5">
+                        {p.keyStack.slice(0, 4).map((s) => (
+                          <li key={s} className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-2.5 py-1 text-[11.5px] text-fg/80">
+                            <TechIcon name={s} size={12} />
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="flex shrink-0 items-end justify-between gap-6 md:flex-col md:items-end">
+                      <dl className="flex gap-6">
+                        {p.outcome.slice(0, 2).map((o) => (
+                          <div key={o.label} className="max-w-[8.5rem] md:text-right">
+                            <dt className="sr-only">{o.label}</dt>
+                            <dd className="sw-num font-sans text-2xl font-semibold leading-none tracking-tight sm:text-3xl">{o.value}</dd>
+                            <dd className="mt-1.5 text-[11.5px] leading-snug text-muted">{o.label}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                      <Link
+                        href={`/work/${p.slug}`}
+                        className="group flex shrink-0 items-center gap-2 rounded-full bg-fg px-4 py-2 text-[13px] font-medium text-bg transition-colors hover:bg-[var(--tint)]"
                       >
-                        {designation(p.slug, p.index)}
-                      </span>
+                        Case study
+                        <ArrowRight aria-hidden className="size-3.5 transition-transform" />
+                      </Link>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
 
-                      <span className="min-w-0 flex-1">
-                        <span
-                          className={`block truncate font-sans text-base font-bold tracking-tight transition-colors duration-300 sm:text-lg ${
-                            on ? "text-accent" : "text-fg"
+            {/* the programme: every project, nine to the stage's height and the
+                rest a scroll away */}
+            <div className="relative min-w-0">
+              <div className="flex flex-col lg:absolute lg:inset-0">
+                <ol
+                  ref={list}
+                  onScroll={onListScroll}
+                  data-lenis-prevent
+                  className="sw-list relative flex min-h-0 snap-x gap-2 overflow-x-auto pb-1 [scrollbar-width:none] lg:block lg:flex-1 lg:snap-y lg:overflow-y-auto lg:overflow-x-visible lg:pb-0"
+                >
+                  {all.map((q, i) => {
+                    const on = i === active;
+                    const c = TINT[q.slug] ?? "#22d3ee";
+                    return (
+                      <li key={q.slug} className="shrink-0 snap-start lg:h-[calc(100%/9)] lg:py-[2px]">
+                        <button
+                          type="button"
+                          onClick={() => setActive(i)}
+                          aria-current={on || undefined}
+                          style={{ ["--c" as string]: c }}
+                          className={`group relative flex h-full w-full items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 text-left transition-all duration-500 lg:py-0 ${
+                            on ? "border-white/12 bg-white/[0.05]" : "border-transparent hover:bg-white/[0.03]"
                           }`}
                         >
-                          {p.title}
-                        </span>
-                        <span className="mt-0.5 block truncate font-mono text-xs text-muted/90">
-                          {p.company ? `${p.company} · ` : ""}
-                          {p.platform}
-                        </span>
-                      </span>
+                          <span className={`font-sans text-[11px] tabular-nums transition-colors ${on ? "text-[var(--c)]" : "text-muted/60"}`}>
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span
+                              className={`block truncate text-[14.5px] font-medium transition-colors ${on ? "text-fg" : "text-fg/55 group-hover:text-fg/85"}`}
+                            >
+                              {q.title}
+                            </span>
+                            <span className="hidden truncate text-[11.5px] text-muted lg:block">
+                              {[q.company, q.year].filter(Boolean).join(" · ")}
+                            </span>
+                          </span>
+                          <span
+                            aria-hidden
+                            className={`size-1.5 shrink-0 rounded-full bg-[var(--c)] transition-all duration-500 ${
+                              on ? "opacity-100 shadow-[0_0_10px_var(--c)]" : "opacity-0"
+                            }`}
+                          />
+                          {/* the time left on stage */}
+                          {on && (
+                            <span
+                              key={active}
+                              aria-hidden
+                              onAnimationEnd={next}
+                              className="sw-progress absolute inset-x-0 bottom-0 h-px origin-left bg-[var(--c)]"
+                              style={{ animationDuration: `${HOLD}s`, animationPlayState: running ? "running" : "paused" }}
+                            />
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
 
-                      {p.link && (
-                        <span
-                          aria-hidden
-                          title="live"
-                          className="relative flex size-1.5 shrink-0"
-                        >
-                          <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-70" />
-                          <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
-                        </span>
-                      )}
-
-                      <span
-                        aria-hidden
-                        className={`shrink-0 font-mono text-xs transition-all duration-300 ${
-                          on ? "translate-x-0 text-accent opacity-100" : "-translate-x-1 opacity-0"
-                        }`}
-                      >
-                        →
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-
-            {lead.length > 0 && hiddenCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setExpanded((e) => !e)}
-                aria-expanded={expanded}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-full border border-line px-5 py-2.5 font-mono text-xs text-muted transition-colors hover:border-accent/50 hover:text-accent"
-              >
-                {expanded
-                  ? "show fewer ↑"
-                  : `explore ${hiddenCount} more ${hiddenCount === 1 ? "project" : "projects"} ↓`}
-              </button>
-            )}
-          </div>
-
-          {/* ── viewport ─────────────────────────────────────────────────── */}
-          {active && (
-            /* On a narrow screen there is no hover, so the viewport can
-               never be driven by the list — it leads instead, as a featured
-               project, with the manifest reading underneath it. */
-            <div className="order-first lg:order-none lg:sticky lg:top-28 lg:self-start">
-              <Link
-                href={`/work/${active.slug}`}
-                className="group block overflow-hidden rounded-2xl border border-line bg-bg/40 backdrop-blur-sm transition-colors duration-300 hover:border-accent/60"
-              >
-                {/* Full bleed to the panel edge. The ground is black rather
-                    than the card colour because the shot is contained, not
-                    cropped — against black the small letterboxing reads as a
-                    screen showing content; against the card it read as a gap. */}
-                <div className="relative isolate aspect-[16/10] overflow-hidden border-b border-line bg-black">
-                  {/* Keyed on the slug, so the incoming shot mounts fresh and
-                      its fade plays, while the outgoing one keeps its element
-                      — and its finished animation — and simply sits beneath
-                      until it is covered. That is the crossfade: no frame
-                      where neither is showing. */}
-                  {/* Inset past the corner ticks, so the brackets sit just
-                      outside the picture and frame it rather than lying on top
-                      of it. The black ground fills the margin. */}
-                  {[outgoing, active.slug]
-                    .filter((slug, i): slug is string => !!slug && (i === 1 || slug !== active.slug))
-                    .map((slug) => (
-                      <div
-                        key={slug}
-                        className="absolute inset-5 animate-[fade-in_0.45s_ease-out]"
-                      >
-                        <ProjectVisual slug={slug} />
-                      </div>
-                    ))}
-
-                  <span
-                    aria-hidden
-                    className="tele-grid pointer-events-none absolute inset-0 opacity-30 mix-blend-overlay"
-                  />
-                  <span
-                    aria-hidden
-                    className="scan-bar pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(180deg,transparent,color-mix(in_oklab,var(--accent)_14%,transparent),transparent)]"
-                  />
-
-                  {[
-                    "left-3 top-3 border-l border-t",
-                    "right-3 top-3 border-r border-t",
-                    "bottom-3 left-3 border-b border-l",
-                    "bottom-3 right-3 border-b border-r",
-                  ].map((pos) => (
-                    <span
-                      key={pos}
-                      aria-hidden
-                      className={`pointer-events-none absolute size-3.5 border-accent/60 ${pos}`}
-                    />
-                  ))}
-
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--bg)_85%,transparent),transparent)]"
-                  />
-                  <span className="absolute left-5 top-4 font-mono text-xs text-accent">
-                    {designation(active.slug, active.index)}
-                  </span>
-                  <span className="absolute right-5 top-4 font-mono text-xs uppercase tracking-widest text-muted/80">
-                    {active.link ? "live" : "private build"}
-                  </span>
-                </div>
-
-                <div className="p-7">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <h3 className="font-sans text-2xl font-bold tracking-tight transition-colors duration-300 group-hover:text-accent">
-                      {active.title}
-                    </h3>
-                    <span className="shrink-0 font-mono text-xs text-muted/90">
-                      {active.year}
-                    </span>
-                  </div>
-                  <p className="mt-2.5 text-sm leading-relaxed text-muted">{active.tagline}</p>
-
-                  {active.outcome[0] && (
-                    <p className="mt-6 flex items-baseline gap-2.5">
-                      <span className="font-sans text-3xl font-bold leading-none tracking-tight text-accent">
-                        {active.outcome[0].value}
-                      </span>
-                      <span className="font-mono text-xs text-muted">
-                        {active.outcome[0].label}
-                      </span>
-                    </p>
+                {/* the way to the rest of the list, and back */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const l = list.current;
+                    if (l) l.scrollTo({ top: atEnd ? 0 : l.scrollTop + l.clientHeight * 0.8, behavior: "smooth" });
+                  }}
+                  className="sw-more group mt-2 hidden h-10 shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.03] font-sans text-[11px] uppercase tracking-[0.16em] text-fg/75 transition-colors hover:border-accent/50 hover:text-accent lg:flex"
+                >
+                  {atEnd ? (
+                    <>
+                      <ChevronUp aria-hidden className="size-3.5" />
+                      Back to the top
+                    </>
+                  ) : (
+                    <>
+                      {all.length - VISIBLE} more projects
+                      <ChevronDown aria-hidden className="size-3.5 transition-transform" />
+                    </>
                   )}
-
-                  <div className="mt-7 flex items-center justify-between gap-4 border-t border-line pt-5">
-                    <span className="flex items-center gap-3">
-                      {active.stack.slice(0, 5).map((s) => (
-                        <span key={s} title={s} className="opacity-70">
-                          <TechIcon name={s} size={16} />
-                        </span>
-                      ))}
-                      {active.stack.length > 5 && (
-                        <span className="font-mono text-xs text-muted/80">
-                          +{active.stack.length - 5}
-                        </span>
-                      )}
-                    </span>
-                    <span className="flex items-center gap-2 font-mono text-xs text-muted transition-colors group-hover:text-accent">
-                      open dossier
-                      <span className="transition-transform duration-300 group-hover:translate-x-1">
-                        →
-                      </span>
-                    </span>
-                  </div>
-                </div>
-              </Link>
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-      </Reveal>
+          </div>
+        </Reveal>
+      </div>
     </section>
   );
 }

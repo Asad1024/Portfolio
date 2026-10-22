@@ -117,7 +117,7 @@ export function Starfield() {
     let cancelled = false;
     let catalog: typeof import("@/lib/sky-catalog") | null = null;
     let named: Named[] = [];
-    let monoFont = "ui-monospace, monospace";
+    let labelFont = "ui-sans-serif, system-ui, sans-serif";
     /* The sky is drawn once into an off-screen layer — every star and figure,
        at the scale the viewport needs — and each frame only rotates and
        stamps that one image. Redrawing ~1,400 stars one by one every frame
@@ -140,8 +140,8 @@ export function Starfield() {
       const hex = (s.getPropertyValue("--accent").trim() || "#22d3ee").replace("#", "");
       const n = parseInt(hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex, 16);
       if (!Number.isNaN(n)) accentRgb = `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
-      const mono = document.querySelector(".font-mono");
-      if (mono) monoFont = getComputedStyle(mono).fontFamily;
+      // the star names are set in the site's own face
+      labelFont = getComputedStyle(document.body).fontFamily;
       buildLayer();
     };
 
@@ -434,7 +434,7 @@ export function Starfield() {
     const LABEL_H = 34;
     let placed: { star: Named; side: "right" | "left" | "below" | "above" | null } | null = null;
     const measure = (text: string, size: number, weight: number) => {
-      ctx.font = `${weight} ${size}px ${monoFont}`;
+      ctx.font = `${weight} ${size}px ${labelFont}`;
       return ctx.measureText(text).width;
     };
     const placeLabel = (l: { star: Named; x: number; y: number }) => {
@@ -490,10 +490,10 @@ export function Starfield() {
 
       ctx.textAlign = "left";
       ctx.textBaseline = "alphabetic";
-      ctx.font = `500 13px ${monoFont}`;
+      ctx.font = `500 13px ${labelFont}`;
       ctx.fillStyle = `rgba(232,236,245,${0.95 * a})`;
       ctx.fillText(l.star.name, bx + 8, by + 15);
-      ctx.font = `400 11px ${monoFont}`;
+      ctx.font = `400 11px ${labelFont}`;
       ctx.fillStyle = `rgba(139,147,167,${0.95 * a})`;
       ctx.fillText(l.star.detail, bx + 8, by + 28);
     };

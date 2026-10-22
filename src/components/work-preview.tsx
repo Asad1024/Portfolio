@@ -120,7 +120,17 @@ const mockups: Record<string, React.ReactNode> = {
  * the hand-built mini-mockup so no card is ever empty. Fills its parent, which
  * must be `relative` and set the aspect ratio.
  */
-export function ProjectVisual({ slug }: { slug: string }) {
+export function ProjectVisual({
+  slug,
+  variant = "card",
+  sizes = "(max-width: 1024px) 100vw, 560px",
+}: {
+  slug: string;
+  /** The mockups are drawn for a ~280px card: "hero" scales them up to hold a
+   *  full-width stage, "thumb" down to fit a small tile. */
+  variant?: "card" | "hero" | "thumb";
+  sizes?: string;
+}) {
   const project = projects.find((p) => p.slug === slug);
 
   if (project?.image) {
@@ -129,12 +139,12 @@ export function ProjectVisual({ slug }: { slug: string }) {
         src={project.image}
         alt={`${project.title} interface`}
         fill
-        sizes="(max-width: 1024px) 100vw, 560px"
+        sizes={sizes}
         /* contain, not cover: these are full desktop captures and cover was
            slicing the sides off every one of them. The screen it sits in has
            a black ground, so the little letterboxing this leaves reads as a
            display showing content rather than as a gap. */
-        className="object-contain transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+        className="object-contain transition-transform duration-700 ease-out"
       />
     );
   }
@@ -143,7 +153,15 @@ export function ProjectVisual({ slug }: { slug: string }) {
   if (!mockup) return null;
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <div className="scale-[1.15] transition-transform duration-700 ease-out group-hover:scale-[1.2]">
+      <div
+        className={
+          variant === "hero"
+            ? "scale-[1.1] transition-transform duration-700 ease-out sm:scale-[1.6] lg:scale-[1.9]"
+            : variant === "thumb"
+              ? "scale-[0.5]"
+              : "scale-[1.15] transition-transform duration-700 ease-out"
+        }
+      >
         {mockup}
       </div>
     </div>

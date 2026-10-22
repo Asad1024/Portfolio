@@ -2,86 +2,89 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useScrollLock } from "@/lib/use-scroll-lock";
+import { grainTile, paintGalaxy, paintNebula, paintPlanet, paintRing, paintRock } from "./space/film-textures";
 
-/* ── first visit: a star forms, then you fall into it ───────────────────────
-   Two acts on one canvas.
+/* ── first visit: a short film ──────────────────────────────────────────────
+   Four scenes on one canvas, cut like a trailer and framed in letterbox bars.
 
-   Collapse: dust falls inward, winds into an accretion disc seen near
-   edge-on, and the core brightens and swells as the mass arrives. The
-   percentage lives inside that — it sits at the centre of an orbit whose arc
-   closes as the star assembles, with a lit body riding the leading edge, so
-   100% is one full revolution rather than a number bolted on beside it.
+     before     black, and a single point of light breathing in the dark
+     the bang   it ignites: a white-out, the frame shakes, shockwaves split
+                into colour, and thousands of particles burst outward in
+                three dimensions, cooling from white-hot to colour as they go
+     voyage     the camera flies through what was made — nebula, a red desert
+                world, an asteroid field close enough to flinch at, a ringed
+                gas giant, a comet, an ice moon, a binary star flaring the
+                lens — banking gently as it goes
+     arrival    a cyan star swells ahead, the bars open, the name lands like an
+                end card, and the light hands over to the hero, whose star
+                ignites and flings its planets out (see solar-system)
 
-   Approach: the moment it reads 100 the core ignites and the view runs at it.
-   The readout drops away and a projected field tears past, which is the same
-   effect the route transition uses — so arriving at the site for the first
-   time and arriving at any page afterwards are the same motion, at different
-   lengths. That is the whole reason to chain them.
+   The worlds are painted procedurally (space/film-textures) — 3D noise on a
+   real sphere, lit with a soft terminator — a few rows per frame while the
+   opening plays, so nothing hitches. Everything holds an x, y, z, is projected
+   through x/z and rolled for the bank. Title cards write themselves in letter
+   by letter; cards, bars and the readout are driven from the frame loop.
 
-   Shown once per browser session, not once per page load: sessionStorage
-   survives a refresh, so a reload doesn't sit through it again.
+   Once per browser session, skippable by any key, wheel or tap, or the Skip
+   button. The end is on a timer, so a throttled tab still gets the site. */
 
-   Kept short — about three seconds end to end — because it stands
-   between a recruiter and the work, and any click, key, wheel or tap skips
-   straight to the page. */
+const FILM_MS = 11600;
+const FADE_MS = 700;
 
-const PHASES = [
-  { at: 0.0, status: "gravity well forming" },
-  { at: 0.34, status: "accretion disc stable" },
-  { at: 0.62, status: "core pressure critical" },
-  { at: 0.86, status: "ignition →" },
-];
-
-const COLLAPSE_MS = 2600;
-const WARP_MS = 600;
-const FADE_MS = 450;
-
-const MAX_DUST = 1400;
-/** the approach field — projected, so these carry a depth */
-const MOTES = 560;
-const DEPTH = 1500;
-const FOV = 340;
-
-type Mote = {
-  /** where it starts, in polar coordinates about the core */
-  r0: number;
-  a0: number;
-  /** how far around it winds on the way in — the spiral */
-  wind: number;
-  /** staggered so the disc doesn't arrive as one shell */
-  delay: number;
-  size: number;
-  hot: boolean;
+const T = {
+  ignite: 2700,
+  bang: 2850,
+  voyage: 4300,
+  approach: 9900,
+  arrive: 11000,
 };
 
-type Flyer = { x: number; y: number; z: number; hot: boolean };
+const CARDS = [
+  { text: "In the beginning, there was nothing.", from: 350, to: 2600 },
+  { text: "Then, everything.", from: 3200, to: 5100 },
+  { text: "Across a hundred billion stars,", from: 5400, to: 7500 },
+  { text: "to one small corner of space.", from: 7800, to: 9800 },
+];
 
-const easeIn = (t: number) => t * t;
+const DEPTH = 2600;
+const FOV = 380;
+
+type RGB = [number, number, number];
+type Star = { x: number; y: number; z: number; c: RGB };
+type Spark = { dx: number; dy: number; dz: number; s: number; c: RGB; px: number; py: number };
+type Rock = { x: number; y: number; z: number; r: number; spin: number; rot: number; sprite: number };
+type Cloud = { x: number; y: number; z: number; r: number; tex: number; alpha: number };
+type World = { key: "desert" | "giant" | "ice"; x: number; y: number; z: number; r: number; glow: RGB };
+
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const smooth = (t: number) => t * t * (3 - 2 * t);
+const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const rgba = (c: RGB, a: number) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
 
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace("#", "");
-  const f = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  const n = parseInt(f, 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+/** Ship speed (depth units per ms) through the voyage and approach. */
+function cruise(t: number) {
+  if (t < T.voyage) return 0;
+  if (t < T.approach) return 0.28 + smooth((t - T.voyage) / (T.approach - T.voyage)) * 0.85;
+  if (t < T.arrive - 300) return 1.13 + Math.pow((t - T.approach) / (T.arrive - 300 - T.approach), 2) * 7;
+  return 8.1 * (1 - clamp01((t - (T.arrive - 300)) / 700)) + 0.2;
 }
 
 export function Preloader() {
-  const [phase, setPhase] = useState<"idle" | "collapse" | "warp" | "exit" | "gone">("idle");
-  const [progress, setProgress] = useState(0);
+  const [phase, setPhase] = useState<"idle" | "film" | "exit" | "gone">("idle");
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pctRef = useRef<HTMLSpanElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const topBar = useRef<HTMLDivElement>(null);
+  const bottomBar = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLParagraphElement>(null);
+  const creditRef = useRef<HTMLDivElement>(null);
+  const finishRef = useRef<() => void>(() => {});
 
-  /* The curtain holds the page still while it is up. Shared with the other
-     three things that freeze scrolling, so whichever closes last is the one
-     that gives the page back. */
-  useScrollLock(phase === "collapse" || phase === "warp");
+  useScrollLock(phase === "film");
 
-  /* Both branches below set state on mount, and that is the only shape this
-     can take. The phase cannot be seeded from sessionStorage in useState: the
-     server has no session and always renders the curtain, so deriving the
-     initial phase on the client would hydrate a mismatch — a returning
-     visitor would get a flash of the loader they were meant to skip. One
-     extra render on mount is the correct price. */
+  /* Both branches set state on mount, and that is the only shape this can
+     take: the server has no session and always renders the cover, so the
+     phase cannot be seeded from sessionStorage without a hydration mismatch. */
   /* eslint-disable react-hooks/set-state-in-effect -- explained above */
   useEffect(() => {
     if (sessionStorage.getItem("booted") === "1") {
@@ -89,79 +92,51 @@ export function Preloader() {
       window.dispatchEvent(new CustomEvent("boot-complete"));
       return;
     }
-    setPhase("collapse");
+    setPhase("film");
 
-    /* The readout is timer-driven and measured against the wall clock, never
-       against tick count — a backgrounded tab throttles intervals, which would
-       otherwise strand the counter mid-collapse. */
-    const t0 = performance.now();
-    const tick = setInterval(() => {
-      setProgress(Math.min(100, Math.round(((performance.now() - t0) / COLLAPSE_MS) * 100)));
-    }, 16);
-
-    const toWarp = setTimeout(() => {
-      setProgress(100);
-      clearInterval(tick);
-      setPhase("warp");
-    }, COLLAPSE_MS);
-
-    /* boot-complete fires at the END of the approach, not when the counter
-       hits 100. The hero holds its entrance on this event, and releasing it a
-       second early would run the name's decrypt behind a curtain that is still
-       up, landing it already finished. */
-    let goneTimer: ReturnType<typeof setTimeout> | undefined;
     let finished = false;
+    let goneTimer: ReturnType<typeof setTimeout> | undefined;
+    let bootTimer: ReturnType<typeof setTimeout> | undefined;
     const finish = () => {
       if (finished) return;
       finished = true;
-      clearInterval(tick);
-      clearTimeout(toWarp);
-      clearTimeout(toExit);
+      clearTimeout(toEnd);
       detach();
-      setProgress(100);
       sessionStorage.setItem("booted", "1");
-      window.dispatchEvent(new CustomEvent("boot-complete"));
       setPhase("exit");
-      goneTimer = setTimeout(() => setPhase("gone"), FADE_MS + 120);
+      // the hero launches its planets on boot-complete; announced part way
+      // through the fade so the launch is seen rather than played behind the film
+      bootTimer = setTimeout(() => window.dispatchEvent(new CustomEvent("boot-complete")), FADE_MS * 0.45);
+      goneTimer = setTimeout(() => setPhase("gone"), FADE_MS + 80);
     };
-    const toExit = setTimeout(finish, COLLAPSE_MS + WARP_MS);
+    finishRef.current = finish;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const toEnd = setTimeout(finish, reduced ? 1200 : FILM_MS);
 
-    // anything that says "I'm here for the site" ends the intro early
-    const SKIP = ["keydown", "pointerdown", "wheel", "touchstart"] as const;
+    // anything that says "I'm here for the site" ends the film early
+    const SKIP = ["keydown", "wheel", "touchstart"] as const;
     const detach = () => SKIP.forEach((type) => window.removeEventListener(type, finish));
     SKIP.forEach((type) => window.addEventListener(type, finish, { passive: true }));
 
     return () => {
-      clearInterval(tick);
-      clearTimeout(toWarp);
-      clearTimeout(toExit);
+      clearTimeout(toEnd);
       clearTimeout(goneTimer);
+      clearTimeout(bootTimer);
       detach();
     };
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  /* The canvas needs its own effect: the boot effect above sets phase in the
-     same pass it would read the ref, and at that point the component has still
-     returned null with no canvas to draw on.
-
-     It depends on a boolean spanning every animating phase, NOT on phase
-     itself. Depending on phase tore the loop down the instant it changed —
-     cleanup cancelled the frame, the effect re-ran, and the guard bailed — so
-     the canvas froze on its last collapse frame and the approach never drew.
-     A boolean is compared by value, so collapse -> warp -> exit is one
-     unbroken run. */
-  const animating = phase === "collapse" || phase === "warp" || phase === "exit";
+  const rolling = phase === "film" || phase === "exit";
 
   useEffect(() => {
-    if (!animating) return;
+    if (!rolling) return;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
 
     let raf = 0;
     let cancelled = false;
-
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = window.innerWidth;
@@ -170,122 +145,534 @@ export function Preloader() {
     canvas.height = h * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const styles = getComputedStyle(document.documentElement);
-    const accent = hexToRgb(styles.getPropertyValue("--accent").trim() || "#22d3ee");
-    const violet = hexToRgb(styles.getPropertyValue("--violet").trim() || "#8b5cf6");
-
+    // a phone gets the same film with fewer particles and smaller textures
+    const small = w < 700;
+    const scale = small ? 0.55 : 1;
     const cx = w / 2;
     const cy = h / 2;
-    const reach = Math.hypot(w, h) * 0.55;
-    const spread = Math.max(w, h);
+    const spread = Math.max(w, h) * 1.5;
+    const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
-    const dust: Mote[] = Array.from({ length: MAX_DUST }, () => ({
-      r0: reach * (0.25 + Math.random() * 0.75),
-      a0: Math.random() * Math.PI * 2,
-      wind: (1.4 + Math.random() * 2.6) * (Math.random() < 0.5 ? -1 : 1),
-      delay: Math.random() * 0.35,
-      size: 0.5 + Math.random() * 1.3,
-      hot: Math.random() < 0.22,
+    const WHITE: RGB = [240, 246, 255];
+    const CYAN: RGB = [34, 211, 238];
+    const ICE: RGB = [165, 243, 252];
+    const VIOLET: RGB = [139, 92, 246];
+    const AMBER: RGB = [255, 176, 92];
+    const ROSE: RGB = [244, 114, 182];
+    const palette = [CYAN, ICE, VIOLET, AMBER, ROSE, WHITE];
+
+    // ── textures, painted between frames while the opening plays ──
+    const tex: {
+      desert?: HTMLCanvasElement;
+      giant?: HTMLCanvasElement;
+      ice?: HTMLCanvasElement;
+      ring?: HTMLCanvasElement;
+      galaxy?: HTMLCanvasElement;
+      rocks: HTMLCanvasElement[];
+      nebula: HTMLCanvasElement[];
+    } = { rocks: [], nebula: [] };
+    const grain = ctx.createPattern(grainTile(), "repeat");
+    const P = small ? 220 : 320;
+    const jobs: { gen: Generator<void, HTMLCanvasElement>; done: (c: HTMLCanvasElement) => void }[] = [
+      { gen: paintNebula(small ? 200 : 280, VIOLET, ROSE, 3), done: (c) => tex.nebula.push(c) },
+      { gen: paintPlanet("desert", P), done: (c) => (tex.desert = c) },
+      { gen: paintNebula(small ? 200 : 280, CYAN, VIOLET, 7), done: (c) => tex.nebula.push(c) },
+      ...[1, 2, 3, 4, 5, 6, 7].map((s) => ({ gen: paintRock(small ? 72 : 96, s), done: (c: HTMLCanvasElement) => tex.rocks.push(c) })),
+      { gen: paintPlanet("giant", small ? 260 : 380), done: (c) => (tex.giant = c) },
+      { gen: paintRing(small ? 300 : 440), done: (c) => (tex.ring = c) },
+      { gen: paintPlanet("ice", small ? 180 : 260), done: (c) => (tex.ice = c) },
+      { gen: paintNebula(small ? 200 : 280, ROSE, CYAN, 11), done: (c) => tex.nebula.push(c) },
+      { gen: paintGalaxy(small ? 200 : 280), done: (c) => (tex.galaxy = c) },
+    ];
+    const pump = (budget: number) => {
+      const until = performance.now() + budget;
+      while (jobs.length && performance.now() < until) {
+        const step = jobs[0].gen.next();
+        if (step.done) {
+          jobs[0].done(step.value);
+          jobs.shift();
+        }
+      }
+    };
+
+    // the field the camera flies through after the bang
+    const stars: Star[] = Array.from({ length: Math.round(1400 * scale) }, () => ({
+      x: rnd(-spread, spread),
+      y: rnd(-spread, spread),
+      z: rnd(1, DEPTH),
+      c: Math.random() < 0.72 ? WHITE : palette[(Math.random() * 3) | 0],
     }));
 
-    const flyers: Flyer[] = Array.from({ length: MOTES }, () => ({
-      x: (Math.random() - 0.5) * spread * 2,
-      y: (Math.random() - 0.5) * spread * 2,
-      z: 1 + Math.random() * DEPTH,
-      hot: Math.random() < 0.3,
-    }));
+    // the bang itself: directions on a sphere, each spark its own speed and colour
+    const sparks: Spark[] = Array.from({ length: Math.round(2600 * scale) }, () => {
+      const u = rnd(-1, 1);
+      const th = rnd(0, Math.PI * 2);
+      const r = Math.sqrt(1 - u * u);
+      return { dx: r * Math.cos(th), dy: u, dz: r * Math.sin(th), s: Math.pow(Math.random(), 0.55), c: palette[(Math.random() * palette.length) | 0], px: cx, py: cy };
+    });
+
+    // route scenery, placed by distance along the voyage
+    const clouds: Cloud[] = [
+      { x: -spread * 0.3, y: -spread * 0.12, z: 650, r: 1300, tex: 0, alpha: 0.85 },
+      { x: spread * 0.34, y: spread * 0.1, z: 1350, r: 1500, tex: 1, alpha: 0.75 },
+      { x: -spread * 0.08, y: spread * 0.24, z: 2300, r: 1700, tex: 2, alpha: 0.7 },
+      { x: spread * 0.2, y: -spread * 0.26, z: 3100, r: 1600, tex: 0, alpha: 0.6 },
+      { x: -spread * 0.32, y: spread * 0.06, z: 3900, r: 1800, tex: 1, alpha: 0.6 },
+    ];
+    const worlds: World[] = [
+      { key: "desert", x: spread * 0.31, y: -spread * 0.19, z: 1250, r: 170, glow: AMBER },
+      { key: "giant", x: -spread * 0.4, y: spread * 0.15, z: 2350, r: 340, glow: [236, 196, 150] },
+      { key: "ice", x: spread * 0.36, y: spread * 0.07, z: 3250, r: 120, glow: ICE },
+    ];
+    // a loose field: a scatter of rocks of every size, most of them small (the
+    // squared random skews them small), and five big ones that pass close
+    // enough to fill a corner of the frame
+    const rocks: Rock[] = [
+      ...Array.from({ length: Math.round(28 * scale) }, () => ({
+        x: rnd(-spread * 0.62, spread * 0.62),
+        y: rnd(-spread * 0.36, spread * 0.36),
+        z: rnd(1700, 3200),
+        r: 10 + Math.random() ** 2 * 62,
+        spin: rnd(-0.0009, 0.0009),
+        rot: rnd(0, Math.PI * 2),
+        sprite: (Math.random() * 7) | 0,
+      })),
+      ...[
+        { x: -0.22, y: 0.12, z: 2050, r: 95 },
+        { x: 0.3, y: 0.16, z: 2300, r: 60 },
+        { x: 0.26, y: -0.1, z: 2550, r: 125 },
+        { x: -0.3, y: -0.18, z: 2800, r: 70 },
+        { x: 0.12, y: 0.2, z: 3000, r: 85 },
+      ].map((b, i) => ({ x: spread * b.x, y: spread * b.y, z: b.z, r: b.r, spin: 0.0005 * (i % 2 ? 1 : -1), rot: i, sprite: i })),
+    ];
+    const binary = { x: -spread * 0.2, y: -spread * 0.28, z: 3600 };
+    const destination = { x: 0, y: 0, z: 6500 };
 
     const start = performance.now();
     let last = start;
+    let travelled = 0;
+
+    /** camera: depth projection, then the bank, then the shake */
+    let roll = 0;
+    let shakeX = 0;
+    let shakeY = 0;
+    const project = (x: number, y: number, z: number) => {
+      const k = FOV / z;
+      const sx = x * k;
+      const sy = y * k;
+      const c = Math.cos(roll);
+      const s = Math.sin(roll);
+      return { x: cx + sx * c - sy * s + shakeX, y: cy + sx * s + sy * c + shakeY, k };
+    };
+
+    const flare = (x: number, y: number, power: number, tint: RGB) => {
+      if (power <= 0.01) return;
+      ctx.globalCompositeOperation = "lighter";
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, 220 * power);
+      glow.addColorStop(0, rgba(WHITE, 0.95 * power));
+      glow.addColorStop(0.15, rgba(tint, 0.55 * power));
+      glow.addColorStop(1, rgba(tint, 0));
+      ctx.fillStyle = glow;
+      ctx.fillRect(x - 240 * power, y - 240 * power, 480 * power, 480 * power);
+      // the anamorphic streak, the thing that makes it read as a lens
+      const len = w * 0.75 * power;
+      const streak = ctx.createLinearGradient(x - len, y, x + len, y);
+      streak.addColorStop(0, rgba(tint, 0));
+      streak.addColorStop(0.5, rgba(ICE, 0.75 * power));
+      streak.addColorStop(1, rgba(tint, 0));
+      ctx.fillStyle = streak;
+      ctx.fillRect(x - len, y - 1.5 * power - 0.5, len * 2, 3 * power + 1);
+      // ghosts along the line through the frame centre
+      for (const [f, rad, a] of [
+        [0.4, 26, 0.12],
+        [-0.25, 48, 0.08],
+        [-0.7, 18, 0.14],
+      ] as const) {
+        const gx = cx + (x - cx) * f;
+        const gy = cy + (y - cy) * f;
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, rad * (0.6 + power));
+        g.addColorStop(0, rgba(tint, a * power));
+        g.addColorStop(1, rgba(tint, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(gx, gy, rad * (0.6 + power), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    };
+
+    const drawWorld = (wd: World, x: number, y: number, r: number, alpha: number) => {
+      const t = tex[wd.key];
+      if (!t || r < 0.8 || alpha <= 0) return;
+      ctx.globalAlpha = alpha;
+      // scattered light around the limb
+      const a = ctx.createRadialGradient(x, y, r * 0.92, x, y, r * 1.28);
+      a.addColorStop(0, rgba(wd.glow, 0.38));
+      a.addColorStop(1, rgba(wd.glow, 0));
+      ctx.fillStyle = a;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 1.28, 0, Math.PI * 2);
+      ctx.fill();
+      const ring = wd.key === "giant" ? tex.ring : undefined;
+      const tilt = -0.32 + roll;
+      const drawRingHalf = (back: boolean) => {
+        if (!ring) return;
+        const R = r * 2.3;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(tilt);
+        ctx.scale(1, 0.26);
+        ctx.beginPath();
+        if (back) ctx.rect(-R, -R, R * 2, R);
+        else ctx.rect(-R, 0, R * 2, R);
+        ctx.clip();
+        ctx.drawImage(ring, -R, -R, R * 2, R * 2);
+        ctx.restore();
+      };
+      drawRingHalf(true);
+      ctx.drawImage(t, x - r, y - r, r * 2, r * 2);
+      drawRingHalf(false);
+      if (wd.key === "ice") {
+        // its moon, small and grey, on its own slow path
+        const m = performance.now() * 0.0005;
+        const mr = r * 0.22;
+        const mx = x + Math.cos(m) * r * 1.9;
+        const my = y + Math.sin(m) * r * 0.5;
+        const mg = ctx.createRadialGradient(mx - mr * 0.4, my - mr * 0.45, mr * 0.05, mx, my, mr);
+        mg.addColorStop(0, "rgba(214,218,226,1)");
+        mg.addColorStop(0.6, "rgba(96,102,116,1)");
+        mg.addColorStop(1, "rgba(10,12,18,1)");
+        ctx.fillStyle = mg;
+        ctx.beginPath();
+        ctx.arc(mx, my, mr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    };
+
+    let cardIndex = -1;
+    const setCard = (t: number) => {
+      const el = cardRef.current;
+      if (!el) return;
+      const i = CARDS.findIndex((c) => t >= c.from && t <= c.to);
+      if (i !== cardIndex) {
+        cardIndex = i;
+        el.replaceChildren();
+        if (i >= 0) {
+          // one span per letter, each rising out of a blur a beat after the last
+          [...CARDS[i].text].forEach((ch, k) => {
+            const span = document.createElement("span");
+            span.className = "film-letter";
+            span.style.setProperty("--i", String(k));
+            span.textContent = ch === " " ? " " : ch;
+            el.appendChild(span);
+          });
+        }
+      }
+      if (i < 0) return;
+      // the whole line dissolves on its way out
+      const out = clamp01((CARDS[i].to - t) / 450);
+      el.style.opacity = String(out);
+      el.style.filter = `blur(${(1 - out) * 8}px)`;
+      el.style.letterSpacing = `${(1 - out) * 0.12}em`;
+    };
 
     const draw = (now: number) => {
       if (cancelled) return;
-      /* Both of these need a floor, not just a ceiling. requestAnimationFrame
-         hands you the frame's start time, which can precede a performance.now()
-         taken after that frame already began, so the first frame's elapsed can
-         be negative. Unclamped that gives a negative progress, and
-         Math.pow(negative, fractional) is NaN — which createRadialGradient
-         rejects outright. A negative dt would also run the field backwards. */
-      const elapsed = reduced ? COLLAPSE_MS : now - start;
+      // floor on both: the first rAF can precede `start`
+      const t = reduced ? T.arrive : Math.max(0, now - start);
       const dt = Math.min(48, Math.max(0, now - last));
       last = now;
+      // book the next frame first: a drawing error then costs one frame, not the film
+      if (t < FILM_MS + FADE_MS) raf = requestAnimationFrame(draw);
+      pump(t < T.bang ? 11 : 6);
+      const speed = cruise(t) * dt;
+      travelled += speed;
 
-      ctx.clearRect(0, 0, w, h);
+      // ── readout, bars, cards, credits ──
+      const shown = clamp01(t / FILM_MS);
+      if (pctRef.current) pctRef.current.textContent = String(Math.round(smooth(shown) * 100));
+      if (barRef.current) barRef.current.style.transform = `scaleX(${smooth(shown)})`;
+      const bars = 1 - clamp01((t - T.approach - 300) / 700);
+      const barH = `${Math.min(1, t / 600) * bars * 11}vh`;
+      if (topBar.current) topBar.current.style.height = barH;
+      if (bottomBar.current) bottomBar.current.style.height = barH;
+      setCard(t);
+      if (creditRef.current) {
+        const c = clamp01((t - T.approach - 250) / 600) * (1 - clamp01((t - FILM_MS + 380) / 320));
+        creditRef.current.style.opacity = String(c);
+        creditRef.current.style.transform = `scale(${0.96 + c * 0.04})`;
+        creditRef.current.style.letterSpacing = `${0.6 - c * 0.6}em`;
+      }
 
-      if (elapsed < COLLAPSE_MS) {
-        // ── act one: the disc falls in ──────────────────────────────────
-        const p = clamp01(elapsed / COLLAPSE_MS);
+      // ── camera ──
+      roll = t > T.voyage ? Math.sin((t - T.voyage) * 0.0006) * 0.12 : 0;
+      const shake = t > T.bang ? 22 * Math.exp(-(t - T.bang) / 320) : t > T.ignite ? ((t - T.ignite) / (T.bang - T.ignite)) * 4 : 0;
+      shakeX = (Math.random() - 0.5) * shake;
+      shakeY = (Math.random() - 0.5) * shake;
 
-        const coreR = 3 + p * p * 46;
-        const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 3);
-        glow.addColorStop(0, `rgba(255,255,255,${0.35 + p * 0.65})`);
-        glow.addColorStop(0.16, `rgba(${accent.join(",")},${(0.35 + p * 0.65) * 0.85})`);
-        glow.addColorStop(0.45, `rgba(${violet.join(",")},${(0.35 + p * 0.65) * 0.22})`);
-        glow.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(cx, cy, coreR * 3, 0, Math.PI * 2);
-        ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "#020309";
+      ctx.fillRect(0, 0, w, h);
 
-        for (const m of dust) {
-          const fall = easeIn(clamp01((p - m.delay) / (1 - m.delay)));
-          const r = m.r0 * (1 - fall);
-          const a = m.a0 + m.wind * fall;
-          const x = cx + Math.cos(a) * r;
-          const y = cy + Math.sin(a) * r * 0.62; // disc, seen near edge-on
+      // ── scene one: the point in the dark ──
+      if (t < T.bang + 200) {
+        const breathe = 0.6 + Math.sin(t * 0.006) * 0.4;
+        const charge = clamp01((t - T.ignite) / (T.bang - T.ignite));
+        const rr = 2 + breathe * 2.5 + charge * 60;
+        const g = ctx.createRadialGradient(cx + shakeX, cy + shakeY, 0, cx + shakeX, cy + shakeY, rr * 6);
+        g.addColorStop(0, rgba(WHITE, 0.9));
+        g.addColorStop(0.2, rgba(ICE, 0.35 + charge * 0.5));
+        g.addColorStop(1, rgba(CYAN, 0));
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = "source-over";
+      }
 
-          const alpha = (0.18 + fall * 0.82) * (m.hot ? 1 : 0.6);
-          const [cr, cg, cb] = m.hot ? accent : violet;
-          ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha})`;
-          ctx.beginPath();
-          ctx.arc(x, y, m.size + fall * 0.7, 0, Math.PI * 2);
-          ctx.fill();
+      // ── the voyage ──
+      if (t > T.bang) {
+        const born = clamp01((t - T.bang) / 1400);
+
+        // nebula, far behind everything
+        ctx.globalCompositeOperation = "screen";
+        for (const c of clouds) {
+          const img = tex.nebula[c.tex % Math.max(1, tex.nebula.length)];
+          if (!img) continue;
+          const z = c.z - travelled;
+          if (z < 40) continue;
+          const p = project(c.x, c.y, z);
+          const rr = c.r * p.k;
+          ctx.globalAlpha = c.alpha * born * clamp01((c.z + 500 - z) / 900) * Math.min(1, z / 260);
+          ctx.drawImage(img, p.x - rr, p.y - rr, rr * 2, rr * 2);
         }
-      } else {
-        // ── act two: ignition, then the run at it ───────────────────────
-        const t = clamp01((elapsed - COLLAPSE_MS) / WARP_MS);
-        // one hard flash off the line, gone by a third of the way in
-        const flash = Math.max(0, 1 - t * 3);
+        // a spiral galaxy at infinity: it barely moves, only turns, and banks with the camera
+        if (tex.galaxy) {
+          const gs = Math.min(w, h) * 0.36;
+          ctx.save();
+          ctx.translate(cx - w * 0.26 + shakeX, cy - h * 0.2 + shakeY);
+          ctx.rotate(roll - 0.35);
+          ctx.globalAlpha = 0.75 * born;
+          ctx.drawImage(tex.galaxy, -gs / 2, -gs / 2, gs, gs);
+          ctx.restore();
+        }
+        ctx.globalAlpha = 1;
 
-        const coreR = 40 + Math.pow(t, 2.2) * 260 + flash * 140;
-        const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 3.2);
-        glow.addColorStop(0, `rgba(255,255,255,${Math.min(1, 0.75 + t * 0.25 + flash)})`);
-        glow.addColorStop(0.18, `rgba(${accent.join(",")},${0.5 + t * 0.4})`);
-        glow.addColorStop(0.5, `rgba(${violet.join(",")},${0.16 + t * 0.12})`);
-        glow.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(cx, cy, coreR * 3.2, 0, Math.PI * 2);
-        ctx.fill();
-
-        // hard away from the gate, easing off as the star fills the view
-        const speed = (0.5 + Math.sin(t * Math.PI) * 3.1) * dt;
+        ctx.globalCompositeOperation = "lighter";
         ctx.lineCap = "round";
-        for (const m of flyers) {
-          const prevZ = m.z;
-          m.z -= speed;
-          if (m.z < 1) {
-            m.x = (Math.random() - 0.5) * spread * 2;
-            m.y = (Math.random() - 0.5) * spread * 2;
-            m.z = DEPTH;
+        for (const s of stars) {
+          const pz = s.z;
+          s.z -= speed;
+          if (s.z < 1) {
+            s.x = rnd(-spread, spread);
+            s.y = rnd(-spread, spread);
+            s.z = DEPTH;
             continue;
           }
+          const p = project(s.x, s.y, s.z);
+          if (p.x < -60 || p.x > w + 60 || p.y < -60 || p.y > h + 60) continue;
+          const q = project(s.x, s.y, pz);
+          const fade = Math.min(1, (DEPTH - s.z) / (DEPTH * 0.45)) * born;
+          const len = Math.hypot(p.x - q.x, p.y - q.y);
+          if (len < 1.3) {
+            const size = Math.min(2.2, p.k * 1.2);
+            ctx.fillStyle = rgba(s.c, fade * 0.85);
+            ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+          } else {
+            ctx.strokeStyle = rgba(s.c, fade * 0.8);
+            ctx.lineWidth = Math.min(2.4, p.k * 1.3);
+            ctx.beginPath();
+            ctx.moveTo(q.x, q.y);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+          }
+        }
+        ctx.globalCompositeOperation = "source-over";
 
-          // perspective: divide by depth. near motes sweep, far ones crawl.
-          const k = FOV / m.z;
-          const pk = FOV / prevZ;
-          const depthFade = Math.min(1, (DEPTH - m.z) / (DEPTH * 0.55));
-          const [r, g, b] = m.hot ? accent : violet;
-          ctx.strokeStyle = `rgba(${r},${g},${b},${depthFade * (0.4 + t * 0.45)})`;
-          ctx.lineWidth = Math.min(2.4, k * 1.6);
-          ctx.beginPath();
-          ctx.moveTo(cx + m.x * pk, cy + m.y * pk);
-          ctx.lineTo(cx + m.x * k, cy + m.y * k);
-          ctx.stroke();
+        // a comet crossing high on the frame, its tail streaming away from the light
+        if (t > 6400 && t < 8800) {
+          const k = (t - 6400) / 2400;
+          const hx = w * (1.08 - k * 1.25);
+          const hy = h * (0.1 + k * 0.28);
+          const tx = hx + w * 0.32;
+          const ty = hy - h * 0.12;
+          ctx.globalCompositeOperation = "lighter";
+          const tail = ctx.createLinearGradient(hx, hy, tx, ty);
+          tail.addColorStop(0, "rgba(220,250,255,0.75)");
+          tail.addColorStop(0.3, "rgba(120,220,255,0.28)");
+          tail.addColorStop(1, "rgba(120,220,255,0)");
+          ctx.strokeStyle = tail;
+          ctx.lineCap = "round";
+          for (const [width, a] of [
+            [14, 0.25],
+            [6, 0.5],
+            [2, 1],
+          ] as const) {
+            ctx.globalAlpha = a * Math.sin(k * Math.PI);
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(hx, hy);
+            ctx.quadraticCurveTo(hx + w * 0.16, hy - h * 0.02, tx, ty);
+            ctx.stroke();
+          }
+          ctx.globalAlpha = Math.sin(k * Math.PI);
+          const head = ctx.createRadialGradient(hx, hy, 0, hx, hy, 16);
+          head.addColorStop(0, "rgba(255,255,255,1)");
+          head.addColorStop(1, "rgba(160,235,255,0)");
+          ctx.fillStyle = head;
+          ctx.fillRect(hx - 16, hy - 16, 32, 32);
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = "source-over";
+        }
+
+        // worlds, far to near
+        for (const wd of [...worlds].sort((a, b) => b.z - a.z)) {
+          const z = wd.z - travelled;
+          if (z < 25) continue;
+          const p = project(wd.x, wd.y, z);
+          const appear = clamp01((wd.z + 300 - z) / 900) * Math.min(1, z / 60);
+          drawWorld(wd, p.x, p.y, wd.r * p.k, appear * born);
+        }
+
+        // the asteroid field
+        for (const rk of rocks) {
+          const sprite = tex.rocks[rk.sprite % Math.max(1, tex.rocks.length)];
+          if (!sprite) break;
+          const z = rk.z - travelled;
+          if (z < 8 || z > 1900) continue;
+          rk.rot += rk.spin * dt;
+          const p = project(rk.x, rk.y, z);
+          const rr = rk.r * p.k;
+          if (rr < 0.8 || p.x < -rr * 2 || p.x > w + rr * 2 || p.y < -rr * 2 || p.y > h + rr * 2) continue;
+          ctx.globalAlpha = clamp01((1900 - z) / 600) * Math.min(1, z / 40);
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(rk.rot);
+          ctx.drawImage(sprite, -rr, -rr, rr * 2, rr * 2);
+          ctx.restore();
+        }
+        ctx.globalAlpha = 1;
+
+        // the binary pair, flaring the lens as they pass
+        {
+          const z = binary.z - travelled;
+          if (z > 30 && z < 2400) {
+            const p = project(binary.x, binary.y, z);
+            const power = clamp01((2400 - z) / 1400) * Math.min(1, z / 300);
+            flare(p.x, p.y, power * 0.7, AMBER);
+            const sep = 70 * p.k;
+            flare(p.x + sep, p.y + sep * 0.3, power * 0.45, ROSE);
+          }
+        }
+
+        // the destination, swelling ahead
+        {
+          const z = Math.max(60, destination.z - travelled);
+          const p = project(destination.x, destination.y, z);
+          const power = clamp01((t - T.approach + 400) / 1200);
+          if (power > 0) {
+            const core = Math.min(h * 0.9, 18 + 900 * p.k);
+            ctx.globalCompositeOperation = "lighter";
+            const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, core);
+            g.addColorStop(0, rgba(WHITE, 0.95 * power));
+            g.addColorStop(0.25, rgba(CYAN, 0.6 * power));
+            g.addColorStop(1, rgba(CYAN, 0));
+            ctx.fillStyle = g;
+            ctx.fillRect(p.x - core, p.y - core, core * 2, core * 2);
+            ctx.globalCompositeOperation = "source-over";
+            flare(p.x, p.y, power, CYAN);
+          }
         }
       }
 
-      if (elapsed < COLLAPSE_MS + WARP_MS + 120) raf = requestAnimationFrame(draw);
+      // ── the bang: sparks, rings, the white-out ──
+      if (t > T.bang && t < T.voyage + 1600) {
+        const age = t - T.bang;
+        const life = 1 - clamp01((age - 900) / 1700);
+        const reach = Math.max(w, h) * 1.4;
+        const grow = 1 - Math.exp(-age / 420);
+        ctx.globalCompositeOperation = "lighter";
+        ctx.lineCap = "round";
+        for (const s of sparks) {
+          const r = grow * reach * s.s;
+          const z = Math.max(80, 700 + s.dz * r * 0.9);
+          const k = 700 / z;
+          const x = cx + s.dx * r * k + shakeX;
+          const y = cy + s.dy * r * k * 0.82 + shakeY;
+          const heat = clamp01(age / 700);
+          const c = mix(WHITE, s.c, heat);
+          ctx.strokeStyle = rgba(c, life * (0.35 + (1 - s.s) * 0.5));
+          ctx.lineWidth = Math.min(2.8, 0.6 + k * 0.9);
+          ctx.beginPath();
+          ctx.moveTo(s.px, s.py);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+          s.px = x;
+          s.py = y;
+        }
+        // shockwaves, each split into colour like light through a lens
+        for (const [delay, speedPx, width] of [
+          [0, 1.9, 6],
+          [140, 1.35, 4],
+          [320, 0.95, 3],
+        ] as const) {
+          const a2 = age - delay;
+          if (a2 < 0) continue;
+          const rr = a2 * speedPx;
+          const fade = Math.max(0, 1 - a2 / 1300);
+          if (fade <= 0) continue;
+          for (const [off, col] of [
+            [-4, CYAN],
+            [0, WHITE],
+            [4, ROSE],
+          ] as const) {
+            ctx.strokeStyle = rgba(col, fade * 0.55);
+            ctx.lineWidth = width * fade + 0.5;
+            ctx.beginPath();
+            // the inner (cyan) edge starts inside the centre; a negative radius throws
+            const ring = Math.max(0.5, rr + off);
+            ctx.ellipse(cx + shakeX, cy + shakeY, ring, ring * 0.86, 0, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+        ctx.globalCompositeOperation = "source-over";
+        // the white-out
+        const flash = Math.max(0, 1 - age / 520);
+        if (flash > 0) {
+          ctx.fillStyle = `rgba(255,255,255,${flash * 0.92})`;
+          ctx.fillRect(0, 0, w, h);
+        }
+      }
+
+      // a vignette, for the lens
+      const vg = ctx.createRadialGradient(cx, cy, Math.min(w, h) * 0.35, cx, cy, Math.max(w, h) * 0.75);
+      vg.addColorStop(0, "rgba(0,0,0,0)");
+      vg.addColorStop(1, "rgba(0,0,0,0.55)");
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, w, h);
+
+      // film grain, shifted every frame so it crawls like stock
+      if (grain) {
+        ctx.save();
+        ctx.globalCompositeOperation = "overlay";
+        ctx.globalAlpha = 0.07;
+        ctx.translate(Math.random() * 192, Math.random() * 192);
+        ctx.fillStyle = grain;
+        ctx.fillRect(-192, -192, w + 192, h + 192);
+        ctx.restore();
+      }
+
+      // ── the hand-over: light fills the frame as the film ends ──
+      const out = clamp01((t - FILM_MS + 450) / 450);
+      if (out > 0) {
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.8);
+        g.addColorStop(0, `rgba(255,255,255,${out})`);
+        g.addColorStop(0.5, `rgba(165,243,252,${out * 0.85})`);
+        g.addColorStop(1, `rgba(34,211,238,${out * 0.4})`);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+      }
+
     };
     raf = requestAnimationFrame(draw);
 
@@ -293,88 +680,65 @@ export function Preloader() {
       cancelled = true;
       cancelAnimationFrame(raf);
     };
-  }, [animating]);
+  }, [rolling]);
 
-  if (phase === "idle" || phase === "gone") return null;
-
-  const status =
-    [...PHASES].reverse().find((s) => progress / 100 >= s.at)?.status ?? PHASES[0].status;
-  // the ring closes as the star assembles — 100% is one full orbit
-  const R = 74;
-  const circumference = 2 * Math.PI * R;
-  // the readout belongs to the collapse; the approach is the canvas alone
-  const readoutGone = phase !== "collapse";
+  if (phase === "gone") return null;
+  /* Before the effect has decided anything, the server-rendered page shows a
+     plain cover, so a first visit never flashes the bare page and navbar before
+     the film starts. A returning visitor never sees it: the boot-flag script in
+     the root layout marks <html> data-booted before first paint, and CSS hides
+     the cover (see globals.css). */
+  if (phase === "idle") return <div aria-hidden data-boot-cover className="fixed inset-0 z-[250] bg-[#020309]" />;
 
   return (
     <div
-      className={`fixed inset-0 z-[250] flex flex-col justify-between bg-bg p-6 transition-opacity ease-out sm:p-10 ${
-        phase === "exit" ? "opacity-0" : "opacity-100"
+      role="presentation"
+      className={`fixed inset-0 z-[250] overflow-hidden bg-[#020309] transition-opacity ease-out ${
+        phase === "exit" ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
       style={{ transitionDuration: `${FADE_MS}ms` }}
     >
-      <canvas ref={canvasRef} className="absolute inset-0 size-full" aria-hidden />
+      <canvas ref={canvasRef} aria-hidden className="absolute inset-0 size-full" />
 
-      <div
-        className={`relative flex items-start justify-between font-mono text-xs text-muted transition-opacity duration-300 ${
-          readoutGone ? "opacity-0" : "opacity-100"
-        }`}
-      >
-        <p>
-          <span className="term-green">$</span> stellar ignition — asad-os
-          <span className="caret-blink term-green">_</span>
-        </p>
-        <p className="hidden sm:block">v3.0.0 · orbital</p>
-      </div>
+      {/* letterbox: the film is framed, then the frame opens on arrival */}
+      <div ref={topBar} aria-hidden className="absolute inset-x-0 top-0 h-0 bg-black" />
+      <div ref={bottomBar} aria-hidden className="absolute inset-x-0 bottom-0 h-0 bg-black" />
 
-      {/* the readout sits inside the orbit it describes */}
-      <div className="relative flex flex-1 items-center justify-center">
-        <div
-          className={`relative flex size-[13rem] items-center justify-center transition-all duration-300 ${
-            readoutGone ? "scale-95 opacity-0" : "scale-100 opacity-100"
-          }`}
-        >
-          <svg className="absolute inset-0 -rotate-90" viewBox="0 0 180 180" aria-hidden>
-            <circle cx="90" cy="90" r={R} fill="none" stroke="var(--line)" strokeWidth="1" />
-            <circle
-              cx="90"
-              cy="90"
-              r={R}
-              fill="none"
-              stroke="var(--accent)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={circumference * (1 - progress / 100)}
-              style={{ transition: "stroke-dashoffset 120ms linear" }}
-            />
-          </svg>
-
-          {/* the body riding the leading edge of the arc */}
-          <span
-            aria-hidden
-            className="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent shadow-[0_0_14px_3px_var(--ring)]"
-            style={{
-              transform: `rotate(${(progress / 100) * 360 - 90}deg) translateX(${R}px)`,
-              transformOrigin: "0 0",
-              transition: "transform 120ms linear",
-            }}
-          />
-
-          <p className="font-sans text-5xl font-bold tabular-nums tracking-tighter">
-            {progress}
-            <span className="text-accent">%</span>
-          </p>
-        </div>
-      </div>
-
+      {/* title cards, written in letter by letter */}
       <p
-        className={`relative font-mono text-xs text-muted transition-opacity duration-300 ${
-          readoutGone ? "opacity-0" : "opacity-100"
-        }`}
+        ref={cardRef}
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-[17vh] px-6 text-center font-sans text-[clamp(1.5rem,3.3vw,2.6rem)] font-light tracking-[-0.02em] text-white/95 drop-shadow-[0_2px_24px_rgba(0,0,0,0.95)]"
+      />
+
+      {/* the end card, in the lower third like a film's, clear of the star */}
+      <div
+        ref={creditRef}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 flex flex-col items-center justify-end pb-[24vh] text-center opacity-0"
       >
-        <span className="text-accent">▸</span> {status}
-        <span className="float-right text-muted/80">press any key to skip</span>
-      </p>
+        <p className="font-sans text-[clamp(2.6rem,7vw,5.5rem)] font-semibold tracking-[-0.04em] text-white drop-shadow-[0_0_30px_rgba(34,211,238,0.6)]">
+          Asad Shah
+        </p>
+        <p className="mt-3 font-sans text-[11px] uppercase tracking-[0.5em] text-white/80">Full-stack developer</p>
+      </div>
+
+      {/* the only controls: skip, and how far through the film you are */}
+      <div className="absolute bottom-[calc(11vh+1rem)] right-5 flex items-center gap-3 sm:right-8">
+        <span className="font-sans text-[11px] tabular-nums text-white/60">
+          <span ref={pctRef}>0</span>%
+        </span>
+        <button
+          type="button"
+          onClick={() => finishRef.current()}
+          className="whitespace-nowrap rounded-full border border-white/20 bg-black/40 px-4 py-2 font-sans text-[11px] text-white/75 backdrop-blur-sm transition-colors hover:border-accent hover:text-accent"
+        >
+          Skip intro
+        </button>
+      </div>
+      <div className="absolute inset-x-0 bottom-0 h-px bg-white/10">
+        <div ref={barRef} className="h-full origin-left scale-x-0 bg-accent shadow-[0_0_10px_var(--ring)]" />
+      </div>
     </div>
   );
 }

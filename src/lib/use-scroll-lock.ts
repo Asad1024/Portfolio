@@ -13,7 +13,11 @@ import { useEffect } from "react";
 
    Counting owners fixes it: the first one in takes the lock, the last one out
    restores whatever the body had before. The count is module-level because
-   the thing being locked is module-level too — there is only one body. */
+   the thing being locked is module-level too — there is only one body.
+
+   Hiding the body's overflow only stops native scrolling. Lenis drives the
+   page programmatically, so it kept scrolling the page behind an open panel;
+   the lock also announces itself, and SmoothScroll stops and starts Lenis. */
 
 let owners = 0;
 let restore = "";
@@ -25,12 +29,16 @@ export function useScrollLock(active: boolean) {
     if (owners === 0) {
       restore = document.body.style.overflow;
       document.body.style.overflow = "hidden";
+      window.dispatchEvent(new CustomEvent("scroll-lock", { detail: true }));
     }
     owners += 1;
 
     return () => {
       owners -= 1;
-      if (owners === 0) document.body.style.overflow = restore;
+      if (owners === 0) {
+        document.body.style.overflow = restore;
+        window.dispatchEvent(new CustomEvent("scroll-lock", { detail: false }));
+      }
     };
   }, [active]);
 }

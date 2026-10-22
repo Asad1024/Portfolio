@@ -4,16 +4,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { contact, projects } from "@/lib/data";
 import { ConsolePanel } from "./console-panel";
+import { Hash, FolderOpen, Zap, Search, ArrowUpDown, CornerDownLeft } from "lucide-react";
 
 type Item = {
   label: string;
   group: string;
   hint?: string;
+  /** extra words the query matches but the row doesn't show (stack, tags) */
+  keywords?: string;
   run: () => void;
 };
 
-/** The marker each kind of result carries, in its heading and on its rows. */
-const GLYPH: Record<string, string> = { destinations: "◆", bodies: "●", systems: "▸" };
+/** The icon and heading each kind of result carries. */
+const GROUPS: Record<string, { name: string; Icon: typeof Hash }> = {
+  destinations: { name: "Sections", Icon: Hash },
+  bodies: { name: "Projects", Icon: FolderOpen },
+  systems: { name: "Actions", Icon: Zap },
+};
 
 const SECTIONS = [
   ["Work", "#work"],
@@ -56,6 +63,7 @@ export function CommandPalette() {
         label: p.title,
         group: "bodies",
         hint: p.tagline,
+        keywords: [p.company, p.platform, ...p.tags, ...p.stack].filter(Boolean).join(" "),
         run: go(`/work/${p.slug}`),
       })),
       {
@@ -110,7 +118,7 @@ export function CommandPalette() {
     const q = query.trim().toLowerCase();
     if (!q) return items;
     return items.filter((i) =>
-      `${i.label} ${i.group} ${i.hint ?? ""}`.toLowerCase().includes(q),
+      `${i.label} ${GROUPS[i.group]?.name ?? ""} ${i.hint ?? ""} ${i.keywords ?? ""}`.toLowerCase().includes(q),
     );
   }, [items, query]);
 
@@ -159,21 +167,21 @@ export function CommandPalette() {
       open={open}
       onClose={close}
       label="Command palette"
-      title="nav computer"
-      sub="set destination"
+      title="search"
+      sub="sections · projects · actions"
       initialFocusRef={inputRef}
       align="top"
       size="max-w-xl"
       z={160}
       footer={
         <div
-          className="flex items-center gap-4 border-t px-4 py-2 font-mono text-[11px] text-muted/70"
+          className="flex items-center gap-4 border-t px-4 py-2 font-sans text-[11px] text-muted/70"
           style={{ borderColor: "color-mix(in oklab, var(--accent) 14%, transparent)" }}
         >
-          <span>↑↓ navigate</span>
-          <span>↵ select</span>
+          <span className="flex items-center gap-1.5"><ArrowUpDown aria-hidden className="size-3" /> navigate</span>
+          <span className="flex items-center gap-1.5"><CornerDownLeft aria-hidden className="size-3" /> select</span>
           <span className="ml-auto uppercase tabular-nums tracking-widest text-accent/80">
-            {String(results.length).padStart(2, "0")} in range
+            {results.length} {results.length === 1 ? "result" : "results"}
           </span>
         </div>
       }
@@ -183,9 +191,7 @@ export function CommandPalette() {
         className="relative flex items-center gap-3 border-b px-4"
         style={{ borderColor: "color-mix(in oklab, var(--accent) 14%, transparent)" }}
       >
-        <span aria-hidden className="font-mono text-sm text-accent">
-          ❯
-        </span>
+        <Search aria-hidden className="size-4 shrink-0 text-accent" />
         <input
           ref={inputRef}
           value={query}
@@ -195,11 +201,11 @@ export function CommandPalette() {
             setCursor(0);
           }}
           onKeyDown={onKeyDown}
-          placeholder="jump to a section, project, or action…"
+          placeholder="Search projects and sections…"
           spellCheck={false}
           autoComplete="off"
           aria-label="Search sections, projects and actions"
-          className="w-full bg-transparent py-3.5 font-mono text-sm text-fg outline-none placeholder:text-muted/60"
+          className="w-full bg-transparent py-3.5 font-sans text-sm text-fg outline-none placeholder:text-muted/60"
         />
       </div>
 
@@ -211,20 +217,20 @@ export function CommandPalette() {
       >
         {results.length === 0 && (
           <p className="px-3 py-10 text-center text-sm text-muted">
-            no signal for “{query}”
+            No results for “{query}”
           </p>
         )}
         {results.map((item, i) => {
           const header = item.group !== lastGroup ? item.group : null;
           lastGroup = item.group;
           const on = i === cursor;
-          const glyph = GLYPH[item.group] ?? "◆";
+          const { name, Icon } = GROUPS[item.group] ?? GROUPS.systems;
           return (
             <div key={`${item.group}-${item.label}`}>
               {header && (
-                <p className="flex items-center gap-2 px-3 pb-1.5 pt-3.5 font-mono text-[11px] uppercase tracking-[0.18em] text-accent/75">
-                  <span aria-hidden className="text-[9px]">{glyph}</span>
-                  {header}
+                <p className="flex items-center gap-2 px-3 pb-1.5 pt-3.5 font-sans text-[11px] uppercase tracking-[0.18em] text-accent/75">
+                  <Icon aria-hidden className="size-3" />
+                  {name}
                 </p>
               )}
               <button
@@ -235,16 +241,14 @@ export function CommandPalette() {
                   on ? "border-accent/30 bg-accent/[0.07] text-fg" : "border-transparent text-fg/80"
                 }`}
               >
-                <span
+                <Icon
                   aria-hidden
-                  className={`shrink-0 font-mono text-[9px] transition-colors ${on ? "text-accent" : "text-muted/50"}`}
-                >
-                  {glyph}
-                </span>
-                <span className="truncate text-sm">{item.label}</span>
+                  className={`size-3.5 shrink-0 transition-colors ${on ? "text-accent" : "text-muted/50"}`}
+                />
+                <span className="max-w-[55%] shrink-0 truncate text-sm">{item.label}</span>
                 {item.hint && (
                   <span
-                    className={`ml-auto shrink-0 truncate font-mono text-xs transition-colors ${
+                    className={`ml-auto min-w-0 truncate text-right font-sans text-xs transition-colors ${
                       on ? "text-accent/80" : "text-muted/60"
                     }`}
                   >

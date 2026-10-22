@@ -9,12 +9,10 @@ import { techColor, techGlyph } from "../tech-icon";
 
 /* ── the hero solar system ──────────────────────────────────────────────────
    Fourteen technologies across eleven orbit lines, each tinted its own
-   brand colour and carrying its own inclination and rate. Every one travels
-   the same way round — counterclockwise from above the plane, as every planet
-   in the real solar system does; only the speed varies. Kepler sets the
-   baseline (angular speed falling off as 1/√r) and each body is then knocked
-   off it, so the field never turns as one rigid disc. It all runs off a single
-   clock in useFrame; there is no per-body state, so the whole stack costs one
+   brand colour and carrying its own inclination. Every one travels the same
+   way round, counterclockwise from above the plane, and at the same angular
+   speed, so the evenly spread layout holds however long the page is open. It
+   all runs off a single clock in useFrame; there is no per-body state, so the whole stack costs one
    render.
 
    This file is only ever reached through a dynamic() import with ssr:false;
@@ -32,13 +30,16 @@ import { techColor, techGlyph } from "../tech-icon";
    Anything added later goes in the band its role belongs to — the rule is
    only worth having if it survives the next technology.
 
-   Radii, tilts and rates are render concerns and live here; which technology
+   Radii and tilts are render concerns and live here; which technology
    belongs to which band is content and lives in data.ts. */
-const BANDS: Record<StackBand["band"], { radius: number; tilt: number; rate: number }> = {
-  core: { radius: 3.6, tilt: 0.1, rate: 1.0 },
-  frameworks: { radius: 5.3, tilt: -0.18, rate: 0.84 },
-  services: { radius: 7.1, tilt: 0.26, rate: 0.72 },
+const BANDS: Record<StackBand["band"], { radius: number; tilt: number }> = {
+  core: { radius: 3.7, tilt: 0.1 },
+  frameworks: { radius: 5.6, tilt: -0.18 },
+  services: { radius: 7.55, tilt: 0.26 },
 };
+
+/** How fast the whole system turns, in radians a second: a full turn in about 40s. */
+const ORBIT_SPEED = 0.155;
 
 /** Clear of the corona's outer shell (1.5 × 1.75 × 0.9 = 2.36) with room to
  *  spare, so nothing ever rides through the star. */
@@ -49,7 +50,7 @@ const BODY_SIZE = 0.36;
 
 /** Where the camera sits. Its distance from the star is also what converts a
  *  body's world size into the fixed on-screen size its sprite is drawn at. */
-const CAMERA_POSITION: [number, number, number] = [0, 24.32, 26.53];
+const CAMERA_POSITION: [number, number, number] = [0, 20.8, 22.7];
 const CAMERA_DISTANCE = Math.hypot(...CAMERA_POSITION);
 
 type Body = {
@@ -71,7 +72,7 @@ type Body = {
    up along one spoke. */
 function buildBodies(): Body[] {
   return stackOrbits.flatMap((band, bandIndex) => {
-    const { radius, tilt, rate } = BANDS[band.band];
+    const { radius, tilt } = BANDS[band.band];
     if (radius < MIN_RADIUS) throw new Error(`${band.band} orbits inside the star`);
 
     return band.members.map((tech, i) => ({
@@ -82,10 +83,11 @@ function buildBodies(): Body[] {
       radius,
       tilt,
       phase: (i / band.members.length) * Math.PI * 2 + bandIndex * 0.7,
-      // Kepler sets the baseline — inner bands genuinely outrun outer ones —
-      // and each band is knocked off it so the field doesn't turn as one
-      // rigid disc. Rate only: direction is shared, never reversed.
-      speed: -(0.42 / Math.sqrt(radius)) * rate,
+      // One speed for every band, so the system turns as one. With Kepler's
+      // differing speeds (inner bands outrunning outer ones) the evenly spread
+      // layout drifted apart within a minute: icons on different rings lined
+      // up and piled on top of each other, and only a reload set them right.
+      speed: -ORBIT_SPEED,
     }));
   });
 }
@@ -540,6 +542,41 @@ function useTrail(body: Body, accent: string) {
   }, [body.color, accent]);
 }
 
+/* ── launch ───────────────────────────────────────────────────────────────
+   The arrival moment. Until the hero says the page is ready, every body sits
+   inside the star and the rings are collapsed to nothing; then the rings open
+   out and each technology is flung from the star, spiralling out and
+   overshooting a touch before it settles into its orbit. Module state rather
+   than React state, because it is read every frame by every body. Reset on
+   each mount so coming back to the page plays it again. */
+const LAUNCH_MS = 1700;
+const launch = { at: -1, reduced: false };
+
+function launchK(delayMs = 0) {
+  if (launch.reduced) return 1;
+  if (launch.at < 0) return 0;
+  return clamp01((performance.now() - launch.at - delayMs) / LAUNCH_MS);
+}
+
+function easeOutBack(x: number) {
+  const c1 = 1.4;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+}
+
+/** The rings and dust open out from the star on launch. */
+function LaunchGroup({ children }: { children: React.ReactNode }) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (!ref.current) return;
+    const k = launchK(0);
+    const e = 1 - Math.pow(1 - k, 3);
+    ref.current.scale.setScalar(Math.max(0.0001, e));
+    ref.current.rotation.y = (1 - e) * 1.6;
+  });
+  return <group ref={ref}>{children}</group>;
+}
+
 /* Each body is its technology's mark and nothing else — no name. The marks
    are recognisable on their own, and without labels there is nothing to
    collide when two bodies pass each other. Baked into one canvas texture per
@@ -548,7 +585,6 @@ function useTrail(body: Body, accent: string) {
 const CANVAS_W = 128;
 const CANVAS_H = 128;
 const ICON_PX = 112;
-const ICON_TOP = (CANVAS_H - ICON_PX) / 2;
 /** Icon height as a fraction of the sprite — used to size the sprite so the
  *  glyph itself lands at a predictable world size. */
 const ICON_FRACTION = ICON_PX / CANVAS_H;
@@ -571,28 +607,60 @@ function useGlyphTexture(tech: string, color: string) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
-    // same box for every technology
+    /* Every mark sits on its own small planet: a shaded disc lit from the
+       upper left, rimmed in the brand colour. Bare glyphs on black lost the
+       dark marks (Next.js, Prisma, TypeScript) entirely and read as flat
+       stickers; on a lit body each one is legible and reads as a thing in
+       orbit. Marks too dark to show on the disc are lifted toward white. */
+    const c = new THREE.Color(color);
+    const hsl = { h: 0, s: 0, l: 0 };
+    c.getHSL(hsl);
+    const ink = hsl.l < 0.42 ? `#${c.clone().lerp(new THREE.Color("#e8ecf5"), 0.62).getHexString()}` : color;
+    // normalised to #rrggbb so the alpha suffixes below are always valid
+    const rim = hsl.l < 0.25 ? "#22d3ee" : `#${c.getHexString()}`;
+
+    const cx = CANVAS_W / 2;
+    const cy = CANVAS_H / 2;
+    const R = CANVAS_W / 2 - 4;
+    const body = ctx.createRadialGradient(cx - R * 0.38, cy - R * 0.42, R * 0.08, cx, cy, R);
+    body.addColorStop(0, "#2a3346");
+    body.addColorStop(0.55, "#111827");
+    body.addColorStop(1, "#04060c");
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = body;
+    ctx.fill();
+    // brand-tinted atmosphere on the lit side
+    const tint = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.35, 0, cx, cy, R);
+    tint.addColorStop(0, `${rim}38`);
+    tint.addColorStop(1, `${rim}00`);
+    ctx.fillStyle = tint;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = `${rim}aa`;
+    ctx.stroke();
+
+    const GLYPH_PX = ICON_PX * 0.64;
     ctx.save();
-    ctx.translate(0, ICON_TOP);
+    ctx.translate((CANVAS_W - GLYPH_PX) / 2, (CANVAS_H - GLYPH_PX) / 2);
     if (letters) {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillStyle = color;
-      ctx.font = `700 ${Math.round(ICON_PX * 0.62)}px "JetBrains Mono", ui-monospace, monospace`;
-      ctx.fillText(letters, CANVAS_W / 2, ICON_PX / 2);
+      ctx.fillStyle = ink;
+      ctx.font = `800 ${Math.round(GLYPH_PX * 0.62)}px ui-sans-serif, system-ui, sans-serif`;
+      ctx.fillText(letters, GLYPH_PX / 2, GLYPH_PX / 2 + 2);
     } else {
-      const scale = ICON_PX / 24;
-      ctx.translate((CANVAS_W - ICON_PX) / 2, 0);
+      const scale = GLYPH_PX / 24;
       ctx.scale(scale, scale);
       const path = new Path2D(glyph!.path);
       if (glyph!.stroked) {
-        ctx.strokeStyle = color;
+        ctx.strokeStyle = ink;
         ctx.lineWidth = 1.9;
         ctx.lineJoin = "round";
         ctx.lineCap = "round";
         ctx.stroke(path);
       } else {
-        ctx.fillStyle = color;
+        ctx.fillStyle = ink;
         ctx.fill(path);
       }
     }
@@ -612,12 +680,15 @@ function useGlyphTexture(tech: string, color: string) {
 
 function Planet({
   body,
+  order,
   hovered,
   onHover,
   accent,
 }: {
   accent: string;
   body: Body;
+  /** launch order: later bodies leave the star a beat after earlier ones */
+  order: number;
   hovered: boolean;
   onHover: (tech: string | null) => void;
 }) {
@@ -643,14 +714,22 @@ function Planet({
   // number of pixels wherever it is on its orbit — perspective would otherwise
   // swell it on the near side and shrink it on the far side. Dividing by the
   // camera distance keeps it the size it used to be at the star's depth.
-  const iconWorld = BODY_SIZE * 2.5;
+  // a touch larger now each mark sits on its own disc
+  const iconWorld = BODY_SIZE * 3.1;
   const spriteH = iconWorld / ICON_FRACTION / CAMERA_DISTANCE;
   const spriteW = spriteH * (CANVAS_W / CANVAS_H);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-    const a = body.phase + t * body.speed;
+    // launch: radius grows out of the star with an overshoot, and the body
+    // carries extra spin on the way so it spirals rather than slides out
+    const k = launchK(order * 65);
+    const out = 1 - Math.pow(1 - k, 3);
+    const radius = body.radius * easeOutBack(k);
+    const a = body.phase + t * body.speed + (1 - out) * 3.4;
     if (!group.current) return;
+    group.current.visible = k > 0;
+    if (trailRef.current) trailRef.current.visible = k > 0.05;
 
     // Trail: the angles this body has just come from. Speed is negative, so
     // "behind" is the larger angle.
@@ -658,16 +737,16 @@ function Planet({
       | THREE.BufferAttribute
       | undefined;
     if (tp) {
-      const step = TRAIL_LENGTH / body.radius / (TRAIL_POINTS - 1);
+      const step = TRAIL_LENGTH / Math.max(radius, 0.5) / (TRAIL_POINTS - 1);
       const st = Math.sin(body.tilt);
       const ct = Math.cos(body.tilt);
       for (let i = 0; i < TRAIL_POINTS; i++) {
         const b = a + i * step;
         tp.setXYZ(
           i,
-          Math.cos(b) * body.radius,
-          Math.sin(b) * body.radius * st,
-          Math.sin(b) * body.radius * ct,
+          Math.cos(b) * radius,
+          Math.sin(b) * radius * st,
+          Math.sin(b) * radius * ct,
         );
       }
       tp.needsUpdate = true;
@@ -677,10 +756,11 @@ function Planet({
        own ring, at its own angle. OrbitPath draws the same curve from the
        same radius and tilt, so the two cannot disagree. */
     group.current.position.set(
-      Math.cos(a) * body.radius,
-      Math.sin(a) * body.radius * Math.sin(body.tilt),
-      Math.sin(a) * body.radius * Math.cos(body.tilt),
+      Math.cos(a) * radius,
+      Math.sin(a) * radius * Math.sin(body.tilt),
+      Math.sin(a) * radius * Math.cos(body.tilt),
     );
+    group.current.scale.setScalar(Math.min(1, 0.2 + k * 2));
 
     /* Depth changes a body's brightness, and only its brightness. The far
        half of a ring is further from the camera than the star is, so it reads
@@ -801,6 +881,7 @@ function Scene({
       {/* Brightest nearest the star and fading outward, so the eye reads the
           bands as layers leading away from the centre rather than three
           equally weighted wires. */}
+      <LaunchGroup>
       {shells.map((s, i) => (
         <OrbitPath
           key={s.radius}
@@ -812,11 +893,13 @@ function Scene({
       ))}
 
       <DustBelt color={accent} />
+      </LaunchGroup>
 
-      {bodies.map((b) => (
+      {bodies.map((b, i) => (
         <Planet
           key={b.tech}
           body={b}
+          order={i}
           hovered={hovered === b.tech}
           onHover={onHover}
           accent={accent}
@@ -831,7 +914,18 @@ function Scene({
 
 /* ── canvas wrapper ─────────────────────────────────────────────────────── */
 
-export default function SolarSystem({ paused = false }: { paused?: boolean }) {
+export default function SolarSystem({ paused = false, launched = true }: { paused?: boolean; launched?: boolean }) {
+  // a fresh mount waits for its own launch
+  useEffect(() => {
+    launch.at = -1;
+    launch.reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return () => {
+      launch.at = -1;
+    };
+  }, []);
+  useEffect(() => {
+    if (launched && launch.at < 0) launch.at = performance.now();
+  }, [launched]);
   const [hovered, setHovered] = useState<string | null>(null);
   const [accent, setAccent] = useState("#22d3ee");
   const bodies = useMemo(() => buildBodies(), []);
@@ -870,11 +964,10 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
          moves out to keep the visible height identical, so the system fills
          the same space while sitting evenly around the star.
 
-         Distance is 36 for an outermost ring of 7.1: half the visible height
-         is 36·tan(17°) = 11.0, and the widest thing on screen is that ring
-         plus an icon, about 7.6 — so every ellipse closes inside the canvas
-         at any aspect down to 0.69, instead of the outer ones running off the
-         edge as they did when the bands reached 9.2. */
+         Distance is about 30.8 for an outermost ring of 7.55: half the
+         visible height is 30.8·tan(17°) = 9.4, and the widest thing on screen
+         is that ring plus an icon, about 8.1, so every ellipse closes inside
+         the canvas at any aspect down to about 0.86. */
       camera={{ position: CAMERA_POSITION, fov: 34 }}
       /* Stop the render loop entirely once the hero scrolls away. Left on
          "always" the scene keeps drawing twelve orbits behind every other
@@ -885,7 +978,7 @@ export default function SolarSystem({ paused = false }: { paused?: boolean }) {
       gl={{ antialias: true, powerPreference: "high-performance" }}
       // a machine without WebGL still gets a hero, just a flat one
       fallback={
-        <div className="flex size-full items-center justify-center font-mono text-xs text-muted">
+        <div className="flex size-full items-center justify-center font-sans text-xs text-muted">
           WebGL unavailable — solar view offline
         </div>
       }

@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { ScrambleText } from "./scramble-text";
+import { Magnetic } from "./magnetic";
+import Image from "next/image";
+import { profile, projects } from "@/lib/data";
+import { ArrowRight } from "lucide-react";
 
 /* The WebGL scene is client-only and lazily chunked: three and drei must never
    land in the first-paint bundle, and none of it means anything during SSR. */
@@ -11,9 +15,8 @@ const SolarSystem = dynamic(() => import("./space/solar-system"), {
   ssr: false,
   loading: () => (
     <div className="flex size-full items-center justify-center">
-      <p className="font-mono text-xs text-muted">
-        <span className="term-green">$</span> initializing orbital view
-        <span className="caret-blink term-green">_</span>
+      <p className="font-sans text-xs text-muted">
+        initializing orbital view
       </p>
     </div>
   ),
@@ -71,7 +74,9 @@ export function Hero() {
       sessionStorage.setItem("booted", "1");
       window.dispatchEvent(new CustomEvent("boot-complete"));
       setRevealed(true);
-    }, 6000);
+      // longer than the whole intro film: firing inside it launched the planets
+      // behind the film, where nobody could see them
+    }, 15000);
 
     return () => {
       window.removeEventListener("route-revealed", onRevealed);
@@ -92,7 +97,7 @@ export function Hero() {
   return (
     <section
       ref={sectionRef}
-      className="relative flex min-h-screen items-center overflow-hidden"
+      className="relative flex min-h-[92svh] items-center overflow-hidden md:min-h-[84vh]"
     >
       {/* The system owns the right half on desktop and the lower band on
           mobile — never the same pixels as the type.
@@ -112,81 +117,104 @@ export function Hero() {
       <div
         className={`absolute inset-x-0 bottom-0 h-[44%] transition-opacity duration-1000 md:inset-y-0 md:bottom-auto md:left-auto md:right-[2.5%] md:h-full md:w-[52%] md:max-w-[907px] ${fade}`}
       >
-        <SolarSystem paused={!inView} />
+        <SolarSystem paused={!inView} launched={ready} />
+        {/* Arrival: the star ignites and two shockwaves sweep out across the
+            screen as the system is flung into its orbits (see solar-system). */}
+        {ready && (
+          <span aria-hidden className="pointer-events-none absolute inset-0 motion-reduce:hidden">
+            <span className="ignite" />
+            <span className="shockwave" />
+            <span className="shockwave shockwave-late" />
+          </span>
+        )}
       </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-shell px-6 pb-40 pt-28 md:py-24">
-        <div className="md:max-w-[46%]">
+      <div className="relative z-10 mx-auto w-full max-w-shell px-6 pb-40 pt-28 md:pb-16 md:pt-32">
+        <div className="md:max-w-[50%]">
           <p
-            className={`${BASE} ${fade} font-mono text-xs tracking-wide text-muted`}
+            className={`${BASE} ${fade} inline-flex items-center gap-2.5 rounded-full border border-line bg-bg/40 py-1 pl-1 pr-4 font-sans text-[12px] tracking-wide text-muted backdrop-blur-sm`}
             style={at(0)}
           >
-            <span className="term-green">$</span> whoami
+            {profile.photo && (
+              <Image
+                src={profile.photo}
+                alt=""
+                width={32}
+                height={32}
+                loading="eager"
+                className="size-8 rounded-full border border-accent/40 object-cover object-top"
+              />
+            )}
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60" />
+              <span className="relative inline-flex size-2 rounded-full bg-accent" />
+            </span>
+            <span className="whitespace-nowrap">Available for work</span>
+            <span aria-hidden className="hidden h-3 w-px bg-line sm:block" />
+            <span className="hidden whitespace-nowrap sm:inline">Lahore, remote-first</span>
           </p>
 
-          <h1 className="mt-10 select-none font-sans font-bold leading-[0.92] tracking-tighter">
+          <h1 className="mt-10 select-none font-sans font-semibold leading-[0.95] tracking-[-0.05em]">
             <span
-              className={`${BASE} ${lift} block text-[clamp(3.5rem,8.5vw,7rem)] text-glow`}
+              className={`${BASE} ${lift} block text-[clamp(3.5rem,8.1vw,6.9rem)] text-glow`}
               style={at(150)}
             >
-              <ScrambleText text="ASAD" trigger="manual" active={ready} duration={1100} />
+              <ScrambleText text="Asad Shah" trigger="manual" active={ready} duration={1100} />
             </span>
             <span
-              className={`${BASE} ${rise} mt-3 block text-[clamp(1.4rem,3.3vw,2.6rem)] text-muted`}
+              className={`${BASE} ${rise} mt-10 block text-[clamp(1.55rem,3.2vw,2.55rem)] font-medium leading-[1.15] tracking-[-0.03em] text-fg/85`}
               style={at(320)}
             >
-              <ScrambleText text="FULL-STACK" trigger="manual" active={ready} duration={1300} />
-              <span className="text-accent">*</span>{" "}
-              <ScrambleText text="DEVELOPER" trigger="manual" active={ready} duration={1300} />
+              Full-stack developer shipping{" "}
+              <span className="whitespace-nowrap text-accent">
+                AI products
+              </span>{" "}
+              end to end.
             </span>
           </h1>
 
-          <p
-            className={`${BASE} ${rise} mt-10 max-w-md text-base leading-[1.75] text-muted sm:text-lg`}
-            style={at(520)}
-          >
-            I design and ship complete products — web platforms, desktop apps,
-            cloud infrastructure, and AI systems that actually make it to
-            production.
-          </p>
-
           <div
-            className={`${BASE} ${fade} mt-10 flex items-center gap-5 font-mono text-xs text-muted`}
-            style={at(680)}
+            className={`${BASE} ${rise} mt-14 flex flex-wrap items-center gap-3`}
+            style={at(640)}
           >
-            <span className="flex items-center gap-2.5">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60" />
-                <span className="relative inline-flex size-2 rounded-full bg-accent" />
-              </span>
-              available for work
-            </span>
-            <span className="h-px w-8 bg-line" />
-            <span className="hidden sm:inline">lahore · remote-first</span>
+            <Magnetic>
+              <Link
+                href="/#work"
+                className="group inline-flex items-center gap-2.5 whitespace-nowrap rounded-full bg-fg px-5 py-3.5 text-sm font-medium text-bg transition-opacity hover:opacity-90 sm:px-7 sm:py-4 sm:text-[15px]"
+              >
+                View selected work
+                <ArrowRight aria-hidden className="size-4 transition-transform duration-300" />
+              </Link>
+            </Magnetic>
+            <Magnetic>
+              <Link
+                href="/#contact"
+                className="inline-flex items-center whitespace-nowrap rounded-full border border-line bg-bg/40 px-5 py-3.5 text-sm font-medium text-fg/90 backdrop-blur-sm transition-colors hover:border-accent hover:text-accent sm:px-7 sm:py-4 sm:text-[15px]"
+              >
+                Get in touch
+              </Link>
+            </Magnetic>
           </div>
+
+          <dl
+            className={`${BASE} ${fade} mt-16 hidden flex-wrap gap-x-10 gap-y-4 sm:flex`}
+            style={at(800)}
+          >
+            {[
+              [String(projects.length), "products shipped"],
+              ["5", "live AI platforms"],
+              ["3+", "years in production"],
+            ].map(([v, k]) => (
+              <div key={k}>
+                <dt className="sr-only">{k}</dt>
+                <dd className="font-sans text-[1.75rem] font-semibold tracking-tight text-fg">{v}</dd>
+                <dd className="mt-0.5 font-sans text-[12.5px] text-muted">{k}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </div>
 
-      <Link
-        href="/#work"
-        aria-label="Scroll to work"
-        className={`${BASE} ${fade} absolute bottom-16 left-1/2 z-10 -translate-x-1/2 text-muted transition-colors hover:text-accent`}
-        style={at(1100)}
-      >
-        <svg
-          className="animate-bounce"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 4v16m0 0l-6-6m6 6l6-6" />
-        </svg>
-      </Link>
     </section>
   );
 }

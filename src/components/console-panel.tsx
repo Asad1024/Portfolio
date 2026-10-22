@@ -165,9 +165,9 @@ export function ConsolePanel({
                   className="size-2 shrink-0 rounded-full bg-accent"
                   style={{ boxShadow: "0 0 8px var(--accent)" }}
                 />
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-accent">{title}</p>
+                <p className="font-sans text-xs uppercase tracking-[0.18em] text-accent">{title}</p>
                 {sub && (
-                  <p className="ml-auto hidden font-mono text-[11px] uppercase tracking-widest text-muted/70 sm:block">
+                  <p className="ml-auto hidden font-sans text-[11px] uppercase tracking-widest text-muted/70 sm:block">
                     {sub}
                   </p>
                 )}
@@ -179,7 +179,7 @@ export function ConsolePanel({
                 </span>
                 <button
                   onClick={onClose}
-                  className="ml-auto rounded-md border border-line px-1.5 py-px font-mono text-[11px] uppercase tracking-widest text-muted transition-colors hover:border-accent/60 hover:text-accent sm:ml-0"
+                  className="ml-auto rounded-md border border-line px-1.5 py-px font-sans text-[11px] uppercase tracking-widest text-muted transition-colors hover:border-accent/60 hover:text-accent sm:ml-0"
                   aria-label={`Close ${label.toLowerCase()}`}
                 >
                   esc

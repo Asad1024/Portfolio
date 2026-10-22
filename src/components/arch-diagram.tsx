@@ -95,7 +95,7 @@ export function ArchDiagram({ cols, caption }: { cols: ArchCol[]; caption: strin
       </div>
 
       <motion.p
-        className="mt-8 border-l-2 border-accent pl-4 font-mono text-xs leading-relaxed text-muted"
+        className="mt-8 border-l-2 border-accent pl-4 font-sans text-xs leading-relaxed text-muted"
         initial={{ opacity: 0, x: -12 }}
         whileInView={{ opacity: 1, x: 0 }}
         viewport={{ once: true }}
@@ -134,14 +134,14 @@ function Stage({
           className="arch-node-flare absolute inset-0 rounded-full bg-accent/25"
           style={{ animationDelay: delay }}
         />
-        <span className="relative flex size-10 items-center justify-center rounded-full border border-accent/50 bg-bg font-mono text-[11px] text-accent shadow-[0_0_14px_-4px_var(--accent)]">
+        <span className="relative flex size-10 items-center justify-center rounded-full border border-accent/50 bg-bg font-sans text-[11px] text-accent shadow-[0_0_14px_-4px_var(--accent)]">
           {step}
         </span>
       </span>
 
       {/* the stage itself */}
       <div
-        className={`group relative w-full flex-1 overflow-hidden rounded-xl border border-line bg-card p-4 backdrop-blur-sm transition-[border-color,transform] duration-300 hover:-translate-y-1 hover:border-accent/60 ${
+        className={`group relative w-full flex-1 overflow-hidden rounded-xl border border-line bg-card p-4 backdrop-blur-sm transition-[border-color,transform] duration-300 hover:border-accent/60 ${
           vertical ? "" : "mt-4"
         }`}
       >
@@ -156,12 +156,12 @@ function Stage({
           aria-hidden
           className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-accent/10 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
         />
-        <p className="relative font-mono text-xs uppercase tracking-[0.18em] text-accent">{col.title}</p>
+        <p className="relative font-sans text-xs uppercase tracking-[0.18em] text-accent">{col.title}</p>
         <ul className="relative mt-3 space-y-2">
           {col.items.map((item, k) => (
             <motion.li
               key={item}
-              className="flex items-start gap-2 rounded-md border border-line bg-bg/70 px-3 py-2 font-mono text-xs leading-snug text-muted transition-colors duration-300 group-hover:border-accent/25 group-hover:text-fg"
+              className="flex items-start gap-2 rounded-md border border-line bg-bg/70 px-3 py-2 font-sans text-xs leading-snug text-muted transition-colors duration-300 group-hover:border-accent/25 group-hover:text-fg"
               initial={{ opacity: 0, y: 6 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}

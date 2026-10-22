@@ -31,8 +31,8 @@
   --color-green: var(--green);
   --color-card: var(--card);
   --color-void: var(--void);
-  --font-sans: var(--font-space), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jet), ui-monospace, "Cascadia Code", monospace;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "Cascadia Code", monospace;
 
   /* One width for every section, so the page has a single left and right
      edge to line up against. Wider than Tailwind's 6xl by a hair: the
@@ -140,7 +140,7 @@ body::after {
 }
 
 /* ── telemetry ──────────────────────────────────────────────────────────────
-   Instrument-panel treatment for the work cards: a survey grid over the
+   Instrument-panel treatment: a survey grid over the
    viewport, a scan bar crossing it, and a marker running the arrow's ring. */
 
 .tele-grid {
@@ -334,4 +334,443 @@ body::after {
   .arch-card-glow {
     animation: none;
   }
+}
+
+/* Past the hero, the sky steps back so it never competes with text. */
+.nebula {
+  transition: opacity 900ms ease;
+}
+html[data-sky-dim] .nebula {
+  opacity: 0.5;
+}
+
+/* The intro's first-paint cover, skipped for a visitor who has already seen
+   the intro this session (flag set by the inline script in the root layout). */
+html[data-booted] [data-boot-cover] {
+  display: none;
+}
+
+/* One visible focus ring for every keyboard stop, in the accent. Mouse clicks
+   don't show it (focus-visible), so it never decorates a pointer user. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+/* ── arrival ─────────────────────────────────────────────────────────────────
+   The moment the hero lands: a flash at the star, then two rings of light
+   racing out past the edges of the screen. Played once per mount; transforms
+   and opacity only. */
+@keyframes ignite {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.6); }
+}
+.ignite {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46vmin;
+  height: 46vmin;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95), color-mix(in oklab, var(--accent) 60%, transparent) 30%, transparent 68%);
+  animation: ignite 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+@keyframes shockwave {
+  0% { opacity: 0.95; transform: translate(-50%, -50%) scale(0.02); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+.shockwave {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 230vmax;
+  height: 230vmax;
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklab, var(--accent) 75%, transparent);
+  box-shadow: 0 0 60px 6px var(--ring), inset 0 0 90px color-mix(in oklab, var(--accent) 18%, transparent);
+  opacity: 0;
+  animation: shockwave 2.1s cubic-bezier(0.12, 0.6, 0.2, 1) 0.08s forwards;
+}
+.shockwave-late {
+  border-color: color-mix(in oklab, var(--violet) 70%, transparent);
+  box-shadow: 0 0 50px 4px color-mix(in oklab, var(--violet) 45%, transparent);
+  animation-delay: 0.38s;
+  animation-duration: 2.5s;
+}
+
+/* the panel: dark glass inside a slowly turning border of light */
+.k-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  padding: 1px;
+  box-shadow: 0 30px 80px -24px rgba(34, 211, 238, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+.k-frame::before {
+  content: "";
+  position: absolute;
+  inset: -60%;
+  background: conic-gradient(from 0deg, rgba(34, 211, 238, 0.9), rgba(139, 92, 246, 0.6), transparent 35%, transparent 60%, rgba(34, 211, 238, 0.9));
+  animation: k-spin 6s linear infinite;
+}
+.k-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: calc(1.5rem - 1px);
+  background:
+    radial-gradient(120% 60% at 100% 0%, rgba(34, 211, 238, 0.1), transparent 60%),
+    radial-gradient(90% 50% at 0% 100%, rgba(139, 92, 246, 0.1), transparent 60%),
+    rgba(6, 9, 18, 0.94);
+  backdrop-filter: blur(20px);
+}
+.k-panel::after {
+  /* faint scanlines, for the instrument feel */
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 3px);
+}
+.k-caret {
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: var(--accent);
+  animation: blink 0.9s step-end infinite;
+}
+.k-dots { display: inline-flex; gap: 3px; }
+.k-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: k-dot 1s ease-in-out infinite;
+}
+.k-dots span:nth-child(2) { animation-delay: 0.15s; }
+.k-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes k-dot {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .k-frame::before, .k-dots span { animation: none; }
+}
+
+/* ── experience cards ────────────────────────────────────────────────────────
+   Each card is lit by its company's colour (--co, set on the card). */
+.xp-card {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01) 40%),
+    #070a14;
+  box-shadow: 0 40px 100px -40px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.xp-glow {
+  background:
+    radial-gradient(55% 70% at 100% 0%, color-mix(in oklab, var(--co) 12%, transparent), transparent 70%),
+    radial-gradient(40% 50% at 0% 100%, color-mix(in oklab, var(--co) 5%, transparent), transparent 70%);
+}
+.xp-year {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--co) 12%, transparent), transparent 80%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 1px color-mix(in oklab, var(--co) 50%, transparent);
+  opacity: 0.6;
+}
+
+/* intro film title cards: each letter rises out of a blur a beat after the last */
+@keyframes film-letter {
+  from { opacity: 0; filter: blur(10px); transform: translateY(0.35em); }
+  to { opacity: 1; filter: blur(0); transform: none; }
+}
+.film-letter {
+  display: inline-block;
+  animation: film-letter 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i) * 20ms);
+}
+
+
+@keyframes k-spin { to { transform: rotate(360deg); } }
+
+
+/* ── selected work: a stage lit in the project's colour (--tint) ──────────── */
+.sw-panel {
+  background: #060810;
+  box-shadow: 0 40px 100px -50px color-mix(in oklab, var(--tint) 60%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: box-shadow 0.9s;
+}
+/* the line of light leading each new project onto the stage */
+.sw-edge {
+  background: #fff;
+  box-shadow: 0 0 12px 2px var(--tint), 0 0 40px 6px color-mix(in oklab, var(--tint) 60%, transparent);
+}
+/* a soft light that follows the pointer over the screen */
+.sw-glare {
+  background: radial-gradient(28rem circle at var(--gx, 50%) var(--gy, 0%), rgba(255, 255, 255, 0.1), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s;
+  mix-blend-mode: soft-light;
+}
+.sw-stage:hover .sw-glare { opacity: 1; }
+.sw-num {
+  background: linear-gradient(135deg, #fff, color-mix(in oklab, var(--tint) 75%, #fff));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.sw-more { box-shadow: 0 0 24px -10px var(--tint); }
+.sw-progress { animation: sw-progress linear forwards; box-shadow: 0 0 8px var(--c); }
+@keyframes sw-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sw-progress { display: none; }
+}
+
+/* ── capabilities: bento cards, each with a live diagram in its colour (--c) ── */
+.cap-card {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.01) 45%), #070a14;
+  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: border-color 0.4s, box-shadow 0.4s;
+}
+.cap-card:hover {
+  border-color: color-mix(in oklab, var(--c) 25%, transparent);
+  box-shadow: 0 30px 80px -45px color-mix(in oklab, var(--c) 18%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.cap-card-glow {
+  background:
+    radial-gradient(70% 55% at 50% 0%, color-mix(in oklab, var(--c) 6%, transparent), transparent 70%),
+    radial-gradient(60% 60% at 100% 100%, color-mix(in oklab, var(--c) 3%, transparent), transparent 70%);
+}
+/* the skill box: tiles, one of them in the light */
+.cap-box {
+  background:
+    radial-gradient(90% 60% at 50% 0%, color-mix(in oklab, var(--c) 4%, transparent), transparent 70%),
+    #080b14;
+}
+.cap-tile { transition: border-color 0.3s, background 0.3s; }
+.cap-tile:hover { border-color: rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.04); }
+/* the light on the tile in turn: a soft fill, and a bright edge running round it */
+.cap-light {
+  background: color-mix(in oklab, var(--c) 9%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--c) 35%, transparent), 0 8px 22px -12px color-mix(in oklab, var(--c) 30%, transparent);
+}
+.cap-light::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--cap-a), transparent 0deg, var(--c) 60deg, #fff 90deg, var(--c) 120deg, transparent 180deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: cap-orbit 2.4s linear infinite;
+}
+@property --cap-a {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes cap-orbit { to { --cap-a: 360deg; } }
+/* ── the skill demos: every piece animates from hidden into its normal
+   state, so with animations off each scene shows its last frame ── */
+.dm-in { animation: dm-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: var(--d, 0s); }
+@keyframes dm-in { from { opacity: 0; transform: translateY(6px); } }
+.dm-pop { animation: dm-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both; animation-delay: var(--d, 0s); }
+@keyframes dm-pop { from { opacity: 0; transform: scale(0.6); } }
+.dm-type { animation: dm-type var(--t, 1s) steps(32, end) both; animation-delay: var(--d, 0s); }
+@keyframes dm-type { from { clip-path: inset(0 100% 0 0); } }
+.dm-fill { transform-origin: left; animation: dm-fill var(--t, 1s) cubic-bezier(0.4, 0, 0.2, 1) both; animation-delay: var(--d, 0s); box-shadow: 0 0 8px var(--c); }
+@keyframes dm-fill { from { transform: scaleX(0); } }
+.dm-go { animation: dm-go 0.3s ease both; animation-delay: var(--d, 0s); box-shadow: 0 0 6px #34d399; }
+@keyframes dm-go { from { background: rgba(255, 255, 255, 0.25); box-shadow: none; } }
+.dm-done { animation: dm-done 0.3s ease both; animation-delay: var(--d, 0s); }
+@keyframes dm-done { from { opacity: 0; } }
+.dm-strike { transform-origin: left; animation: dm-fill 0.4s ease both; animation-delay: var(--d, 0s); }
+.dm-shrink { animation: dm-shrink var(--t, 1s) cubic-bezier(0.4, 0, 0.2, 1) both; animation-delay: var(--d, 0s); width: 55%; }
+@keyframes dm-shrink { from { width: 100%; filter: saturate(0.6); } }
+.dm-wave span { transform-origin: center; animation: dm-wave 0.55s ease-in-out infinite alternate; }
+@keyframes dm-wave { from { transform: scaleY(0.25); } }
+.dm-ping { animation: dm-ping 1.1s ease-out infinite; }
+@keyframes dm-ping {
+  from { box-shadow: 0 0 0 0 color-mix(in oklab, var(--c) 60%, transparent); }
+  to { box-shadow: 0 0 0 10px transparent; }
+}
+.dm-talk { animation: dm-talk 0.3s ease-in-out infinite alternate; }
+@keyframes dm-talk { from { transform: scaleY(0.4) scaleX(0.7); } }
+.dm-speak { animation: dm-speak 1.6s ease-in-out infinite; }
+.dm-speak-2 { animation: dm-speak 1.6s ease-in-out 0.8s infinite; }
+@keyframes dm-speak {
+  0%, 100% { box-shadow: 0 0 0 1px transparent; }
+  50% { box-shadow: 0 0 0 1px var(--c), 0 0 18px -4px var(--c); }
+}
+.dm-squiggle { text-decoration: underline wavy #fb7185; text-underline-offset: 3px; }
+.dm-caret::after { content: ""; display: inline-block; width: 5px; height: 0.9em; margin-left: 2px; vertical-align: -1px; background: var(--c); animation: blink 0.9s step-end infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .dm *, .dm *::after { animation: none !important; }
+}
+.cap-demo { background: radial-gradient(90% 70% at 30% 0%, color-mix(in oklab, var(--c) 4%, transparent), transparent 70%), rgba(0, 0, 0, 0.35); }
+.dm-scene { animation: dm-scene 0.35s ease both; }
+@keyframes dm-scene { from { opacity: 0; filter: blur(4px); } }
+.cap-spot {
+  background: radial-gradient(80% 60% at 50% 30%, color-mix(in oklab, var(--c) 6%, transparent), transparent 75%), rgba(0, 0, 0, 0.3);
+}
+.cap-ring-run {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  filter: drop-shadow(0 0 4px var(--c));
+  animation: cap-ring-run linear forwards;
+}
+@keyframes cap-ring-run { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .cap-light::before { animation: none; }
+  .cap-ring-run { animation: none; stroke-dashoffset: 0; }
+}
+
+/* ── the guide's orb: a plasma core inside three gyroscope rings, each tilted
+   on its own axis and turning at its own speed. Mood speeds the rings and
+   pulses the core. */
+.k-orb {
+  --k-speed: 1;
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.k-orb[data-mood="thinking"] { --k-speed: 0.28; }
+.k-orb[data-mood="speaking"] { --k-speed: 0.6; }
+.k-halo {
+  position: absolute;
+  inset: -22%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.32), rgba(139, 92, 246, 0.12) 45%, transparent 70%);
+  filter: blur(6px);
+  animation: k-breathe calc(3.4s * var(--k-speed)) ease-in-out infinite;
+}
+.k-core {
+  position: absolute;
+  inset: 22%;
+  overflow: hidden;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 120%, rgba(139, 92, 246, 0.9), transparent 55%),
+    radial-gradient(circle at 40% 35%, #e0fbff 0%, #67e8f9 18%, #0891b2 45%, #1e1b4b 80%, #05060f 100%);
+  box-shadow:
+    0 0 18px 4px rgba(34, 211, 238, 0.55),
+    inset -5px -7px 12px rgba(0, 0, 0, 0.55),
+    inset 3px 4px 10px rgba(255, 255, 255, 0.25);
+  animation: k-pulse calc(2.6s * var(--k-speed)) ease-in-out infinite;
+}
+.k-core::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 255, 255, 0.35) 40deg, transparent 90deg, rgba(167, 139, 250, 0.35) 200deg, transparent 260deg);
+  mix-blend-mode: screen;
+  animation: k-spin calc(4s * var(--k-speed)) linear infinite;
+}
+.k-shine {
+  position: absolute;
+  width: 34%;
+  height: 34%;
+  border-radius: 50%;
+  translate: -50% -50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%);
+}
+.k-ring {
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(165, 243, 252, 0.6);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.45), inset 0 0 6px rgba(34, 211, 238, 0.3);
+}
+.k-ring::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px 2px #22d3ee;
+}
+.k-ring-1 { animation: k-gyro-1 calc(7s * var(--k-speed)) linear infinite; }
+.k-ring-2 {
+  inset: 0%;
+  border-color: rgba(196, 181, 253, 0.55);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.45);
+  animation: k-gyro-2 calc(9s * var(--k-speed)) linear infinite;
+}
+.k-ring-3 {
+  inset: 12%;
+  border-color: rgba(103, 232, 249, 0.4);
+  animation: k-gyro-3 calc(5.5s * var(--k-speed)) linear infinite;
+}
+.k-orb[data-small] .k-ring::after { display: none; }
+@keyframes k-gyro-1 { from { transform: rotateX(72deg) rotateZ(0deg); } to { transform: rotateX(72deg) rotateZ(360deg); } }
+@keyframes k-gyro-2 { from { transform: rotateY(68deg) rotateZ(0deg); } to { transform: rotateY(68deg) rotateZ(-360deg); } }
+@keyframes k-gyro-3 { from { transform: rotateX(50deg) rotateY(40deg) rotateZ(0deg); } to { transform: rotateX(50deg) rotateY(40deg) rotateZ(360deg); } }
+@keyframes k-pulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.06); filter: brightness(1.18); }
+}
+@keyframes k-breathe {
+  0%, 100% { opacity: 0.7; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .k-halo, .k-core, .k-core::before, .k-ring { animation: none; }
+}
+
+/* ── about: a light running round the portrait, and the principle cards ──── */
+.ab-frame::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--ab-a), transparent 0deg, var(--accent) 50deg, #fff 75deg, var(--violet) 110deg, transparent 170deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: ab-orbit 7s linear infinite;
+}
+.ab-frame { box-shadow: 0 30px 80px -40px color-mix(in oklab, var(--accent) 45%, transparent); }
+@property --ab-a {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes ab-orbit { to { --ab-a: 360deg; } }
+.ab-card {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.01) 50%), #070a14;
+  transition: border-color 0.4s, box-shadow 0.4s;
+}
+.ab-card:hover {
+  border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+  box-shadow: 0 24px 50px -30px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.ab-card-glow {
+  background: radial-gradient(80% 60% at 0% 0%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 70%);
+  opacity: 0.6;
+  transition: opacity 0.4s;
+}
+.ab-card:hover .ab-card-glow { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .ab-frame::before { animation: none; }
 }

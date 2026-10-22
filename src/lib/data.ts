@@ -32,6 +32,9 @@ export type Project = {
    *  its name. `stack` keeps the full list. */
   keyStack: string[];
   stack: string[];
+  /** The case study's opening card: one sentence each, read before anything
+   *  else on the page. Long-form detail stays in overview / problem / built. */
+  summary: { challenge: string; approach: string; result: string };
   overview: string;
   problem: string;
   built: string[];
@@ -77,6 +80,14 @@ export const projects: Project[] = [
       "Text-to-speech",
       "NSIS installer",
     ],
+    summary: {
+      challenge:
+        "Coaching for sales calls and interviews arrives days later in a call review, too late to help in the moment.",
+      approach:
+        "A Windows overlay that hears both sides of any call and streams the next line to say, grounded in your own documents. No bot joins the call and there's no server.",
+      result:
+        "A suggestion lands about 1–2 seconds after the other person stops talking, with a badge saying how grounded it is.",
+    },
     overview:
       "A Windows desktop copilot that sits beside any live conversation — Zoom, Meet, Teams, or a phone dialer — and tells you what to say next. It hears both sides of the call, and the moment the other person stops talking it streams in a short line you can say out loud, grounded in your own documents. No bot joins the call, audio is captured locally, and the AI runs on the user's own API keys.",
     problem:
@@ -154,6 +165,14 @@ export const projects: Project[] = [
       "Stripe",
       "SendGrid · Nodemailer",
     ],
+    summary: {
+      challenge:
+        "Sales and support teams can't staff every call, so follow-ups slip and after-hours calls go unanswered.",
+      approach:
+        "AI agents with their own voice and knowledge base that run outbound campaigns and answer inbound calls over Twilio, streaming audio both ways in real time.",
+      result:
+        "Inbound lines are covered 24/7, in five interface languages, and every call is saved with a transcript and quality checks.",
+    },
     overview:
       "A multilingual AI voice-calling platform for sales and customer teams. A company sets up an AI agent, gives it a voice and a knowledge base, then runs outbound call campaigns or puts it on the line as an inbound receptionist. The agent qualifies leads, books appointments, follows up, and handles inbound calls without a person on every line. Every call is saved with its transcript, duration, status, and analytics.",
     problem:
@@ -233,6 +252,14 @@ export const projects: Project[] = [
       "Stripe",
       "Vitest · Playwright",
     ],
+    summary: {
+      challenge:
+        "Outbound teams run on five or six disconnected tools stitched together with CSV exports, so leads go stale and replies sit unread.",
+      approach:
+        "One workspace for search, enrichment, multi-channel sequences, an AI SDR, meetings, and a CRM, with every slow job queued in the background.",
+      result:
+        "The whole funnel, from first search to closed deal, sits behind one login across email, LinkedIn, WhatsApp, and phone.",
+    },
     overview:
       "A B2B sales workspace that covers the whole outbound path in one product: find companies and people, reach them on email, LinkedIn, WhatsApp, and phone, handle the replies with an AI SDR, book the meeting, and track the deal through a built-in CRM. Each customer gets a workspace with shared leads, campaigns, inbox, pipeline, team roles, and credits.",
     problem:
@@ -277,7 +304,7 @@ export const projects: Project[] = [
     outcome: [
       { value: "4", label: "outreach channels in one workspace" },
       { value: "5", label: "lead-data providers behind one search" },
-      { value: "1", label: "product from first search to closed deal" },
+      { value: "6 → 1", label: "tools (data, enrichment, sequencer, LinkedIn, dialer, CRM) in one login" },
     ],
   },
   {
@@ -303,6 +330,14 @@ export const projects: Project[] = [
       "JSON site recipes",
       "NSIS installer",
     ],
+    summary: {
+      challenge:
+        "Trade teams tracked competitor shelves by clicking through retailer sites and copying notes into spreadsheets.",
+      approach:
+        "A Windows app that opens any retailer URL like a real shopper, extracts banners, offers, and products, and ranks the client's brand share of shelf.",
+      result:
+        "In one test run it scanned 128 retailer sites, and about 3 in 4 returned usable shelf data. Blocked sites are reported as blocked, never as empty.",
+    },
     overview:
       "A Windows desktop app for retail competitive intelligence. You paste a retailer URL and press Proceed. It opens the site like a real shopper would and extracts the commercial picture: banners, offers, categories, products, filters, and brand share of shelf, with the client's brands ranked against competitors like Samsung, LG, Bosch, Haier, and Hisense. Everything stays on the user's computer — no cloud login, no third-party platform.",
     problem:
@@ -372,6 +407,14 @@ export const projects: Project[] = [
       "OpenStreetMap Overpass",
       "python-dotenv",
     ],
+    summary: {
+      challenge:
+        "Prospect lists were built by hand, and every repeated paid lookup wasted API credits.",
+      approach:
+        "A local app that pulls leads from three sources, removes duplicates, and scores each one from 0 to 100 on transparent rules.",
+      result:
+        "The team works from ranked, de-duplicated leads with AI-personalized outreach, and no lookup is ever paid for twice.",
+    },
     overview:
       "A local web app for an internal sales team. It finds B2B companies and decision makers, scores every lead from 0 to 100, and stores them so the team can review them, write AI-personalized outreach, and export a CSV. It runs on one machine with no login and no cloud host, and targets the UAE and KSA by default (Dubai, Abu Dhabi, Sharjah, Riyadh).",
     problem:
@@ -445,6 +488,14 @@ export const projects: Project[] = [
       "OpenAPI REST",
       "MCP server",
     ],
+    summary: {
+      challenge:
+        "Setting up cold email (domains, DNS, mailboxes, warm-up) takes weeks, and one wrong DNS record ruins deliverability.",
+      approach:
+        "Domains, DNS checks, real Mailcow mailboxes, and warming in a few clicks or a single API call, all on one VPS the team owns.",
+      result:
+        "Warmed mailboxes export straight into five sequencers, and an AI agent can run the whole setup over MCP.",
+    },
     overview:
       "The infrastructure layer behind outbound campaigns, deliberately not a sequencer. You add domains, and MailForge publishes and checks SPF, DKIM, DMARC, and MX. It then creates real SMTP/IMAP mailboxes on Mailcow, which can be warmed, used from a built-in inbox, or exported straight into Instantly, Smartlead, Snov, or Lemlist.",
     problem:
@@ -517,6 +568,14 @@ export const projects: Project[] = [
       "CycloneDX · SARIF",
       "Jest",
     ],
+    summary: {
+      challenge:
+        "Most security scanners need your source code uploaded first, which rules them out for client work or anything under NDA.",
+      approach:
+        "A desktop scanner that checks code, secrets, dependencies, licenses, and infrastructure in one offline pass.",
+      result:
+        "It covers 15 languages, grades the codebase A–F, and exports SARIF reports, with 244 tests behind it. No code leaves the machine.",
+    },
     overview:
       "A desktop static-analysis (SAST) scanner that runs on the developer's own machine. You pick a project folder and run Analyze. It reads source, config, and dependency files and reports vulnerabilities, leaked secrets, risky dependencies, and weak infrastructure-as-code, then gives the codebase an A–F grade, compliance notes, and exportable reports. It never runs the code or touches live systems, and it's offline by default.",
     problem:
@@ -594,6 +653,14 @@ export const projects: Project[] = [
       "OpenAI",
       "Sentry",
     ],
+    summary: {
+      challenge:
+        "Service businesses juggle a booking widget, a calendar, payment links, and manual reminder texts, and lose money to no-shows.",
+      approach:
+        "A multi-tenant platform that handles availability, booking, payment at booking time, and reminders for many businesses at once.",
+      result:
+        "Each business gets its own booking site, deposits and no-show fees are collected up front, and reminders go out on their own.",
+    },
     overview:
       "A multi-tenant appointment booking platform. Businesses sign up as organizations, set up locations, staff, and services, and get their own booking site. Customers choose a service and a provider, pick an open slot, and confirm. Staff handle the calendar, approvals, payments, and reminders, and a platform admin layer sits above every organization.",
     problem:
@@ -672,6 +739,14 @@ export const projects: Project[] = [
       "Cloudinary",
       "Stripe",
     ],
+    summary: {
+      challenge:
+        "Funnel tools don't make video and video tools don't build funnels, so marketers wire several products together.",
+      approach:
+        "A drag-and-drop funnel builder that turns a script into a talking HeyGen presenter video inside the same flow.",
+      result:
+        "Marketers build, generate, publish, and measure drop-off in one product, with 18 step types to build from.",
+    },
     overview:
       "A SaaS product for building conversion funnels that include talking AI videos. Users design a multi-step journey, generate or choose an AI presenter and voice, publish a public funnel page, and review leads and performance. It's built for marketers, agencies, coaches, and e-commerce teams in the UAE and worldwide.",
     problem:
@@ -715,7 +790,7 @@ export const projects: Project[] = [
     outcome: [
       { value: "18", label: "funnel step types" },
       { value: "4", label: "plan tiers, Trial to Elite" },
-      { value: "0", label: "video production skills needed" },
+      { value: "1", label: "flow from script to published video funnel" },
     ],
   },
   {
@@ -752,6 +827,14 @@ export const projects: Project[] = [
       "Swagger",
       "Vitest · Playwright",
     ],
+    summary: {
+      challenge:
+        "Small sales teams pay for a CRM, a sequencer, a quoting app, a chat widget, and a form builder, then copy data between them.",
+      approach:
+        "One multi-tenant workspace from first form fill to paid invoice, with an AI assistant and enterprise sign-in built in.",
+      result:
+        "Leads, pipelines, quotes, invoices, and email sequences live in one tool, with SSO and two-factor available from day one.",
+    },
     overview:
       "A multi-tenant sales CRM where each organization gets its own workspace — contacts, deals, email, and billing — with roles, a subscription plan, and a 7-day trial. Teams run the whole sales cycle in one place: capture leads, move deals through pipelines, follow up by email and live chat, send quotes and invoices, and track pipeline and revenue on a dashboard. A built-in AI assistant drafts emails and summarizes timelines.",
     problem:
@@ -830,6 +913,14 @@ export const projects: Project[] = [
       "Cloudinary",
       "Stripe",
     ],
+    summary: {
+      challenge:
+        "Swipe apps can't explain their matches, and matching done purely by AI can override what people said they won't accept.",
+      approach:
+        "Rules-first matching that respects deal-breakers, with AI adding nuance, plus a community and coaching layer around each match.",
+      result:
+        "Matches stay explainable (72% rules, 28% AI) across web, iOS, and Android, all running on one API.",
+    },
     overview:
       "A relationship and community app. People set preferences, discover compatible matches, chat, join events and groups, and get coaching. Matching is rules-first: deal-breakers filter out poor fits, the rest are ranked by values, lifestyle, and communication style, and an AI model (Gemini, falling back to OpenAI) adds 28% of each score. A separate AI assistant helps with messages and relationship advice. Three apps — web, iOS/Android, and a shared API — run on one backend.",
     problem:
@@ -889,6 +980,14 @@ export const projects: Project[] = [
     platform: "Web — SaaS",
     keyStack: ["Next.js", "NestJS", "HeyGen", "OpenAI", "Stripe"],
     stack: ["Next.js", "NestJS", "OpenAI · Gemini", "HeyGen", "Cloudinary", "Stripe"],
+    summary: {
+      challenge:
+        "Every campaign needs scripts, videos, and ad variations, and each one is a slow, expensive one-off.",
+      approach:
+        "A structured brief feeds AI script strategy and async avatar and product video renders.",
+      result:
+        "A brief goes in and platform-ready creatives come out, and winning formats are saved as reusable recipes.",
+    },
     overview:
       "An AI creative platform that turns a structured brief into finished marketing assets — avatar videos, product videos, and image ads — with AI script strategy, reusable creative recipes, and market-trend style analysis.",
     problem:
@@ -922,8 +1021,7 @@ export const projects: Project[] = [
     ],
     outcome: [
       { value: "3", label: "creative formats — avatar, product, ads" },
-      { value: "async", label: "render pipeline with callbacks" },
-      { value: "credit", label: "metered usage billing" },
+      { value: "1 brief", label: "drives every script, video, and ad variant" },
     ],
   },
   {
@@ -953,6 +1051,14 @@ export const projects: Project[] = [
       "JWT · bcrypt",
       "uv · Gunicorn",
     ],
+    summary: {
+      challenge:
+        "A marketplace in Pakistan needs local payment rails, cash on delivery, vendors, and a warehouse team working from one source of truth.",
+      approach:
+        "A customer storefront plus one admin, vendor, and fulfillment panel, both running on a single FastAPI and PostgreSQL backend.",
+      result:
+        "Customers, vendors, admins, and the fulfillment team all work from the same orders, paid through JazzCash, PayFast, or cash on delivery.",
+    },
     overview:
       "A multi-vendor online marketplace for Pakistan. Customers browse and buy, sellers run their own shops, admins run the platform, and a fulfillment team ships the orders. It's three apps on one system: a customer website, a combined admin / vendor / fulfillment panel, and a single FastAPI backend that both frontends talk to.",
     problem:
@@ -1028,6 +1134,14 @@ export const projects: Project[] = [
       "Recharts",
       "Resend",
     ],
+    summary: {
+      challenge:
+        "One checkout has to pay independent sellers and in-house sellers in different ways, and take a commission on both.",
+      approach:
+        "A curated marketplace with Stripe Checkout, store approval, and two separate earnings paths for vendors.",
+      result:
+        "Customers see one cart, while Stripe Connect payouts and tracked team-vendor credit keep the ledger right behind it.",
+    },
     overview:
       "A curated multi-vendor marketplace where customers shop from independent stores and an official store in one cart. Vendors run their own shops with products, coupons, orders, payouts, and analytics, while admins approve stores, manage the catalog, and control commission, payouts, and platform settings. There are two kinds of vendor: independent sellers paid through their own Stripe Connect account, and team vendors who sell only on the official store.",
     problem:
@@ -1176,6 +1290,49 @@ export const capabilities = [
   },
 ];
 
+/* What the Capabilities section actually shows: four pillars, each pointing at
+   the projects that prove it. The eight cards above stay as the full record
+   (the terminal's `skills` command and the tool strip read them); a section
+   listing all fifty-odd tools in boxes read as a CV, not as evidence. */
+export type Pillar = {
+  title: string;
+  accent: string;
+  body: string;
+  techs: string[];
+  proof: string[];
+};
+
+export const pillars: Pillar[] = [
+  {
+    title: "AI systems",
+    accent: "in production",
+    body: "LLMs doing real work behind real guardrails: AI SDRs that wait for approval, phone agents that talk in real time, copilots grounded in your own documents, and MCP servers an agent can drive.",
+    techs: ["OpenAI", "Gemini", "ElevenLabs", "Twilio", "HeyGen", "LiveKit", "RAG · embeddings", "MCP"],
+    proof: ["voice-agents", "sparkcue", "outbound-copilot"],
+  },
+  {
+    title: "Multi-tenant",
+    accent: "SaaS",
+    body: "Whole products from schema to screen: workspaces, roles, SSO and 2FA, realtime inboxes, and every slow job on a queue so the person clicking never waits on a provider.",
+    techs: ["Next.js", "React", "TypeScript", "NestJS", "Node.js", "FastAPI", "PostgreSQL", "Redis"],
+    proof: ["sales-crm", "booking-platform", "video-funnels"],
+  },
+  {
+    title: "Payments &",
+    accent: "infrastructure",
+    body: "Stripe subscriptions, Connect payouts, deposits, and credits; JazzCash and PayFast; mail servers, Docker on a VPS, and test suites that keep it shipped.",
+    techs: ["Stripe", "JazzCash", "PayFast", "Docker", "Vercel", "Sentry", "Playwright", "Cloudinary"],
+    proof: ["mailforge", "insyncx", "ghertak"],
+  },
+  {
+    title: "Desktop &",
+    accent: "mobile",
+    body: "Windows apps that capture system audio, browse like a shopper, and scan code without uploading a byte, plus React Native and Flutter apps on the same API as the web.",
+    techs: ["Electron", "Node.js", "React Native", "Expo", "Flutter", "SQLite"],
+    proof: ["sparkcue", "siteharvest", "codevault", "matching-app"],
+  },
+];
+
 /** The headline stack — one body per entry in the hero's orbital system, so
  *  this list is deliberately short: nine, each on its own visible orbit, one
  *  per surface I actually build on. Curated, not exhaustive — the full list
@@ -1224,41 +1381,71 @@ export type Experience = {
   role: string;
   period: string;
   location: string;
+  /** a one-line description of what the job was */
+  summary: string;
+  /** three lines on what I did, each carrying its own number */
   bullets: string[];
+  /** the tools the work ran on */
+  stack: string[];
+  /** case studies built in this role */
+  projects: string[];
+  /** work done here that has no case study, named plainly */
+  internal?: string[];
+  /** company mark in /public; the card falls back to initials without one */
+  logo?: string;
+  /** the card's glow, taken from the company's own brand colour */
+  accent: string;
 };
 
 export const experience: Experience[] = [
   {
     company: "Spark AI",
+    logo: "/brand/companies/spark-ai.svg",
+    accent: "#6d5cff",
     role: "Full Stack Developer",
     period: "2026 — present",
     location: "Remote · Dubai",
+    summary: "Building the company's AI SaaS products end to end, from schema and billing to the interface.",
     bullets: [
-      "Built 5 production AI SaaS platforms from scratch — a booking platform, an AI video funnel builder, Avatar Studio AI, AI voice agents, and an outbound sales copilot — all live and serving real users.",
-      "Architected multi-tenant systems with RBAC, JWT + CSRF auth, Stripe subscriptions, credit-based billing, and webhook integrations across every platform.",
-      "Integrated OpenAI, HeyGen, Twilio, LiveKit, Google Calendar, and WhatsApp into production workflows; built async media pipelines with Cloudinary and BullMQ.",
+      "Shipped 7 products from scratch, 5 of them live AI platforms.",
+      "Owned the shared multi-tenant core: RBAC, auth, billing, webhooks.",
+      "Wired 6 AI and comms providers into production, OpenAI to WhatsApp.",
     ],
+    stack: ["Next.js", "NestJS", "TypeScript", "MySQL", "OpenAI", "Stripe"],
+    projects: ["outbound-copilot", "voice-agents", "booking-platform", "sales-crm", "video-funnels", "matching-app", "avatar-studio"],
   },
   {
     company: "GherTak",
+    logo: "/brand/companies/ghertak.svg",
+    accent: "#328fb8",
     role: "Full Stack Developer",
     period: "2026 — present",
     location: "Remote · Islamabad",
+    summary: "Customer-facing e-commerce for a multi-vendor marketplace in Pakistan.",
     bullets: [
-      "Built customer-facing web and mobile e-commerce features — product discovery, cart, checkout, order tracking — with Next.js, TypeScript, and React.",
-      "Contributed to multi-role platform workflows for customers, vendors, and administrators across auth, orders, inventory, and payments.",
+      "Built the storefront: discovery, cart, checkout and order tracking.",
+      "Worked on 3 apps on one API, serving 4 roles from buyer to vendor.",
+      "Handled auth, orders, inventory and payments on JazzCash and PayFast.",
     ],
+    stack: ["Next.js", "TypeScript", "FastAPI", "PostgreSQL", "JazzCash · PayFast"],
+    projects: ["ghertak"],
   },
   {
     company: "NoveltySoft",
+    logo: "/brand/companies/noveltysoft.png",
+    accent: "#f5b400",
     role: "Full Stack Developer",
     period: "2023 — 2025",
     location: "Lahore, Pakistan",
+    summary: "Internal platforms and automation for a software house, plus a legacy system brought up to speed.",
     bullets: [
-      "Cut document processing time ~90% with a marketing-collateral system featuring real-time status tracking and client assignment workflows.",
-      "Automated ~85% of financial and onboarding processes via QuickBooks and Zapier; AI communication tools (ChatGPT + LiveKit + Twilio) automated ~80% of support interactions.",
-      "Improved system performance ~40% through legacy refactoring; built SSO portal switching and a dynamic RBAC module.",
+      "Cut document processing time by ~90% with a collateral tracker.",
+      "Automated ~85% of finance and onboarding, and ~80% of support with AI.",
+      "Sped up a legacy system by ~40%, and built SSO switching and RBAC.",
     ],
+    stack: ["OpenAI", "LiveKit", "Twilio", "QuickBooks", "Zapier"],
+    projects: [],
+    internal: ["Collateral tracker", "Finance automation", "AI support desk", "SSO + RBAC portal"],
   },
 ];
 
@@ -1269,4 +1456,12 @@ export const contact = {
   linkedin: "https://www.linkedin.com/in/asadshah2",
   github: "https://github.com/Asad1024",
   location: "Lahore, Pakistan · remote-first",
+};
+
+/** The About portrait. Drop a photo in /public (a 4:5 crop of at least
+ *  800×1000 looks best) and set its path here, e.g. "/asad.jpg". Until then
+ *  the section draws a monogram in its place. */
+export const profile: { name: string; photo: string | null } = {
+  name: "Asad Shah",
+  photo: "/profile-img.jpeg",
 };

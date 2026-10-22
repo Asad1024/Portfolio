@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
+import { Search } from "lucide-react";
+import { BrandMark } from "./brand-mark";
 import Link from "next/link";
 import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
 import { Magnetic } from "./magnetic";
@@ -28,6 +31,7 @@ export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [active, setActive] = useState<string | null>(null);
   const [docked, setDocked] = useState(false);
+  const mounted = useSyncExternalStore(noSubscribe, () => true, () => false);
 
   /* Which section you're actually in. The nav had no idea before — every link
      looked identical the whole way down the page, so it told you where you
@@ -43,8 +47,7 @@ export function Nav() {
     /* Kept as a running set rather than read off each callback: a callback
        only carries the entries that CHANGED, so a scroll that merely takes one
        section out of the band arrives with nothing intersecting and would have
-       stranded the highlight on the section you just left. Document order then
-       picks the topmost of whatever is currently in the band. */
+       stranded the highlight on the section you just left. */
     const inBand = new Set<string>();
     const io = new IntersectionObserver(
       (entries) => {
@@ -52,7 +55,9 @@ export function Nav() {
           if (e.isIntersecting) inBand.add(e.target.id);
           else inBand.delete(e.target.id);
         }
-        setActive(ids.find((id) => inBand.has(id)) ?? null);
+        // two sections share the band only at a hand-over; the later one is
+        // the one being scrolled into, so it wins
+        setActive([...ids].reverse().find((id) => inBand.has(id)) ?? null);
       },
       { rootMargin: "-72px 0px -55% 0px", threshold: 0 },
     );
@@ -122,9 +127,9 @@ export function Nav() {
       />
       <nav className="relative mx-auto flex h-16 max-w-shell items-center justify-between px-6">
         <Magnetic>
-          <Link href="/" className="font-mono text-sm tracking-tight" onClick={() => setMenuOpen(false)}>
-            <span className="text-accent">~/</span>asad
-            <span className="caret-blink text-accent">_</span>
+          <Link href="/" className="group flex items-center gap-2.5" onClick={() => setMenuOpen(false)}>
+            <BrandMark className="size-8 shrink-0 transition-transform duration-500" />
+            <span className="text-[15px] font-semibold tracking-tight text-fg">Asad Shah</span>
           </Link>
         </Magnetic>
 
@@ -136,7 +141,7 @@ export function Nav() {
                 key={l.href}
                 href={l.href}
                 aria-current={on ? "true" : undefined}
-                className="group relative rounded-full px-3 py-1.5 font-mono text-xs transition-colors"
+                className="group relative inline-flex items-center rounded-full px-3 py-1.5 text-[13px] transition-colors"
               >
                 <span
                   className={`transition-colors duration-300 ${
@@ -168,14 +173,11 @@ export function Nav() {
               aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}
               title={`Search — ${mac ? "⌘K" : "Ctrl K"}`}
               onClick={() => window.dispatchEvent(new CustomEvent("open-palette"))}
-              className="group flex h-9 items-center gap-2.5 rounded-full border border-line bg-bg/40 pl-3 pr-1.5 font-mono text-xs text-muted backdrop-blur-sm transition-colors hover:border-accent/60 hover:text-fg"
+              className="group flex h-9 items-center justify-center gap-2.5 rounded-full border border-line bg-bg/40 px-2.5 font-sans text-xs text-muted backdrop-blur-sm transition-colors hover:border-accent/60 hover:text-fg sm:pl-3 sm:pr-1.5"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden className="transition-colors group-hover:text-accent">
-                <circle cx="11" cy="11" r="7" />
-                <path d="M20 20l-3.5-3.5" />
-              </svg>
+              <Search aria-hidden className="size-3.5 transition-colors group-hover:text-accent" />
               <span className="hidden sm:inline">search</span>
-              <kbd className="flex h-6 items-center gap-0.5 rounded-full border border-line bg-card px-2 font-mono text-[11px] text-fg/85">
+              <kbd className="hidden h-6 items-center gap-0.5 rounded-full border border-line bg-card px-2 font-sans text-[11px] text-fg/85 sm:flex">
                 {mac ? "⌘" : "Ctrl"}
                 <span className="text-accent">K</span>
               </kbd>
@@ -201,7 +203,12 @@ export function Nav() {
         </div>
       </nav>
 
-      {/* mobile menu overlay */}
+      {/* Mobile menu, portalled to <body>: the header has a backdrop-filter
+          when docked or open, and that makes it the containing block for any
+          fixed child, which clipped the overlay to the 64px bar and let the
+          page show through underneath. */}
+      {mounted &&
+        createPortal(
       <AnimatePresence>
         {menuOpen && (
           <motion.div
@@ -209,7 +216,7 @@ export function Nav() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="fixed inset-0 top-16 z-40 bg-bg md:hidden"
+            className="fixed inset-0 top-16 z-[45] bg-bg/95 backdrop-blur-xl md:hidden"
           >
             <div className="flex h-full flex-col justify-between px-6 py-10">
               <div className="flex flex-col gap-2">
@@ -226,7 +233,7 @@ export function Nav() {
                       onClick={() => setMenuOpen(false)}
                       className="group flex items-baseline gap-4 border-b border-line py-5"
                     >
-                      <span className="font-sans text-4xl font-bold tracking-tight transition-colors group-hover:text-accent">
+                      <span className="font-sans text-4xl font-semibold tracking-[-0.03em] transition-colors group-hover:text-accent">
                         {l.label}
                       </span>
                     </Link>
@@ -238,15 +245,16 @@ export function Nav() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ delay: 0.3 }}
-                className="font-mono text-xs text-muted"
+                className="font-sans text-xs text-muted"
               >
-                <span className="text-accent">$</span> asad — full-stack developer · web
-                · desktop · cloud · ai
+                Asad Shah · Full-stack developer
               </motion.p>
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+          document.body,
+        )}
     </header>
   );
 }
