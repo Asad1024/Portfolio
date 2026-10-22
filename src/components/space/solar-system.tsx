@@ -954,21 +954,15 @@ export default function SolarSystem({
     if (launched && launch.at < 0) launch.at = performance.now();
   }, [launched]);
   const [hovered, setHovered] = useState<string | null>(null);
-  const [accent, setAccent] = useState("#22d3ee");
+  /* Follow the site's accent rather than hard-coding the sun's colour. Read
+     once, on mount (this module never renders on the server): there is one
+     palette, and watching <html>'s class for a theme swap only ever caught
+     Lenis, which rewrites that class at the start and end of every scroll —
+     a forced style recalc each time for nothing. */
+  const [accent] = useState(
+    () => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#22d3ee",
+  );
   const bodies = useMemo(() => buildBodies(), []);
-
-  // follow the site's theme rather than hard-coding the sun's colour
-  useEffect(() => {
-    const read = () => {
-      const style = getComputedStyle(document.documentElement);
-      const v = style.getPropertyValue("--accent").trim();
-      if (v) setAccent(v);
-    };
-    read();
-    const mo = new MutationObserver(read);
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => mo.disconnect();
-  }, []);
 
   return (
     <Canvas
@@ -1001,7 +995,9 @@ export default function SolarSystem({
          veil coming back to a page scrolled past the hero is not left
          waiting), then draws nothing more until it is back in view. */
       frameloop={paused || held ? "demand" : "always"}
-      dpr={[1, 1.75]}
+      /* 1.5 at most: past that, a hidpi laptop fills about 3x the pixels of a
+         1x screen, every one multisampled, for orbits that look the same. */
+      dpr={[1, 1.5]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       // a machine without WebGL still gets a hero, just a flat one
       fallback={

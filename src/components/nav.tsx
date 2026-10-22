@@ -82,15 +82,18 @@ export function Nav() {
   }, [menuOpen]);
 
   return (
-    <header
-      className={`fixed inset-x-0 top-0 z-50 transition-[background-color,backdrop-filter] duration-500 ${
-        docked || menuOpen ? "bg-bg/55 backdrop-blur-xl backdrop-saturate-150" : "bg-transparent"
-      }`}
-    >
-      {/* Saturating the backdrop rather than covering it: the page behind is
-          a violet wash and a starfield, and a 70%-opaque black panel threw
-          all of that away. At 55% with saturation up, the nebula reads
-          through the glass and the bar takes its colour from the page. */}
+    <header className="fixed inset-x-0 top-0 z-50">
+      {/* The glass, on a layer of its own that only ever fades. Docking used
+          to transition the header's backdrop-filter itself, so for half a
+          second every frame re-blurred the page at a new radius — the hitch
+          at the start of every jump down from the hero. Opacity is the
+          compositor's job; the blur stays one fixed, moderate radius. */}
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 bg-bg/70 backdrop-blur-md transition-opacity duration-500 ${
+          docked || menuOpen ? "opacity-100" : "opacity-0"
+        }`}
+      />
       <div
         aria-hidden
         className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
@@ -185,10 +188,10 @@ export function Nav() {
         </div>
       </nav>
 
-      {/* Mobile menu, portalled to <body>: the header has a backdrop-filter
-          when docked or open, and that makes it the containing block for any
-          fixed child, which clipped the overlay to the 64px bar and let the
-          page show through underneath. */}
+      {/* Mobile menu, portalled to <body>: when the header itself carried the
+          backdrop-filter it became the containing block for any fixed child,
+          which clipped the overlay to the 64px bar. Kept out of the header so
+          nothing styled on it can do that again. */}
       {mounted &&
         createPortal(
       <AnimatePresence>
@@ -198,7 +201,7 @@ export function Nav() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="fixed inset-0 top-16 z-[45] bg-bg/95 backdrop-blur-xl md:hidden"
+            className="fixed inset-0 top-16 z-[45] bg-bg/[0.97] md:hidden"
           >
             <div className="flex h-full flex-col justify-between px-6 py-10">
               <div className="flex flex-col gap-2">

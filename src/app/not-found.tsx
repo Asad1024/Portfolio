@@ -32,7 +32,7 @@ export default function NotFound() {
         </Link>
         <Link
           href="/#work"
-          className="inline-flex items-center gap-2 rounded-full border border-line bg-bg/40 px-6 py-3.5 text-sm font-medium text-fg/90 backdrop-blur-sm transition-colors hover:border-accent hover:text-accent"
+          className="inline-flex items-center gap-2 rounded-full border border-line bg-bg/75 px-6 py-3.5 text-sm font-medium text-fg/90 transition-colors hover:border-accent hover:text-accent"
         >
           <LayoutGrid aria-hidden className="size-4" />
           Browse the work

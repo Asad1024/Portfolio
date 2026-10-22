@@ -117,7 +117,7 @@ export function ConsolePanel({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           style={{ zIndex: z }}
-          className={`fixed inset-0 flex justify-center bg-void/75 p-4 backdrop-blur-md ${
+          className={`fixed inset-0 flex justify-center bg-void/90 p-4 ${
             align === "top" ? "items-start pt-[12vh]" : "items-end sm:items-center"
           }`}
           onClick={onClose}
@@ -132,7 +132,7 @@ export function ConsolePanel({
             animate={{ y: 0, scale: 1, opacity: 1 }}
             exit={{ y: 40, scale: 0.98, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.21, 0.6, 0.35, 1] }}
-            className={`relative flex w-full flex-col overflow-hidden rounded-xl border bg-[#05080c]/95 backdrop-blur-xl ${size}`}
+            className={`relative flex w-full flex-col overflow-hidden rounded-xl border bg-[#05080c] ${size}`}
             style={{
               borderColor: "color-mix(in oklab, var(--accent) 22%, transparent)",
               boxShadow:

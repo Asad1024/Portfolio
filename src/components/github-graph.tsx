@@ -72,7 +72,7 @@ export async function GithubGraph() {
   const login = contact.github.split("/").pop();
 
   return (
-    <div className="mt-20 overflow-hidden rounded-3xl border border-line bg-card backdrop-blur-sm">
+    <div className="mt-20 overflow-hidden rounded-3xl border border-line bg-[rgba(11,13,20,0.85)]">
       <div className="flex flex-wrap items-end justify-between gap-6 border-b border-line p-6 sm:p-8">
         <div>
           <p className="font-sans text-[11px] uppercase tracking-[0.22em] text-muted">GitHub activity · {year}</p>

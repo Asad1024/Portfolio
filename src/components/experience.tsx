@@ -78,7 +78,7 @@ function Card({ role: e }: { role: Role }) {
         {/* who, when, and with what */}
         <div className="flex min-w-0 flex-col">
           <div className="flex items-center gap-4">
-            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-black/30 shadow-[0_0_18px_-8px_var(--co)] backdrop-blur-sm">
+            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-black/50 shadow-[0_0_18px_-8px_var(--co)]">
               {e.logo ? (
                 <Image src={e.logo} alt="" width={36} height={36} unoptimized className="size-9 object-contain" />
               ) : (
@@ -93,7 +93,7 @@ function Card({ role: e }: { role: Role }) {
             </div>
           </div>
 
-          <span className="mt-5 flex w-fit items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-1 font-sans text-[11.5px] text-fg/85 backdrop-blur-sm">
+          <span className="mt-5 flex w-fit items-center gap-2 rounded-full border border-white/15 bg-black/50 px-3 py-1 font-sans text-[11.5px] text-fg/85">
             <span className="relative flex size-1.5">
               {current && <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--co)] opacity-70" />}
               <span className={`relative inline-flex size-1.5 rounded-full ${current ? "bg-[var(--co)]" : "bg-muted"}`} />

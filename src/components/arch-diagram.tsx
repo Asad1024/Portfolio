@@ -141,7 +141,7 @@ function Stage({
 
       {/* the stage itself */}
       <div
-        className={`group relative w-full flex-1 overflow-hidden rounded-xl border border-line bg-card p-4 backdrop-blur-sm transition-[border-color,transform] duration-300 hover:border-accent/60 ${
+        className={`group relative w-full flex-1 overflow-hidden rounded-xl border border-line bg-[rgba(11,13,20,0.85)] p-4 transition-[border-color,transform] duration-300 hover:border-accent/60 ${
           vertical ? "" : "mt-4"
         }`}
       >

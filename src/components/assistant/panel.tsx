@@ -319,7 +319,7 @@ export const Panel = forwardRef<ComposerHandle, Props>(function Panel(p, compose
               pinned.current = true;
               listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
             }}
-            className="absolute bottom-[6.5rem] left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-[#0a0f1d]/95 px-3 py-1.5 text-[11px] text-fg/85 shadow-xl backdrop-blur"
+            className="absolute bottom-[6.5rem] left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-[#0a0f1d]/95 px-3 py-1.5 text-[11px] text-fg/85 shadow-xl"
           >
             <ArrowDown className="size-3" /> Latest
           </motion.button>

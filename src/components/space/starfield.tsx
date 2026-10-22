@@ -18,6 +18,9 @@ import { localSiderealDeg, projectZenith, toHorizontal } from "@/lib/sky";
    stars about independently and would scramble a real constellation. The
    positions are re-aimed once a minute so the sky keeps real time.
 
+   The turn is a CSS rotation of one pre-drawn image, so scrolling costs the
+   compositor a transform and nothing is repainted for it.
+
    Deliberately 2D canvas, not WebGL — the hero already owns a GPU context and
    a second one competing for it on every scroll is a bad trade for what is
    ultimately background texture. The catalogue is imported lazily, after the
@@ -97,11 +100,13 @@ function rgba(v: string, alpha: number) {
 
 export function Starfield() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const skyRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    const sky = skyRef.current;
     const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
+    if (!canvas || !sky || !ctx) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let w = 0;
@@ -118,14 +123,17 @@ export function Starfield() {
     let catalog: typeof import("@/lib/sky-catalog") | null = null;
     let named: Named[] = [];
     let labelFont = "ui-sans-serif, system-ui, sans-serif";
-    /* The sky is drawn once into an off-screen layer — every star and figure,
-       at the scale the viewport needs — and each frame only rotates and
-       stamps that one image. Redrawing ~1,400 stars one by one every frame
-       was the single most expensive thing on the page on a phone. The
-       brightest few dozen are left out of the layer and drawn live on top,
-       so the stars people actually notice still twinkle. */
-    let layer: HTMLCanvasElement | null = null;
+    /* The sky is drawn once into its own canvas (`sky`) — every star and
+       figure, at the scale the viewport needs — and turned with a CSS
+       transform, so the compositor rotates it without a repaint. Redrawing
+       ~1,400 stars one by one every frame was the single most expensive thing
+       on the page on a phone, and even stamping the baked image back into
+       the main canvas cost a full-viewport repaint per frame. The brightest
+       few dozen are left out of it and drawn live on top, so the stars people
+       actually notice still twinkle. */
     let layerSize = 0;
+    let shownTurn = NaN;
+    let shownFade = -1;
     let twinklers: Star[] = [];
 
     // pointer, and whether it is over empty sky (re-checked only when it moves)
@@ -158,15 +166,17 @@ export function Starfield() {
     };
 
     function buildLayer() {
-      if (!stars.length || !w || !h) return;
+      if (!sky || !stars.length || !w || !h) return;
       const scale = Math.hypot(w, h) / 2 / CORNER_REACH;
       // square, and large enough that it still covers the screen when turned
       layerSize = Math.ceil(Math.hypot(w, h)) + 8;
       const ld = Math.min(window.devicePixelRatio || 1, 1.25);
-      layer ??= document.createElement("canvas");
-      layer.width = layerSize * ld;
-      layer.height = layerSize * ld;
-      const lc = layer.getContext("2d");
+      sky.width = layerSize * ld;
+      sky.height = layerSize * ld;
+      sky.style.width = `${layerSize}px`;
+      sky.style.height = `${layerSize}px`;
+      sky.style.margin = `${-layerSize / 2}px 0 0 ${-layerSize / 2}px`;
+      const lc = sky.getContext("2d");
       if (!lc) return;
       lc.setTransform(ld, 0, 0, ld, layerSize * ld / 2, layerSize * ld / 2);
       lc.clearRect(-layerSize, -layerSize, layerSize * 2, layerSize * 2);
@@ -270,19 +280,24 @@ export function Starfield() {
       buildLayer();
     };
 
-    /* Capped at ~30fps. This is a full-viewport 2D canvas that clears and
-       repaints every star each frame, sitting on top of the hero's WebGL
-       context — at 60fps on a hidpi display the two compete for the
-       compositor and the orbits visibly stutter. Twinkle and turn are slow
-       enough that half the frames look identical. */
+    /* Twinkle alone is held to ~30fps: it is slow enough that half the frames
+       would look identical, and this canvas sits over the hero's WebGL
+       context. While the page scrolls every frame is drawn, so the live stars
+       turn in step with the rotated sky beneath them rather than trailing it. */
     const FRAME_MS = 33;
+    /** how often, at most, the pointer is checked against the page */
+    const PICK_MS = 100;
     let last = 0;
+    let lastPick = 0;
 
     const draw = (t: number) => {
-      if (t - last < FRAME_MS) {
+      const turning = !reduced && stars.length > 0 && scrollY * TURN_PER_PX !== shownTurn;
+      if (!turning && t - last < FRAME_MS) {
         raf = requestAnimationFrame(draw);
         return;
       }
+      // shooting stars move by time, not by frame, so the frame rate leaves their speed alone
+      const step = last ? Math.min(3, (t - last) / FRAME_MS) : 1;
       last = t;
       ctx.clearRect(0, 0, w, h);
 
@@ -299,14 +314,14 @@ export function Starfield() {
         const px = (x: number, y: number) => cx + (x * cos - y * sin) * scale;
         const py = (x: number, y: number) => cy + (x * sin + y * cos) * scale;
 
-        // the whole baked sky, turned for the scroll, in one draw
-        if (layer) {
-          ctx.save();
-          ctx.globalAlpha = fade;
-          ctx.translate(cx, cy);
-          ctx.rotate(turn);
-          ctx.drawImage(layer, -layerSize / 2, -layerSize / 2, layerSize, layerSize);
-          ctx.restore();
+        // the whole baked sky, turned for the scroll by the compositor
+        if (turn !== shownTurn) {
+          sky.style.transform = `rotate(${turn}rad)`;
+          shownTurn = turn;
+        }
+        if (fade !== shownFade) {
+          sky.style.opacity = String(fade);
+          shownFade = fade;
         }
 
         // then only the bright ones, live, so they can twinkle
@@ -369,7 +384,8 @@ export function Starfield() {
         }
 
         // ── the name of the star under the pointer, on empty sky only
-        if (pointer.moved) {
+        if (pointer.moved && t - lastPick > PICK_MS) {
+          lastPick = t;
           pointer.moved = false;
           pointer.active = overEmptySky(document.elementFromPoint(pointer.x, pointer.y));
         }
@@ -408,9 +424,9 @@ export function Starfield() {
         });
       }
       shooting = shooting.filter((m) => {
-        m.x += m.vx;
-        m.y += m.vy;
-        m.life -= 0.014;
+        m.x += m.vx * step;
+        m.y += m.vy * step;
+        m.life -= 0.014 * step;
         if (m.life <= 0) return false;
         const grad = ctx.createLinearGradient(m.x, m.y, m.x - m.len, m.y - m.len * (m.vy / m.vx));
         grad.addColorStop(0, rgba(starColor, m.life));
@@ -538,8 +554,6 @@ export function Starfield() {
     });
     const reaim = setInterval(aim, REAIM_MS);
 
-    const mo = new MutationObserver(readColors);
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     window.addEventListener("resize", size);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("pointermove", onPointer, { passive: true });
@@ -551,7 +565,6 @@ export function Starfield() {
       window.removeEventListener("boot-complete", beginAfterArrival);
       clearTimeout(skyTimer);
       clearInterval(reaim);
-      mo.disconnect();
       window.removeEventListener("resize", size);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("pointermove", onPointer);
@@ -559,5 +572,10 @@ export function Starfield() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} aria-hidden className="absolute inset-0 size-full" />;
+  return (
+    <div aria-hidden className="absolute inset-0 overflow-hidden">
+      <canvas ref={skyRef} className="absolute left-1/2 top-1/2 opacity-0 will-change-transform" />
+      <canvas ref={canvasRef} className="absolute inset-0 size-full" />
+    </div>
+  );
 }

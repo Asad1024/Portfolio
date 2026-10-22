@@ -51,16 +51,32 @@ const ease = [0.2, 0.7, 0.2, 1] as const;
 export function Work() {
   const reduced = useReducedMotion();
   const [active, setActive] = useState(0);
+  /* The project being wiped over, held still underneath until the wipe ends.
+     The wipe itself is CSS on transforms and opacity only (see .sw-wipe), so
+     it runs on the compositor: animating clip-path and a blur filter across
+     the whole stage, as it used to, repainted it on every frame of the second. */
+  const [prev, setPrev] = useState<number | null>(null);
+  const select = (i: number) => {
+    if (i === active) return;
+    if (!reduced) setPrev(active);
+    setActive(i);
+  };
   const p = all[active];
   const tint = TINT[p.slug] ?? "#22d3ee";
 
-  // a soft light follows the pointer across the screen
+  /* A soft light follows the pointer across the screen: one pre-painted
+     gradient moved by transform, with the stage measured once on entry
+     rather than on every move. */
   const glare = useRef<HTMLSpanElement>(null);
+  const stageRect = useRef<DOMRect | null>(null);
+  const onEnter = (e: React.PointerEvent<HTMLDivElement>) => {
+    stageRect.current = e.currentTarget.getBoundingClientRect();
+    onMove(e);
+  };
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (reduced || !glare.current) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    glare.current.style.setProperty("--gx", `${((e.clientX - r.left) / r.width) * 100}%`);
-    glare.current.style.setProperty("--gy", `${((e.clientY - r.top) / r.height) * 100}%`);
+    const r = stageRect.current;
+    if (reduced || !glare.current || !r) return;
+    glare.current.style.transform = `translate3d(${e.clientX - r.left}px, ${e.clientY - r.top}px, 0)`;
   };
   const ratio = p.image ? `${p.image.width} / ${p.image.height}` : "16 / 10";
 
@@ -100,34 +116,43 @@ export function Work() {
             <div className="sw-panel relative overflow-hidden rounded-[1.25rem] border border-white/10">
               {/* the screen, edge to edge at the screenshot's own proportions;
                   each project wipes in over the last behind a line of light */}
-              <div onPointerMove={onMove} className="sw-stage relative overflow-hidden bg-[#05070d]" style={{ aspectRatio: ratio }}>
-                <AnimatePresence initial={false}>
-                  <motion.div
-                    key={p.slug}
-                    className="absolute inset-0"
-                    initial={reduced ? { opacity: 0 } : { clipPath: "inset(0 0 0 100%)", scale: 1.08, filter: "brightness(1.6) blur(4px)" }}
-                    animate={{ opacity: 1, clipPath: "inset(0 0 0 0%)", scale: 1, filter: "brightness(1) blur(0px)" }}
-                    exit={{ opacity: 0, scale: 0.97, transition: { duration: 1 } }}
-                    transition={{ duration: 1.05, ease: [0.7, 0, 0.2, 1] }}
-                  >
+              <div
+                onPointerEnter={onEnter}
+                onPointerMove={onMove}
+                className="sw-stage relative overflow-hidden bg-[#05070d]"
+                style={{ aspectRatio: ratio }}
+              >
+                {prev !== null && (
+                  <div key={`out-${all[prev].slug}`} aria-hidden className="sw-out absolute inset-0">
+                    <ProjectVisual slug={all[prev].slug} variant="hero" sizes="(max-width: 1024px) 92vw, 52rem" />
+                  </div>
+                )}
+                {/* the wipe: the frame slides in from the right while its
+                    contents slide the other way, so the picture holds still
+                    and only the edge of the frame travels */}
+                <div
+                  key={p.slug}
+                  className={`absolute inset-0 overflow-hidden ${prev !== null ? "sw-wipe" : ""}`}
+                  onAnimationEnd={(e) => {
+                    if (e.target === e.currentTarget) setPrev(null);
+                  }}
+                >
+                  <div className={`absolute inset-0 ${prev !== null ? "sw-wipe-inner" : ""}`}>
                     <Link href={`/work/${p.slug}`} aria-label={`${p.title}: read the case study`} className="group absolute inset-0 block">
                       <ProjectVisual slug={p.slug} variant="hero" sizes="(max-width: 1024px) 92vw, 52rem" />
                     </Link>
-                  </motion.div>
-                </AnimatePresence>
-                {!reduced && (
-                  <motion.span
-                    key={`edge-${p.slug}`}
-                    aria-hidden
-                    className="sw-edge pointer-events-none absolute inset-y-0 w-px"
-                    initial={{ left: "100%", opacity: 1 }}
-                    animate={{ left: "0%", opacity: 0 }}
-                    transition={{ duration: 1.05, ease: [0.7, 0, 0.2, 1], opacity: { duration: 1.05, ease: [0.9, 0, 1, 1] } }}
-                  />
+                    {prev !== null && <span aria-hidden className="sw-flash pointer-events-none absolute inset-0" />}
+                  </div>
+                </div>
+                {/* the line of light riding the wipe's edge */}
+                {prev !== null && (
+                  <span key={`edge-${p.slug}`} aria-hidden className="sw-edge-run pointer-events-none absolute inset-0">
+                    <span className="sw-edge absolute inset-y-0 left-0 w-px" />
+                  </span>
                 )}
-                <span ref={glare} aria-hidden className="sw-glare pointer-events-none absolute inset-0" />
+                <span ref={glare} aria-hidden className="sw-glare pointer-events-none absolute left-0 top-0" />
                 {p.link && (
-                  <span className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/60 px-2.5 py-1 font-sans text-[10px] text-white/90 backdrop-blur-md">
+                  <span className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/75 px-2.5 py-1 font-sans text-[10px] text-white/90">
                     <span className="size-1.5 animate-pulse rounded-full bg-[var(--tint)] shadow-[0_0_8px_var(--tint)]" />
                     live
                   </span>
@@ -135,7 +160,7 @@ export function Work() {
               </div>
 
               {/* the story of the project on stage */}
-              <div className="relative border-t border-white/[0.07] bg-black/20 px-5 py-5 backdrop-blur-sm sm:px-8 sm:py-6">
+              <div className="relative border-t border-white/[0.07] bg-black/20 px-5 py-5 sm:px-8 sm:py-6">
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={p.slug}
@@ -203,10 +228,10 @@ export function Work() {
                       <li key={q.slug} className="shrink-0 snap-start lg:h-[calc(100%/9)] lg:py-[2px]">
                         <button
                           type="button"
-                          onClick={() => setActive(i)}
+                          onClick={() => select(i)}
                           aria-current={on || undefined}
                           style={{ ["--c" as string]: c }}
-                          className={`group relative flex h-full w-full items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 text-left transition-all duration-500 lg:py-0 ${
+                          className={`group relative flex h-full w-full items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3 text-left transition-colors duration-500 lg:py-0 ${
                             on ? "border-white/12 bg-white/[0.05]" : "border-transparent hover:bg-white/[0.03]"
                           }`}
                         >
@@ -225,7 +250,7 @@ export function Work() {
                           </span>
                           <span
                             aria-hidden
-                            className={`size-1.5 shrink-0 rounded-full bg-[var(--c)] transition-all duration-500 ${
+                            className={`size-1.5 shrink-0 rounded-full bg-[var(--c)] transition-opacity duration-500 ${
                               on ? "opacity-100 shadow-[0_0_10px_var(--c)]" : "opacity-0"
                             }`}
                           />

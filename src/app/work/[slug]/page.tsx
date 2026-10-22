@@ -102,7 +102,7 @@ export default async function CaseStudy({
       <Reveal>
         <section
           aria-label="Summary"
-          className="mt-10 grid overflow-hidden rounded-2xl border border-line bg-bg/70 backdrop-blur-sm lg:grid-cols-[minmax(0,1fr)_340px]"
+          className="mt-10 grid overflow-hidden rounded-2xl border border-line bg-bg/85 lg:grid-cols-[minmax(0,1fr)_340px]"
         >
           <dl className="divide-y divide-line">
             {(
@@ -164,7 +164,7 @@ export default async function CaseStudy({
           }`}
         >
           {project.outcome.map((o) => (
-            <div key={o.label} className="bg-bg/85 p-7 backdrop-blur-sm sm:p-9">
+            <div key={o.label} className="bg-bg/90 p-7 sm:p-9">
               <p className="font-sans text-5xl font-bold tracking-tight text-accent sm:text-6xl">
                 <StatValue value={o.value} />
               </p>
@@ -187,7 +187,7 @@ export default async function CaseStudy({
           {project.decisions.map((d, i) => (
             <li
               key={d.title}
-              className="flex flex-col rounded-2xl border border-line bg-bg/60 p-6 backdrop-blur-sm transition-colors hover:border-accent/45 sm:p-7"
+              className="flex flex-col rounded-2xl border border-line bg-bg/80 p-6 transition-colors hover:border-accent/45 sm:p-7"
             >
               <span className="font-sans text-4xl font-bold tracking-tight text-accent/35">
                 {String(i + 1).padStart(2, "0")}
@@ -201,7 +201,7 @@ export default async function CaseStudy({
 
       {/* everything else, for the reader who wants it */}
       <Reveal>
-        <details className="group mt-6 rounded-2xl border border-line bg-bg/60 backdrop-blur-sm open:border-accent/35">
+        <details className="group mt-6 rounded-2xl border border-line bg-bg/80 open:border-accent/35">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-6 transition-colors hover:text-accent sm:p-8 [&::-webkit-details-marker]:hidden">
             <span>
               <span className="block font-sans text-lg font-bold tracking-tight">Full breakdown</span>
@@ -246,7 +246,7 @@ export default async function CaseStudy({
           {project.stack.map((s) => (
             <li
               key={s}
-              className="flex items-center gap-2.5 rounded-full border border-line bg-card px-4 py-2 font-sans text-xs text-fg/90 backdrop-blur-sm transition-colors hover:border-accent/45"
+              className="flex items-center gap-2.5 rounded-full border border-line bg-[rgba(11,13,20,0.85)] px-4 py-2 font-sans text-xs text-fg/90 transition-colors hover:border-accent/45"
             >
               <TechIcon name={s} size={15} />
               {s}
@@ -259,7 +259,7 @@ export default async function CaseStudy({
       <Reveal>
         <Link
           href={`/work/${next.slug}`}
-          className="group mt-24 grid items-center gap-6 overflow-hidden rounded-2xl border border-line bg-bg/60 p-6 backdrop-blur-sm transition-colors hover:border-accent sm:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] sm:p-8"
+          className="group mt-24 grid items-center gap-6 overflow-hidden rounded-2xl border border-line bg-bg/80 p-6 transition-colors hover:border-accent sm:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] sm:p-8"
         >
           <div>
             <p className="flex items-center gap-1.5 font-sans text-xs text-muted">Next project <ArrowRight aria-hidden className="size-3.5" /></p>

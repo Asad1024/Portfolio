@@ -56,7 +56,7 @@ export function About() {
             </Tilt>
             <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line">
               {facts.map(({ label, icon: Icon, value }) => (
-                <div key={label} className="group/fact flex items-start gap-3 bg-bg/85 p-4 backdrop-blur-sm sm:p-5">
+                <div key={label} className="group/fact flex items-start gap-3 bg-bg/90 p-4 sm:p-5">
                   <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-accent/20 bg-accent/[0.08] transition-colors group-hover/fact:border-accent/50">
                     <Icon aria-hidden className="size-4 text-accent" />
                   </span>

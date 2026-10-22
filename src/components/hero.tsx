@@ -185,7 +185,7 @@ export function Hero() {
       <div className="relative z-10 mx-auto w-full max-w-shell px-6 pb-40 pt-28 md:pb-16 md:pt-32">
         <div className="md:max-w-[50%]">
           <p
-            className={`${BASE} ${fade} inline-flex items-center gap-2.5 rounded-full border border-line bg-bg/40 py-1 pl-1 pr-4 font-sans text-[12px] tracking-wide text-muted backdrop-blur-sm`}
+            className={`${BASE} ${fade} inline-flex items-center gap-2.5 rounded-full border border-line bg-bg/70 py-1 pl-1 pr-4 font-sans text-[12px] tracking-wide text-muted`}
             style={at(0)}
           >
             {profile.photo && (
@@ -249,7 +249,7 @@ export function Hero() {
             <Magnetic>
               <Link
                 href="/#contact"
-                className="inline-flex items-center whitespace-nowrap rounded-full border border-line bg-bg/40 px-5 py-3.5 text-sm font-medium text-fg/90 backdrop-blur-sm transition-colors hover:border-accent hover:text-accent sm:px-7 sm:py-4 sm:text-[15px]"
+                className="inline-flex items-center whitespace-nowrap rounded-full border border-line bg-bg/70 px-5 py-3.5 text-sm font-medium text-fg/90 transition-colors hover:border-accent hover:text-accent sm:px-7 sm:py-4 sm:text-[15px]"
               >
                 Get in touch
               </Link>

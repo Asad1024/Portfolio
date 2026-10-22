@@ -40,6 +40,13 @@
   --container-shell: 78rem;
 }
 
+/* The scrollbar's room is kept even while a panel locks the page, so opening
+   the palette, terminal or menu doesn't widen the page by a scrollbar and
+   reflow everything on it under the opening animation. */
+html {
+  scrollbar-gutter: stable;
+}
+
 html.lenis,
 html.lenis body {
   height: auto;
@@ -728,12 +735,34 @@ textarea:focus-visible {
   background: #fff;
   box-shadow: 0 0 12px 2px var(--tint), 0 0 40px 6px color-mix(in oklab, var(--tint) 60%, transparent);
 }
-/* a soft light that follows the pointer over the screen */
+/* The wipe between projects, transforms and opacity only so the compositor
+   runs it: the frame slides in from the right and its contents slide back the
+   other way, which holds the picture still and moves only the frame's edge.
+   The flash that used to be a brightness filter is a white layer fading out. */
+@keyframes sw-wipe { from { transform: translateX(100%); } }
+@keyframes sw-wipe-inner { from { transform: translateX(-100%) scale(1.08); } }
+@keyframes sw-fade { to { opacity: 0; } }
+@keyframes sw-out { to { opacity: 0; transform: scale(0.97); } }
+.sw-wipe { animation: sw-wipe 1.05s cubic-bezier(0.7, 0, 0.2, 1) both; }
+.sw-wipe-inner { animation: sw-wipe-inner 1.05s cubic-bezier(0.7, 0, 0.2, 1) both; }
+.sw-flash { background: #fff; opacity: 0.22; animation: sw-fade 1.05s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.sw-out { animation: sw-out 1s cubic-bezier(0.7, 0, 0.2, 1) both; }
+.sw-edge-run {
+  animation:
+    sw-wipe 1.05s cubic-bezier(0.7, 0, 0.2, 1) both,
+    sw-fade 1.05s cubic-bezier(0.9, 0, 1, 1) both;
+}
+/* A soft light that follows the pointer over the screen: painted once, a
+   28rem-radius glow centred on the element's origin, and moved by transform. */
 .sw-glare {
-  background: radial-gradient(28rem circle at var(--gx, 50%) var(--gy, 0%), rgba(255, 255, 255, 0.1), transparent 60%);
+  width: 56rem;
+  height: 56rem;
+  margin: -28rem 0 0 -28rem;
+  background: radial-gradient(circle closest-side, rgba(255, 255, 255, 0.1), transparent 60%);
   opacity: 0;
   transition: opacity 0.4s;
   mix-blend-mode: soft-light;
+  will-change: transform;
 }
 .sw-stage:hover .sw-glare { opacity: 1; }
 .sw-num {

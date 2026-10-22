@@ -50,7 +50,14 @@ export function CommandPalette() {
     const go = (href: string) => () => {
       close();
       if (href.startsWith("#")) {
-        document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+        /* Through Lenis, like every other glide on the site: the browser's own
+           smooth scroll fought it. A frame later, once closing has released
+           the scroll lock and Lenis is running again. */
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          document.querySelector(href)?.scrollIntoView();
+        } else {
+          requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("scroll-to", { detail: href })));
+        }
       } else {
         router.push(href);
       }

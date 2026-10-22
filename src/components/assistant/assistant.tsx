@@ -572,7 +572,7 @@ export function Assistant() {
                 initial={{ opacity: 0, x: 8 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 6 }}
-                className="pointer-events-none hidden items-center gap-2 whitespace-nowrap rounded-full border border-white/10 bg-[#0a0f1d]/90 px-3 py-1.5 text-[12px] text-fg/90 shadow-xl backdrop-blur sm:flex"
+                className="pointer-events-none hidden items-center gap-2 whitespace-nowrap rounded-full border border-white/10 bg-[#0a0f1d]/90 px-3 py-1.5 text-[12px] text-fg/90 shadow-xl sm:flex"
               >
                 Ask {NAME}
                 <kbd className="rounded border border-white/15 px-1 font-sans text-[10px] text-muted">Ctrl I</kbd>
